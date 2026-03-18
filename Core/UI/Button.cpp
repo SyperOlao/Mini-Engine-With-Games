@@ -15,7 +15,7 @@ bool Button::HandleKeyboard(const InputSystem &input, const bool isSelected) con
 }
 
 void Button::Draw(
-    ShapeRenderer2D &renderer,
+    const ShapeRenderer2D &renderer,
     const BitmapFont &font,
     const ButtonStyle &style,
     const bool isSelected
@@ -33,11 +33,11 @@ void Button::Draw(
     renderer.DrawFilledRect(Bounds.x + Bounds.width - style.BorderThickness, Bounds.y, style.BorderThickness,
                             Bounds.height, border);
 
-    const float textWidth = font.MeasureTextWidth(Label, style.TextScale);
-    const float textHeight = font.MeasureTextHeight(style.TextScale);
+    const float textWidth = BitmapFont::MeasureTextWidth(Label, style.TextScale);
+    const float textHeight = BitmapFont::MeasureTextHeight(style.TextScale);
 
     const float textX = Bounds.x + (Bounds.width - textWidth) * 0.5f;
     const float textY = Bounds.y + (Bounds.height - textHeight) * 0.5f;
 
-    font.DrawString(renderer, textX, textY, Label, textColor, style.TextScale);
+    BitmapFont::DrawString(renderer, textX, textY, Label, textColor, style.TextScale);
 }

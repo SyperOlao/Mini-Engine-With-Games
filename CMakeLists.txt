@@ -43,6 +43,12 @@ add_executable(PingPong
         Core/UI/Button.cpp
         Core/UI/Button.h
         Core/Physics/CollisionSystem.cpp
+        Game/Pong/PongTypes.h
+        Game/Pong/Entities/Paddle.cpp
+        Game/Pong/Entities/Ball.cpp
+        Game/Pong/Systems/PongRules.cpp
+        Game/Pong/Systems/PaddleAI.cpp
+        Game/Pong/Systems/PongCollisionSystem.cpp
 )
 find_package(directxtk CONFIG REQUIRED)
 target_include_directories(PingPong PRIVATE

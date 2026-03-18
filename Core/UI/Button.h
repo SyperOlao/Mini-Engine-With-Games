@@ -32,7 +32,7 @@ public:
     bool Enabled{true};
 
     [[nodiscard]] bool HandleKeyboard(const InputSystem& input, bool isSelected) const noexcept;
-    void Draw(ShapeRenderer2D& renderer, const BitmapFont& font, const ButtonStyle& style, bool isSelected) const;
+    void Draw(const ShapeRenderer2D& renderer, const BitmapFont& font, const ButtonStyle& style, bool isSelected) const;
 };
 
 
