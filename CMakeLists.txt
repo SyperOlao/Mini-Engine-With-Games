@@ -1,10 +1,14 @@
-cmake_minimum_required(VERSION 4.0)
-project(PingPong)
+cmake_minimum_required(VERSION 3.21)
+
+project(MyProject LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(directxmath CONFIG REQUIRED)
+find_package(directxtk CONFIG REQUIRED)
 
 add_executable(PingPong main.cpp
-        Game/Game.cpp
         Game/Game.cpp
         Game/Game.h
         Core/App/Application.cpp
@@ -33,12 +37,8 @@ add_executable(PingPong main.cpp
         Core/Input/RawInputHandler.h
         Core/Scene/Entity.cpp
         Core/Scene/Entity.h
-        Core/Scene/Entity.h
         Core/Scene/Scene.cpp
         Core/Scene/Scene.h
-        Core/Scene/Scene.h
-        Core/Scene/Transform2D.cpp
-        Core/Scene/Transform2D.h
         Core/Scene/Transform2D.h
         Core/Scene/Components/Collider2D.h
         Core/Scene/Components/RenderComponent2D.h
@@ -66,17 +66,33 @@ add_executable(PingPong main.cpp
         Game/Objects/ScoreBoard.cpp
         Game/Objects/ScoreBoard.h
         Game/Objects/PlayField.cpp
-        Game/Objects/PlayField.h)
+        Game/Objects/PlayField.h
+        Core/Math/DXIncludes.h
+)
 
 target_include_directories(PingPong PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-file(COPY ${CMAKE_SOURCE_DIR}/Core/Shaders
-        DESTINATION ${CMAKE_BINARY_DIR}/Core)
-
 target_link_libraries(PingPong PRIVATE
+        Microsoft::DirectXMath
+        Microsoft::DirectXTK
+
+        d3d11.lib
+        dxgi.lib
+        dxguid.lib
+        uuid.lib
+        kernel32.lib
+        user32.lib
+        comdlg32.lib
+        advapi32.lib
+        shell32.lib
+        ole32.lib
+        oleaut32.lib
         d3d11
         dxgi
         d3dcompiler
 )
+
+file(COPY ${CMAKE_SOURCE_DIR}/Core/Shaders
+        DESTINATION ${CMAKE_BINARY_DIR}/Core)

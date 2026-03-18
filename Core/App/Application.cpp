@@ -4,7 +4,9 @@
 
 #include "Application.h"
 
-Application::Application(HINSTANCE hInstance)
+#include "Core/Common/Constants.h"
+
+Application::Application(HINSTANCE__ *const hInstance)
     : m_hInstance(hInstance)
 {
     Initialize();
@@ -12,8 +14,8 @@ Application::Application(HINSTANCE hInstance)
 
 void Application::Initialize()
 {
-    constexpr int windowWidth = 1280;
-    constexpr int windowHeight = 720;
+    constexpr int windowWidth = Constants::WindowWidth;
+    constexpr int windowHeight = Constants::WindowHeight;
 
     m_window.Initialize(m_hInstance, windowWidth, windowHeight, L"Pong DX11");
     m_renderer.Initialize(m_window.GetHandle(), m_window.GetWidth(), m_window.GetHeight());
@@ -41,6 +43,7 @@ int Application::Run()
 
 void Application::Update()
 {
+    m_input.Update();
     m_game.Update(m_timer.GetDeltaTime());
 }
 

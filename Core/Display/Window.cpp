@@ -4,7 +4,7 @@
 
 #include "Window.h"
 #include <stdexcept>
-
+#include "../Input/RawInputHandler.h"
 
 Window::~Window() {
     if (m_hWnd != nullptr) {
@@ -118,9 +118,13 @@ LRESULT CALLBACK Window::WindowProc(HWND__ *const hWnd, const UINT message, cons
     return DefWindowProcW(hWnd, message, wParam, lParam);
 }
 
-LRESULT Window::HandleMessage(const UINT message, const WPARAM wParam, const LPARAM lParam) const {
+LRESULT Window::HandleMessage(const UINT message, const WPARAM wParam, const LPARAM lParam) const
+{
     switch (message)
     {
+        case WM_INPUT:
+            return RawInputHandler::Instance().HandleMessage(message, wParam, lParam);
+
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
