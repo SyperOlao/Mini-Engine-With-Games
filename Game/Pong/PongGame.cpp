@@ -44,6 +44,7 @@ void PongGame::Initialize(AppContext &context) {
     context.Audio->Load("ui_move", "Game/Pong/Assets/UI_MOVE.wav");
     context.Audio->Load("ui_accept", "Game/Pong/Assets/UI_ACCEPT.wav");
     context.Audio->Load("paddle_hit", "Game/Pong/Assets/PING.wav");
+    context.Audio->Load("point", "Game/Pong/Assets/POINT.wav");
     context.Audio->Load("wall_hit", "Game/Pong/Assets/BALL_WALL.wav");
     context.Audio->Load("score", "Game/Pong/Assets/POINT.wav");
     context.Audio->Load("music_game", "Game/Pong/Assets/MUSIC.wav");
@@ -224,6 +225,7 @@ void PongGame::UpdateGameplay(const AppContext &context, const float deltaTime) 
 
     const CourtSide outOfBounds = PongCollisionSystem::CheckScoring(m_ball);
     if (outOfBounds != CourtSide::None) {
+        context.Audio->PlayOneShot("point", 0.85f);
         ScorePoint(outOfBounds);
     }
 }
