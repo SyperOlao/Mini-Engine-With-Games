@@ -23,7 +23,6 @@ struct Collider2D final
             HalfSize.y * transform.Scale.y
         };
 
-        // Transform.Position трактуем как top-left
         const auto worldCenter = transform.Position + Offset + scaledHalfSize;
         return AABB::FromCenterExtents(worldCenter, scaledHalfSize);
     }

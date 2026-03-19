@@ -23,8 +23,7 @@
 #include "Game/Pong/Systems/PongCollisionSystem.h"
 #include "Game/Pong/Systems/PongRules.h"
 
-namespace
-{
+namespace {
     constexpr Color kWhite{1.0f, 1.0f, 1.0f, 1.0f};
     constexpr Color kMuted{0.65f, 0.68f, 0.78f, 1.0f};
     constexpr Color kAccent{0.82f, 0.84f, 0.93f, 1.0f};
@@ -36,48 +35,44 @@ namespace
     constexpr float kMenuTitleY = 60.0f;
     constexpr float kMenuSubtitleY = 145.0f;
 
-    bool WasMenuUpPressed(const InputSystem& input)
-    {
+    bool WasMenuUpPressed(const InputSystem &input) {
         return input.GetKeyboard().WasKeyPressed(Key::W)
-            || input.GetKeyboard().WasKeyPressed(Key::Up);
+               || input.GetKeyboard().WasKeyPressed(Key::Up);
     }
 
-    bool WasMenuDownPressed(const InputSystem& input)
-    {
+    bool WasMenuDownPressed(const InputSystem &input) {
         return input.GetKeyboard().WasKeyPressed(Key::S)
-            || input.GetKeyboard().WasKeyPressed(Key::Down);
+               || input.GetKeyboard().WasKeyPressed(Key::Down);
     }
 
-    RectF BuildCenteredButtonRect(const int index)
-    {
+    RectF BuildCenteredButtonRect(const int index) {
         const float totalHeight = 4.0f * kMenuButtonHeight + 3.0f * kMenuButtonGap;
 
         constexpr float reservedTop = 230.0f;
         constexpr float reservedBottom = 110.0f;
 
         const float availableHeight =
-            static_cast<float>(Constants::WindowHeight) - reservedTop - reservedBottom;
+                static_cast<float>(Constants::WindowHeight) - reservedTop - reservedBottom;
 
         const float startY =
-            reservedTop + std::max(0.0f, (availableHeight - totalHeight) * 0.5f);
+                reservedTop + std::max(0.0f, (availableHeight - totalHeight) * 0.5f);
 
         const float x =
-            (static_cast<float>(Constants::WindowWidth) - kMenuButtonWidth) * 0.5f;
+                (static_cast<float>(Constants::WindowWidth) - kMenuButtonWidth) * 0.5f;
 
         const float y =
-            startY + static_cast<float>(index) * (kMenuButtonHeight + kMenuButtonGap);
+                startY + static_cast<float>(index) * (kMenuButtonHeight + kMenuButtonGap);
 
         return RectF{x, y, kMenuButtonWidth, kMenuButtonHeight};
     }
 
     void DrawCenteredText(
-        ShapeRenderer2D& renderer,
+        ShapeRenderer2D &renderer,
         std::string_view text,
         const float y,
-        const Color& color,
+        const Color &color,
         const float scale
-    )
-    {
+    ) {
         const std::string value{text};
         const float width = BitmapFont::MeasureTextWidth(value, scale);
         const float x = (static_cast<float>(Constants::WindowWidth) - width) * 0.5f;
@@ -85,23 +80,21 @@ namespace
     }
 
     void DrawRightAlignedText(
-        ShapeRenderer2D& renderer,
+        ShapeRenderer2D &renderer,
         std::string_view text,
         const float rightX,
         const float y,
-        const Color& color,
+        const Color &color,
         const float scale
-    )
-    {
+    ) {
         const std::string value{text};
         const float width = BitmapFont::MeasureTextWidth(value, scale);
         BitmapFont::DrawString(renderer, rightX - width, y, value, color, scale);
     }
 }
 
-void PongGame::Initialize(AppContext& context)
-{
-    (void)context;
+void PongGame::Initialize(AppContext &context) {
+    (void) context;
 
     m_mainMenuButtons[0] = Button{BuildCenteredButtonRect(0), "START VS PLAYER", true};
     m_mainMenuButtons[1] = Button{BuildCenteredButtonRect(1), "START VS BOT", true};
@@ -121,23 +114,21 @@ void PongGame::Initialize(AppContext& context)
     m_rightPaddle.ColorTint = kWhite;
     m_ball.ColorTint = kWhite;
 
+    m_scene.Initialize();
     ResetMatch();
 }
 
-void PongGame::Update(AppContext& context, const float deltaTime)
-{
+void PongGame::Update(AppContext &context, const float deltaTime) {
     m_fpsAccumulator += deltaTime;
     ++m_fpsFrames;
 
-    if (m_fpsAccumulator >= 0.25f)
-    {
+    if (m_fpsAccumulator >= 0.25f) {
         m_displayFps = static_cast<int>(std::round(static_cast<float>(m_fpsFrames) / m_fpsAccumulator));
         m_fpsAccumulator = 0.0f;
         m_fpsFrames = 0;
     }
 
-    switch (m_screenState)
-    {
+    switch (m_screenState) {
         case ScreenState::MainMenu:
             UpdateMainMenu(context);
             break;
@@ -155,10 +146,8 @@ void PongGame::Update(AppContext& context, const float deltaTime)
     }
 }
 
-void PongGame::Render(AppContext& context)
-{
-    switch (m_screenState)
-    {
+void PongGame::Render(AppContext &context) {
+    switch (m_screenState) {
         case ScreenState::MainMenu:
             RenderMainMenu(context);
             break;
@@ -176,15 +165,14 @@ void PongGame::Render(AppContext& context)
     }
 }
 
-void PongGame::ApplyDifficulty()
-{
-    const auto& tuning = PongRules::GetDifficultyTuning(m_difficulty);
+void PongGame::ApplyDifficulty() {
+    const auto &tuning = PongRules::GetDifficultyTuning(m_difficulty);
 
     m_leftPaddle.SetDimensions(Constants::PaddleWidth, tuning.PaddleHeight);
     m_rightPaddle.SetDimensions(Constants::PaddleWidth, tuning.PaddleHeight);
 
     const float centerY =
-        (PongRules::GetPlayableTop() + PongRules::GetPlayableBottom()) * 0.5f;
+            (PongRules::GetPlayableTop() + PongRules::GetPlayableBottom()) * 0.5f;
 
     m_leftPaddle.Transform.SetPosition(
         Constants::PaddleMarginX,
@@ -199,20 +187,18 @@ void PongGame::ApplyDifficulty()
     ResetRound();
 }
 
-void PongGame::StartGame(const GameMode mode)
-{
+void PongGame::StartGame(const GameMode mode) {
     m_gameMode = mode;
     m_screenState = ScreenState::Playing;
     ResetMatch();
 }
 
-void PongGame::ResetRound()
-{
+void PongGame::ResetRound() {
     const float centerX =
-        static_cast<float>(Constants::WindowWidth) * 0.5f - m_ball.Size() * 0.5f;
+            static_cast<float>(Constants::WindowWidth) * 0.5f - m_ball.Size() * 0.5f;
 
     const float centerY =
-        (PongRules::GetPlayableTop() + PongRules::GetPlayableBottom()) * 0.5f - m_ball.Size() * 0.5f;
+            (PongRules::GetPlayableTop() + PongRules::GetPlayableBottom()) * 0.5f - m_ball.Size() * 0.5f;
 
     m_ball.Transform.SetPosition(centerX, centerY);
     m_ball.Movement.Stop();
@@ -221,33 +207,26 @@ void PongGame::ResetRound()
     m_roundResetTimer = Constants::BallResetDelaySeconds;
 }
 
-void PongGame::ResetMatch()
-{
+void PongGame::ResetMatch() {
     m_leftScore = 0;
     m_rightScore = 0;
     ApplyDifficulty();
 }
 
-void PongGame::UpdateMainMenu(AppContext& context)
-{
-    auto& input = *context.Input;
+void PongGame::UpdateMainMenu(AppContext &context) {
+    auto &input = *context.Input;
 
-    if (WasMenuUpPressed(input))
-    {
+    if (WasMenuUpPressed(input)) {
         m_selectedMainMenuIndex = (m_selectedMainMenuIndex + 3) % 4;
-    }
-    else if (WasMenuDownPressed(input))
-    {
+    } else if (WasMenuDownPressed(input)) {
         m_selectedMainMenuIndex = (m_selectedMainMenuIndex + 1) % 4;
     }
 
-    if (!m_mainMenuButtons[m_selectedMainMenuIndex].HandleKeyboard(input, true))
-    {
+    if (!m_mainMenuButtons[m_selectedMainMenuIndex].HandleKeyboard(input, true)) {
         return;
     }
 
-    switch (m_selectedMainMenuIndex)
-    {
+    switch (m_selectedMainMenuIndex) {
         case 0:
             StartGame(GameMode::TwoPlayers);
             break;
@@ -270,32 +249,25 @@ void PongGame::UpdateMainMenu(AppContext& context)
     }
 }
 
-void PongGame::UpdateSettingsMenu(AppContext& context)
-{
-    auto& input = *context.Input;
+void PongGame::UpdateSettingsMenu(AppContext &context) {
+    auto &input = *context.Input;
 
-    if (input.GetKeyboard().WasKeyPressed(Key::Escape))
-    {
+    if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
         m_screenState = ScreenState::MainMenu;
         return;
     }
 
-    if (WasMenuUpPressed(input))
-    {
+    if (WasMenuUpPressed(input)) {
         m_selectedSettingsIndex = (m_selectedSettingsIndex + 3) % 4;
-    }
-    else if (WasMenuDownPressed(input))
-    {
+    } else if (WasMenuDownPressed(input)) {
         m_selectedSettingsIndex = (m_selectedSettingsIndex + 1) % 4;
     }
 
-    if (!m_settingsButtons[m_selectedSettingsIndex].HandleKeyboard(input, true))
-    {
+    if (!m_settingsButtons[m_selectedSettingsIndex].HandleKeyboard(input, true)) {
         return;
     }
 
-    switch (m_selectedSettingsIndex)
-    {
+    switch (m_selectedSettingsIndex) {
         case 0:
             m_difficulty = Difficulty::Easy;
             ApplyDifficulty();
@@ -320,30 +292,24 @@ void PongGame::UpdateSettingsMenu(AppContext& context)
     }
 }
 
-void PongGame::UpdateGameplay(AppContext& context, const float deltaTime)
-{
-    auto& input = *context.Input;
+void PongGame::UpdateGameplay(AppContext &context, const float deltaTime) {
+    auto &input = *context.Input;
 
-    if (input.GetKeyboard().WasKeyPressed(Key::Escape))
-    {
+    if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
         m_screenState = ScreenState::MainMenu;
         return;
     }
 
-    if (input.GetKeyboard().WasKeyPressed(Key::Enter))
-    {
+    if (input.GetKeyboard().WasKeyPressed(Key::Enter)) {
         ResetMatch();
         return;
     }
 
     UpdatePlayerPaddle(context, m_leftPaddle, InputPlayer::Player1, deltaTime);
 
-    if (m_gameMode == GameMode::TwoPlayers)
-    {
+    if (m_gameMode == GameMode::TwoPlayers) {
         UpdatePlayerPaddle(context, m_rightPaddle, InputPlayer::Player2, deltaTime);
-    }
-    else
-    {
+    } else {
         m_paddleAI.Update(
             m_rightPaddle,
             m_ball,
@@ -354,12 +320,10 @@ void PongGame::UpdateGameplay(AppContext& context, const float deltaTime)
         ClampPaddleToField(m_rightPaddle);
     }
 
-    if (m_roundResetTimer > 0.0f)
-    {
+    if (m_roundResetTimer > 0.0f) {
         m_roundResetTimer = std::max(0.0f, m_roundResetTimer - deltaTime);
 
-        if (m_roundResetTimer == 0.0f)
-        {
+        if (m_roundResetTimer == 0.0f) {
             LaunchBallRandomDirection();
         }
 
@@ -371,26 +335,23 @@ void PongGame::UpdateGameplay(AppContext& context, const float deltaTime)
     PongCollisionSystem::HandlePaddleCollision(m_ball, m_leftPaddle, m_rightPaddle);
 
     const CourtSide outOfBounds = PongCollisionSystem::CheckScoring(m_ball);
-    if (outOfBounds != CourtSide::None)
-    {
+    if (outOfBounds != CourtSide::None) {
         ScorePoint(outOfBounds);
     }
 }
 
 void PongGame::UpdatePlayerPaddle(
-    const AppContext& context,
-    Paddle& paddle,
+    const AppContext &context,
+    Paddle &paddle,
     const InputPlayer player,
     const float deltaTime
-)
-{
+) {
     const float axis = context.Input->GetVerticalAxis(player);
     paddle.Transform.Position.y += axis * Constants::PaddleSpeed * deltaTime;
     ClampPaddleToField(paddle);
 }
 
-void PongGame::UpdateBall(const float deltaTime)
-{
+void PongGame::UpdateBall(const float deltaTime) {
     m_ball.Movement.Update(m_ball.Transform, deltaTime);
 
     PongCollisionSystem::HandleWallCollision(
@@ -400,15 +361,13 @@ void PongGame::UpdateBall(const float deltaTime)
     );
 }
 
-void PongGame::ClampPaddleToField(Paddle& paddle) noexcept
-{
+void PongGame::ClampPaddleToField(Paddle &paddle) noexcept {
     const float minY = PongRules::GetPlayableTop();
     const float maxY = PongRules::GetPlayableBottom() - paddle.Height();
     paddle.Transform.Position.y = MathHelpers::Clamp(paddle.Transform.Position.y, minY, maxY);
 }
 
-void PongGame::LaunchBallRandomDirection()
-{
+void PongGame::LaunchBallRandomDirection() {
     const float directionX = MathHelpers::RandomFloat(0.0f, 1.0f) < 0.5f ? -1.0f : 1.0f;
     const float directionY = MathHelpers::RandomFloat(-0.75f, 0.75f);
 
@@ -418,23 +377,18 @@ void PongGame::LaunchBallRandomDirection()
     m_ball.Movement.Velocity = direction * PongRules::GetDifficultyTuning(m_difficulty).BallStartSpeed;
 }
 
-void PongGame::ScorePoint(const CourtSide outSide)
-{
-    if (outSide == CourtSide::Left)
-    {
+void PongGame::ScorePoint(const CourtSide outSide) {
+    if (outSide == CourtSide::Left) {
         ++m_rightScore;
-    }
-    else if (outSide == CourtSide::Right)
-    {
+    } else if (outSide == CourtSide::Right) {
         ++m_leftScore;
     }
 
     ResetRound();
 }
 
-void PongGame::RenderMainMenu(const AppContext& context) const
-{
-    auto& renderer = *context.Shape2D;
+void PongGame::RenderMainMenu(const AppContext &context) const {
+    auto &renderer = *context.Shape2D;
 
     RenderButtons(context, m_mainMenuButtons, m_selectedMainMenuIndex, "PONG");
 
@@ -465,9 +419,8 @@ void PongGame::RenderMainMenu(const AppContext& context) const
     );
 }
 
-void PongGame::RenderSettingsMenu(const AppContext& context) const
-{
-    auto& renderer = *context.Shape2D;
+void PongGame::RenderSettingsMenu(const AppContext &context) const {
+    auto &renderer = *context.Shape2D;
 
     RenderButtons(context, m_settingsButtons, m_selectedSettingsIndex, "SETTINGS");
 
@@ -524,121 +477,35 @@ void PongGame::RenderSettingsMenu(const AppContext& context) const
     );
 }
 
-void PongGame::RenderGameplay(const AppContext& context) const
-{
-    RenderPlayField(context);
-    RenderHUD(context);
+void PongGame::RenderGameplay(const AppContext &context) const {
+    m_scene.RenderGameplay(
+      context,
+      m_leftPaddle,
+      m_rightPaddle,
+      m_ball,
+      m_leftScore,
+      m_rightScore,
+      m_displayFps,
+      m_gameMode,
+      m_difficulty
+  );
 }
 
-void PongGame::RenderPlayField(const AppContext& context) const
-{
-    const auto& renderer = *context.Shape2D;
-
-    const float playableTop = PongRules::GetPlayableTop();
-    const float playableHeight = PongRules::GetPlayableBottom() - PongRules::GetPlayableTop();
-
-    renderer.DrawFilledRect(
-        0.0f,
-        playableTop - 4.0f,
-        static_cast<float>(Constants::WindowWidth),
-        4.0f,
-        kMuted
-    );
-
-    renderer.DrawFilledRect(
-        0.0f,
-        PongRules::GetPlayableBottom(),
-        static_cast<float>(Constants::WindowWidth),
-        4.0f,
-        kMuted
-    );
-
-    constexpr float centerX =
-        static_cast<float>(Constants::WindowWidth) * 0.5f - Constants::CenterLineWidth * 0.5f;
-
-    const int segmentCount = static_cast<int>(
-        playableHeight / (Constants::CenterLineSegmentHeight + Constants::CenterLineGap)
-    );
-
-    for (int index = 0; index < segmentCount; ++index)
-    {
-        const float segmentY =
-            playableTop + 16.0f + static_cast<float>(index) *
-            (Constants::CenterLineSegmentHeight + Constants::CenterLineGap);
-
-        renderer.DrawFilledRect(
-            centerX,
-            segmentY,
-            Constants::CenterLineWidth,
-            Constants::CenterLineSegmentHeight,
-            Color(0.55f, 0.55f, 0.62f, 1.0f)
-        );
-    }
-
-    renderer.DrawFilledRect(
-        m_leftPaddle.Transform.Position.x,
-        m_leftPaddle.Transform.Position.y,
-        m_leftPaddle.Width(),
-        m_leftPaddle.Height(),
-        m_leftPaddle.ColorTint
-    );
-
-    renderer.DrawFilledRect(
-        m_rightPaddle.Transform.Position.x,
-        m_rightPaddle.Transform.Position.y,
-        m_rightPaddle.Width(),
-        m_rightPaddle.Height(),
-        m_rightPaddle.ColorTint
-    );
-
-    renderer.DrawFilledRect(
-        m_ball.Transform.Position.x,
-        m_ball.Transform.Position.y,
-        m_ball.Size(),
-        m_ball.Size(),
-        m_ball.ColorTint
-    );
-}
-
-void PongGame::RenderHUD(const AppContext& context) const
-{
-    auto& renderer = *context.Shape2D;
-
-    const std::string scoreText = PongRules::BuildScoreText(m_leftScore, m_rightScore);
-    constexpr float scoreScale = 1.3f;
-    const float scoreWidth = BitmapFont::MeasureTextWidth(scoreText, scoreScale);
-
-    BitmapFont::DrawString(
-        renderer,
-        (static_cast<float>(Constants::WindowWidth) - scoreWidth) * 0.5f,
-        22.0f,
-        scoreText,
-        kWhite,
-        scoreScale
-    );
-
-    BitmapFont::DrawString(renderer, 24.0f, 24.0f, BuildFpsText(), kAccent, 0.9f);
-    BitmapFont::DrawString(renderer, 24.0f, 58.0f, PongRules::BuildModeText(m_gameMode), kMuted, 0.75f);
-    BitmapFont::DrawString(renderer, 24.0f, 86.0f, PongRules::BuildDifficultyText(m_difficulty), kMuted, 0.75f);
-    BitmapFont::DrawString(renderer, 24.0f, 114.0f, "ESC MENU  ENTER RESET", kMuted, 0.68f);
-}
 
 void PongGame::RenderButtons(
-    const AppContext& context,
-    const std::array<Button, 4>& buttons,
+    const AppContext &context,
+    const std::array<Button, 4> &buttons,
     const int selectedIndex,
-    const char* title
-)
-{
-    auto& renderer = *context.Shape2D;
+    const char *title
+) {
+    auto &renderer = *context.Shape2D;
 
     DrawCenteredText(renderer, title, kMenuTitleY, kWhite, 1.8f);
 
     ButtonStyle style{};
     style.TextScale = 0.85f;
 
-    for (int index = 0; index < static_cast<int>(buttons.size()); ++index)
-    {
+    for (int index = 0; index < static_cast<int>(buttons.size()); ++index) {
         buttons[static_cast<std::size_t>(index)].Draw(
             renderer,
             *context.Font,
@@ -646,9 +513,4 @@ void PongGame::RenderButtons(
             index == selectedIndex
         );
     }
-}
-
-std::string PongGame::BuildFpsText() const
-{
-    return "FPS " + std::to_string(m_displayFps);
 }

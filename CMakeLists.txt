@@ -49,6 +49,11 @@ add_executable(PingPong
         Game/Pong/Systems/PongRules.cpp
         Game/Pong/Systems/PaddleAI.cpp
         Game/Pong/Systems/PongCollisionSystem.cpp
+        Game/Pong/PongScene.cpp
+        Game/Pong/Entities/ScoreBoard.cpp
+        Game/Pong/Entities/Wall.cpp
+        Game/Pong/Entities/PlayField.cpp
+        Game/Pong/Entities/CenterLine.cpp
 )
 find_package(directxtk CONFIG REQUIRED)
 target_include_directories(PingPong PRIVATE

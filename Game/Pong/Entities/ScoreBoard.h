@@ -5,9 +5,22 @@
 #ifndef PINGPONG_SCOREBOARD_H
 #define PINGPONG_SCOREBOARD_H
 
+#include "Core/Common/Types.h"
+#include "Game/Pong/PongTypes.h"
 
-class ScoreBoard {
+class ShapeRenderer2D;
+
+class ScoreBoard final
+{
+public:
+    static void Render(
+        const ShapeRenderer2D& renderer,
+        ScoreType leftScore,
+        ScoreType rightScore,
+        int fps,
+        GameMode gameMode,
+        Difficulty difficulty
+    );
 };
-
 
 #endif //PINGPONG_SCOREBOARD_H

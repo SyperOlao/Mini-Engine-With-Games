@@ -14,6 +14,7 @@
 #include "Core/UI/Button.h"
 #include "Game/Pong/Entities/Ball.h"
 #include "Game/Pong/Entities/Paddle.h"
+#include "Game/Pong/PongScene.h"
 #include "Game/Pong/PongTypes.h"
 #include "Game/Pong/Systems/PaddleAI.h"
 
@@ -54,8 +55,6 @@ private:
     void RenderMainMenu(const AppContext& context) const;
     void RenderSettingsMenu(const AppContext& context) const;
     void RenderGameplay(const AppContext& context) const;
-    void RenderPlayField(const AppContext& context) const;
-    void RenderHUD(const AppContext& context) const;
 
     static void RenderButtons(
         const AppContext& context,
@@ -63,8 +62,6 @@ private:
         int selectedIndex,
         const char* title
     );
-
-    [[nodiscard]] std::string BuildFpsText() const;
 
 private:
     ScreenState m_screenState{ScreenState::MainMenu};
@@ -80,6 +77,7 @@ private:
     Paddle m_rightPaddle{};
     Ball m_ball{};
 
+    PongScene m_scene{};
     PaddleAI m_paddleAI{};
 
     ScoreType m_leftScore{0};
@@ -90,5 +88,6 @@ private:
     int m_fpsFrames{0};
     int m_displayFps{0};
 };
+
 
 #endif //PINGPONG_GAME_H
