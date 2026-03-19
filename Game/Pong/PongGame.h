@@ -5,19 +5,15 @@
 #ifndef PINGPONG_GAME_H
 #define PINGPONG_GAME_H
 
-#include <array>
-#include <string>
-
 #include "Core/App/IGame.h"
 #include "Core/Common/Types.h"
 #include "Core/Input/InputSystem.h"
-#include "Core/UI/Button.h"
-#include "Core/UI/Switcher.h"
 #include "Game/Pong/Entities/Ball.h"
 #include "Game/Pong/Entities/Paddle.h"
 #include "Game/Pong/PongScene.h"
 #include "Game/Pong/PongTypes.h"
 #include "Game/Pong/Systems/PaddleAI.h"
+#include "UI/PongUI.h"
 
 struct AppContext;
 
@@ -30,14 +26,8 @@ public:
     void Render(AppContext &context) override;
 
 private:
-    enum class ScreenState : std::uint8_t {
-        MainMenu = 0,
-        Settings,
-        Playing,
-        GameOver
-    };
+    void HandleUiAction(PongUI::Action action);
 
-private:
     void ApplyDifficulty();
 
     void StartGame(GameMode mode);
@@ -46,13 +36,7 @@ private:
 
     void ResetMatch();
 
-    void UpdateMainMenu(AppContext &context);
-
-    void UpdateSettingsMenu(const AppContext &context);
-
     void UpdateGameplay(const AppContext &context, float deltaTime);
-
-    void UpdateGameOver(const AppContext &context);
 
     static void UpdatePlayerPaddle(const AppContext &context, Paddle &paddle, InputPlayer player, float deltaTime);
 
@@ -68,34 +52,10 @@ private:
 
     [[nodiscard]] bool IsEndlessModeActive() const noexcept;
 
-    void RenderMainMenu(const AppContext &context) const;
-
-    void RenderSettingsMenu(const AppContext &context) const;
-
-    void RenderGameplay(const AppContext &context) const;
-
-    void RenderGameOver(const AppContext &context) const;
-
-    static void RenderButtons(
-        const AppContext &context,
-        const std::array<Button, 4> &buttons,
-        int selectedIndex,
-        const char *title
-    );
-
 private:
-    ScreenState m_screenState{ScreenState::MainMenu};
     GameMode m_gameMode{GameMode::TwoPlayers};
     Difficulty m_difficulty{Difficulty::Medium};
     MatchRule m_matchRule{MatchRule::FirstTo10};
-
-    std::array<Button, 4> m_mainMenuButtons{};
-    Switcher m_difficultySwitcher{};
-    Switcher m_matchRuleSwitcher{};
-    Button m_settingsBackButton{};
-
-    int m_selectedMainMenuIndex{0};
-    int m_selectedSettingsIndex{0};
 
     Paddle m_leftPaddle{};
     Paddle m_rightPaddle{};
@@ -103,6 +63,7 @@ private:
 
     PongScene m_scene{};
     PaddleAI m_paddleAI{};
+    PongUI m_ui{};
 
     ScoreType m_leftScore{0};
     ScoreType m_rightScore{0};
@@ -111,9 +72,6 @@ private:
     float m_fpsAccumulator{0.0f};
     int m_fpsFrames{0};
     int m_displayFps{0};
-
-    std::string m_resultText{};
 };
-
 
 #endif //PINGPONG_GAME_H

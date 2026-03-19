@@ -59,6 +59,9 @@ add_executable(PingPong
         Core/Audio/AudioSystem.cpp
         Core/Audio/AudioSystem.h
         Core/Audio/AudioSystem.h
+        Game/Pong/UI/PongUI.cpp
+        Game/Pong/UI/PongUI.h
+        Game/Pong/UI/PongUI.h
 )
 find_package(directxtk CONFIG REQUIRED)
 target_include_directories(PingPong PRIVATE
