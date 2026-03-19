@@ -74,7 +74,7 @@ target_link_libraries(PingPong PRIVATE
         user32
         gdi32
 )
-
+file(COPY ${CMAKE_SOURCE_DIR}/Game/Pong/Assets DESTINATION ${CMAKE_BINARY_DIR}/Game/Pong)
 
 file(COPY
         ${CMAKE_SOURCE_DIR}/Core/Shaders

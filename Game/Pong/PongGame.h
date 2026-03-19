@@ -21,16 +21,16 @@
 
 struct AppContext;
 
-class PongGame final : public IGame
-{
+class PongGame final : public IGame {
 public:
-    void Initialize(AppContext& context) override;
-    void Update(AppContext& context, float deltaTime) override;
-    void Render(AppContext& context) override;
+    void Initialize(AppContext &context) override;
+
+    void Update(AppContext &context, float deltaTime) override;
+
+    void Render(AppContext &context) override;
 
 private:
-    enum class ScreenState : std::uint8_t
-    {
+    enum class ScreenState : std::uint8_t {
         MainMenu = 0,
         Settings,
         Playing,
@@ -39,35 +39,48 @@ private:
 
 private:
     void ApplyDifficulty();
+
     void StartGame(GameMode mode);
+
     void ResetRound();
+
     void ResetMatch();
 
-    void UpdateMainMenu(AppContext& context);
-    void UpdateSettingsMenu(AppContext& context);
-    void UpdateGameplay(AppContext& context, float deltaTime);
-    void UpdateGameOver(const AppContext& context);
+    void UpdateMainMenu(AppContext &context);
 
-    static void UpdatePlayerPaddle(const AppContext& context, Paddle& paddle, InputPlayer player, float deltaTime);
-    void UpdateBall(float deltaTime);
+    void UpdateSettingsMenu(const AppContext &context);
 
-    static void ClampPaddleToField(Paddle& paddle) noexcept;
+    void UpdateGameplay(const AppContext &context, float deltaTime);
+
+    void UpdateGameOver(const AppContext &context);
+
+    static void UpdatePlayerPaddle(const AppContext &context, Paddle &paddle, InputPlayer player, float deltaTime);
+
+    void UpdateBall(float deltaTime, const AppContext &context);
+
+    static void ClampPaddleToField(Paddle &paddle) noexcept;
+
     void LaunchBallRandomDirection();
+
     void ScorePoint(CourtSide outSide);
+
     void FinishMatch();
 
     [[nodiscard]] bool IsEndlessModeActive() const noexcept;
 
-    void RenderMainMenu(const AppContext& context) const;
-    void RenderSettingsMenu(const AppContext& context) const;
-    void RenderGameplay(const AppContext& context) const;
-    void RenderGameOver(const AppContext& context) const;
+    void RenderMainMenu(const AppContext &context) const;
+
+    void RenderSettingsMenu(const AppContext &context) const;
+
+    void RenderGameplay(const AppContext &context) const;
+
+    void RenderGameOver(const AppContext &context) const;
 
     static void RenderButtons(
-        const AppContext& context,
-        const std::array<Button, 4>& buttons,
+        const AppContext &context,
+        const std::array<Button, 4> &buttons,
         int selectedIndex,
-        const char* title
+        const char *title
     );
 
 private:

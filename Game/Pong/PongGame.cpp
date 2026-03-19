@@ -22,6 +22,7 @@
 #include "Core/UI/BitmapFont.h"
 #include "Game/Pong/Systems/PongCollisionSystem.h"
 #include "Game/Pong/Systems/PongRules.h"
+#include "Core/Audio/AudioSystem.h"
 
 namespace {
     constexpr Color kWhite{1.0f, 1.0f, 1.0f, 1.0f};
@@ -96,8 +97,8 @@ namespace {
     }
 
     void DrawRightAlignedText(
-        ShapeRenderer2D &renderer,
-        std::string_view text,
+        const ShapeRenderer2D &renderer,
+        const std::string_view text,
         const float rightX,
         const float y,
         const Color &color,
@@ -109,7 +110,7 @@ namespace {
     }
 
     void RenderSwitcherRow(
-        ShapeRenderer2D &renderer,
+        const ShapeRenderer2D &renderer,
         const Switcher &switcher,
         const bool selected
     ) {
@@ -182,7 +183,19 @@ void PongGame::Initialize(AppContext &context) {
     m_rightPaddle.ColorTint = kWhite;
     m_ball.ColorTint = kWhite;
 
+    context.Audio->Load("ui_move", "Game/Pong/Assets/UI_MOVE.wav");
+    context.Audio->Load("ui_accept", "Game/Pong/Assets/UI_ACCEPT.wav");
+    context.Audio->Load("paddle_hit", "Game/Pong/Assets/PING.wav");
+    context.Audio->Load("wall_hit", "Game/Pong/Assets/BALL_WALL.wav");
+    context.Audio->Load("score", "Game/Pong/Assets/POINT.wav");
+    // context.Audio->Load("serve", "Assets/Audio/serve.wav");
+    // context.Audio->Load("music_menu", "Game/Pong/Assets/music_menu.wav");
+    context.Audio->Load("music_game", "Game/Pong/Assets/MUSIC.wav");
+
+    context.Audio->StartLoop("music_game", 0.35f);
+
     m_scene.Initialize();
+
     ResetMatch();
 }
 
@@ -293,15 +306,23 @@ void PongGame::ResetMatch() {
 void PongGame::UpdateMainMenu(AppContext &context) {
     auto &input = *context.Input;
 
+    const int previousIndex = m_selectedMainMenuIndex;
+
     if (WasMenuUpPressed(input)) {
         m_selectedMainMenuIndex = (m_selectedMainMenuIndex + 3) % 4;
     } else if (WasMenuDownPressed(input)) {
         m_selectedMainMenuIndex = (m_selectedMainMenuIndex + 1) % 4;
     }
 
+    if (previousIndex != m_selectedMainMenuIndex) {
+        context.Audio->PlayOneShot("ui_move", 0.45f);
+    }
+
     if (!m_mainMenuButtons[m_selectedMainMenuIndex].HandleKeyboard(input, true)) {
         return;
     }
+
+    context.Audio->PlayOneShot("ui_accept", 0.65f);
 
     switch (m_selectedMainMenuIndex) {
         case 0:
@@ -328,13 +349,16 @@ void PongGame::UpdateMainMenu(AppContext &context) {
     }
 }
 
-void PongGame::UpdateSettingsMenu(AppContext &context) {
+void PongGame::UpdateSettingsMenu(const AppContext &context) {
     auto &input = *context.Input;
 
     if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
+        context.Audio->PlayOneShot("ui_accept", 0.65f);
         m_screenState = ScreenState::MainMenu;
         return;
     }
+
+    const int previousIndex = m_selectedSettingsIndex;
 
     if (WasMenuUpPressed(input)) {
         m_selectedSettingsIndex = (m_selectedSettingsIndex + 2) % 3;
@@ -342,8 +366,13 @@ void PongGame::UpdateSettingsMenu(AppContext &context) {
         m_selectedSettingsIndex = (m_selectedSettingsIndex + 1) % 3;
     }
 
+    if (previousIndex != m_selectedSettingsIndex) {
+        context.Audio->PlayOneShot("ui_move", 0.45f);
+    }
+
     if (m_selectedSettingsIndex == 0) {
         if (m_difficultySwitcher.HandleKeyboard(input)) {
+            context.Audio->PlayOneShot("ui_move", 0.5f);
             m_difficulty = static_cast<Difficulty>(m_difficultySwitcher.SelectedIndex());
             ApplyDifficulty();
         }
@@ -353,6 +382,7 @@ void PongGame::UpdateSettingsMenu(AppContext &context) {
 
     if (m_selectedSettingsIndex == 1) {
         if (m_matchRuleSwitcher.HandleKeyboard(input)) {
+            context.Audio->PlayOneShot("ui_move", 0.5f);
             m_matchRule = static_cast<MatchRule>(m_matchRuleSwitcher.SelectedIndex());
         }
 
@@ -360,19 +390,22 @@ void PongGame::UpdateSettingsMenu(AppContext &context) {
     }
 
     if (m_settingsBackButton.HandleKeyboard(input, true)) {
+        context.Audio->PlayOneShot("ui_accept", 0.65f);
         m_screenState = ScreenState::MainMenu;
     }
 }
 
-void PongGame::UpdateGameplay(AppContext &context, const float deltaTime) {
+void PongGame::UpdateGameplay(const AppContext &context, const float deltaTime) {
     auto &input = *context.Input;
 
     if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
+        context.Audio->PlayOneShot("ui_accept", 0.65f);
         m_screenState = ScreenState::MainMenu;
         return;
     }
 
     if (input.GetKeyboard().WasKeyPressed(Key::Enter)) {
+        context.Audio->PlayOneShot("ui_accept", 0.65f);
         ResetMatch();
         return;
     }
@@ -402,10 +435,11 @@ void PongGame::UpdateGameplay(AppContext &context, const float deltaTime) {
         return;
     }
 
-    UpdateBall(deltaTime);
+    UpdateBall(deltaTime, context);
 
-    PongCollisionSystem::HandlePaddleCollision(m_ball, m_leftPaddle, m_rightPaddle);
-
+    if (PongCollisionSystem::HandlePaddleCollision(m_ball, m_leftPaddle, m_rightPaddle)) {
+        context.Audio->PlayOneShot("paddle_hit", 0.75f);
+    }
     const CourtSide outOfBounds = PongCollisionSystem::CheckScoring(m_ball);
     if (outOfBounds != CourtSide::None) {
         ScorePoint(outOfBounds);
@@ -416,11 +450,13 @@ void PongGame::UpdateGameOver(const AppContext &context) {
     auto &input = *context.Input;
 
     if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
+        context.Audio->PlayOneShot("ui_accept", 0.65f);
         m_screenState = ScreenState::MainMenu;
         return;
     }
 
     if (input.GetKeyboard().WasKeyPressed(Key::Enter)) {
+        context.Audio->PlayOneShot("ui_accept", 0.65f);
         StartGame(m_gameMode);
     }
 }
@@ -436,14 +472,16 @@ void PongGame::UpdatePlayerPaddle(
     ClampPaddleToField(paddle);
 }
 
-void PongGame::UpdateBall(const float deltaTime) {
+void PongGame::UpdateBall(const float deltaTime, const AppContext &context) {
     m_ball.Movement.Update(m_ball.Transform, deltaTime);
 
-    PongCollisionSystem::HandleWallCollision(
+    if (PongCollisionSystem::HandleWallCollision(
         m_ball,
         PongRules::GetPlayableTop(),
         PongRules::GetPlayableBottom()
-    );
+    )) {
+        context.Audio->PlayOneShot("wall_hit", 0.45f);
+    }
 }
 
 void PongGame::ClampPaddleToField(Paddle &paddle) noexcept {
@@ -585,9 +623,8 @@ void PongGame::RenderGameplay(const AppContext &context) const {
     );
 }
 
-void PongGame::RenderGameOver(const AppContext& context) const
-{
-    auto& renderer = *context.Shape2D;
+void PongGame::RenderGameOver(const AppContext &context) const {
+    auto &renderer = *context.Shape2D;
 
     RenderGameplay(context);
 

@@ -49,6 +49,8 @@ void Application::Initialize() {
         m_window.GetHeight()
     );
 
+    m_audio.Initialize();
+
     m_shapeRenderer2D.Initialize(m_graphics);
 
     m_context.MainWindow = &m_window;
