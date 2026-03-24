@@ -16,13 +16,15 @@ enum class Key : std::uint16_t {
     S = 'S',
     D = 'D',
     A = 'A',
+    P = 'P',
     Left = VK_LEFT,
     Right = VK_RIGHT,
     Up = VK_UP,
     Down = VK_DOWN,
     Escape = VK_ESCAPE,
     Enter = VK_RETURN,
-    F1 = VK_F1
+    F1 = VK_F1,
+    F2 = VK_F2
 };
 
 class Keyboard final {

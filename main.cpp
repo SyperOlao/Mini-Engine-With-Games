@@ -4,6 +4,13 @@
 #include <Windows.h>
 #include <exception>
 #include "Game/Pong/PongGame.h"
+#include "Game/SolarSystem/SolarSystemGame.h"
+
+enum class DemoType
+{
+    Pong,
+    SolarSystem
+};
 
 int main()
 {
@@ -11,18 +18,22 @@ int main()
     {
         HINSTANCE__ *const hInstance = GetModuleHandleW(nullptr);
 
-        Application app(
-            hInstance,
-            std::make_unique<PongGame>(),
-            ApplicationDesc{
-                .Title = L"Pong DX11",
-                .ClientWidth = 1280,
-                .ClientHeight = 720,
-                .VSync = true,
-                .ClearColor = Color(0.05f, 0.05f, 0.08f, 1.0f)
-            }
-        );
+        constexpr auto demo = DemoType::SolarSystem;
 
+        std::unique_ptr<IGame> game;
+
+        switch (demo)
+        {
+            case DemoType::Pong:
+                game = std::make_unique<PongGame>();
+                break;
+
+            case DemoType::SolarSystem:
+                game = std::make_unique<SolarSystemGame>();
+                break;
+        }
+
+        Application app(hInstance, std::move(game));
         return app.Run();
     }
     catch (const std::exception& exception)

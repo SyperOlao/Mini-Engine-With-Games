@@ -1,0 +1,37 @@
+//
+// Created by SyperOlao on 19.03.2026.
+//
+
+#include "OrbitCamera.h"
+#include <cmath>
+
+using DirectX::SimpleMath::Matrix;
+using DirectX::SimpleMath::Vector3;
+
+void OrbitCamera::SetTarget(const Vector3 &target) noexcept {
+    m_target = target;
+}
+
+void OrbitCamera::SetYawPitchRadius(const float yaw, const float pitch, const float radius) noexcept {
+    m_yaw = yaw;
+    m_pitch = pitch;
+    m_radius = radius;
+}
+
+Matrix OrbitCamera::GetViewMatrix() const {
+    const Vector3 position = CalculatePosition();
+    return Matrix::CreateLookAt(position, m_target, Vector3::Up);
+}
+
+Vector3 OrbitCamera::CalculatePosition() const noexcept {
+    const float cosPitch = std::cos(m_pitch);
+    const float sinPitch = std::sin(m_pitch);
+    const float cosYaw = std::cos(m_yaw);
+    const float sinYaw = std::sin(m_yaw);
+
+    return Vector3(
+        m_target.x + m_radius * sinYaw * cosPitch,
+        m_target.y + m_radius * sinPitch,
+        m_target.z + m_radius * cosYaw * cosPitch
+    );
+}

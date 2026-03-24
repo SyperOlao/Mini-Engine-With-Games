@@ -62,10 +62,52 @@ add_executable(PingPong
         Game/Pong/UI/PongUI.cpp
         Game/Pong/UI/PongUI.h
         Game/Pong/UI/PongUI.h
+        Game/SolarSystem/SolarSystemGame.cpp
+        Game/SolarSystem/SolarSystemGame.h
+        Game/SolarSystem/SolarSystemScene.cpp
+        Game/SolarSystem/SolarSystemScene.h
+        Game/SolarSystem/Entities/PlanetBody.cpp
+        Game/SolarSystem/Entities/PlanetBody.h
+        Core/Graphics/OrbitCamera.cpp
+        Core/Graphics/OrbitCamera.h
+        Core/Math/Transform3D.h
+        Core/Math/OrbitMath.h
+        Core/Math/OrbitMath.cpp
+        Game/SolarSystem/Entities/OrbitalBody.cpp
+        Game/SolarSystem/Entities/OrbitalBody.h
+        Core/Graphics/MeshData.h
+        Core/Graphics/MeshGenerator.h
+        Core/Graphics/ProjectionMode.h
+        Core/Graphics/Camera.h
+        Core/Graphics/Vertex3D.h
+        Core/Graphics/MeshGenerator.cpp
+        Core/Graphics/MeshGenerator.cpp
+        Core/Graphics/FpsCamera.cpp
+        Core/Graphics/FpsCamera.h
+        Core/Graphics/FpsCamera.h
+        Core/Graphics/FpsCamera.h
+        Core/Graphics/ObjectConstants.h
+        Core/Graphics/PrimitiveRenderer3D.h
+        Core/Graphics/FpsCamera.cpp
+        Core/Graphics/PrimitiveRenderer3D.cpp
+        Core/Graphics/PrimitiveRenderer3D.cpp
 )
 find_package(directxtk CONFIG REQUIRED)
 target_include_directories(PingPong PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_library(SolarSystemGame STATIC
+        Game/SolarSystem/SolarSystemGame.cpp
+        Game/SolarSystem/SolarSystemScene.cpp
+)
+
+target_include_directories(SolarSystemGame PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(SolarSystemGame PRIVATE
+        Microsoft::DirectXTK
 )
 
 target_link_libraries(PingPong PRIVATE
