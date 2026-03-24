@@ -8,7 +8,7 @@ using DirectX::SimpleMath::Color;
 using DirectX::SimpleMath::Vector3;
 
 
-MeshData MeshGenerator::CreateBox(float width, float height, float depth) {
+MeshData MeshGenerator::CreateBox(const float width, const float height, const float depth) {
     MeshData mesh{};
 
     const float hx = width * 0.5f;
@@ -43,7 +43,7 @@ MeshData MeshGenerator::CreateBox(float width, float height, float depth) {
     return mesh;
 }
 
-MeshData MeshGenerator::CreateSphere(float radius, int slices, int stacks) {
+MeshData MeshGenerator::CreateSphere(const float radius, const int slices, const int stacks) {
     MeshData mesh{};
 
     if (slices < 3 || stacks < 2) {
@@ -74,9 +74,9 @@ MeshData MeshGenerator::CreateSphere(float radius, int slices, int stacks) {
 
     for (int stack = 0; stack < stacks; ++stack) {
         for (int slice = 0; slice < slices; ++slice) {
-            const std::uint32_t i0 = static_cast<std::uint32_t>(stack * ringVertexCount + slice);
+            const auto i0 = static_cast<std::uint32_t>(stack * ringVertexCount + slice);
             const std::uint32_t i1 = i0 + 1;
-            const std::uint32_t i2 = static_cast<std::uint32_t>((stack + 1) * ringVertexCount + slice);
+            const auto i2 = static_cast<std::uint32_t>((stack + 1) * ringVertexCount + slice);
             const std::uint32_t i3 = i2 + 1;
 
             mesh.Indices.push_back(i0);

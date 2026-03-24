@@ -24,7 +24,8 @@ enum class Key : std::uint16_t {
     Escape = VK_ESCAPE,
     Enter = VK_RETURN,
     F1 = VK_F1,
-    F2 = VK_F2
+    F2 = VK_F2,
+    Tab = VK_TAB,
 };
 
 class Keyboard final {

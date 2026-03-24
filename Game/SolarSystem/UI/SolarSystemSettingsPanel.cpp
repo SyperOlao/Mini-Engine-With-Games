@@ -118,6 +118,14 @@ bool SolarSystemSettingsPanel::IsOpen() const noexcept
     return m_isOpen;
 }
 
+bool SolarSystemSettingsPanel::IsInteracting() const noexcept {
+    return m_planetRotationSlider.IsDragging() ||
+         m_moonRotationSlider.IsDragging() ||
+         m_planetOrbitSlider.IsDragging() ||
+         m_moonOrbitSlider.IsDragging() ||
+         m_eccentricitySlider.IsDragging();
+}
+
 void SolarSystemSettingsPanel::Toggle() noexcept
 {
     m_isOpen = !m_isOpen;

@@ -26,6 +26,7 @@ public:
     [[nodiscard]] SolarSystemTuning GetTuning() const noexcept;
 
     [[nodiscard]] bool IsOpen() const noexcept;
+    [[nodiscard]] bool IsInteracting() const noexcept;
     void Toggle() noexcept;
 
 private:

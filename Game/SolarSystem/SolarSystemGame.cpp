@@ -24,6 +24,7 @@
 #include "Core/Input/InputSystem.h"
 #include "Core/Input/Keyboard.h"
 #include "Core/Input/RawInputHandler.h"
+#include "Core/Platform/Window.h"
 #include "Core/UI/BitmapFont.h"
 #include "Game/SolarSystem/Entities/OrbitalBody.h"
 
@@ -31,7 +32,8 @@
 using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector3;
 
-namespace {
+namespace
+{
     constexpr float kMoveSpeed = 18.0f;
     constexpr float kRotationSpeed = 1.8f;
 
@@ -44,6 +46,14 @@ namespace {
 
     constexpr float kOrbitMinPitch = -1.35f;
     constexpr float kOrbitMaxPitch = 1.35f;
+
+    POINT GetMouseClientPosition(HWND__ *const hwnd)
+    {
+        POINT point{};
+        GetCursorPos(&point);
+        ScreenToClient(hwnd, &point);
+        return point;
+    }
 }
 
 void SolarSystemGame::Initialize(AppContext &context) {
@@ -58,6 +68,9 @@ void SolarSystemGame::Initialize(AppContext &context) {
     m_fpsCamera.SetPosition(Vector3(0.0f, 8.0f, -30.0f));
     m_fpsCamera.SetRotation(0.0f, 0.15f);
 
+    m_settingsPanel.Initialize();
+    m_settingsPanel.SetBounds(RectF{20.0f, 150.0f, 300.0f, 320.0f});
+
     m_orbitCamera.SetTarget(Vector3(0.0f, 0.0f, 0.0f));
     m_orbitCamera.SetYawPitchRadius(m_orbitCameraYaw, m_orbitCameraPitch, m_orbitCameraRadius);
 
@@ -71,27 +84,52 @@ void SolarSystemGame::Initialize(AppContext &context) {
 }
 
 void SolarSystemGame::Update(AppContext &context, const float deltaTime) {
-    if (!m_initialized) {
+    if (!m_initialized)
+    {
         return;
     }
-    RawInputHandler::Instance().ClearFrameDeltas();
+
     UpdateFpsCounter(deltaTime);
     HandleGlobalInput(context);
 
-    switch (m_cameraMode) {
-        case CameraMode::Fps:
-            UpdateFpsCamera(context, deltaTime);
-            break;
+    const auto& raw = RawInputHandler::Instance();
 
-        case CameraMode::Orbit:
-            UpdateOrbitCamera(context, deltaTime);
-            break;
+    HWND__ *const hwnd = context.MainWindow->GetHandle();
+    const auto [x, y] = GetMouseClientPosition(hwnd);
 
-        default:
-            break;
+    MouseState mouse{};
+    mouse.X = static_cast<float>(x);
+    mouse.Y = static_cast<float>(y);
+    mouse.LeftDown = raw.IsLeftMouseDown();
+    mouse.LeftPressed = raw.IsLeftMouseDown() && !m_prevLeftMouseDown;
+    mouse.LeftReleased = !raw.IsLeftMouseDown() && m_prevLeftMouseDown;
+
+    m_settingsPanel.Update(mouse);
+    m_prevLeftMouseDown = raw.IsLeftMouseDown();
+
+    const SolarSystemTuning tuning = m_settingsPanel.GetTuning();
+    m_scene.Update(deltaTime);
+
+    if (const bool uiInteracting = m_settingsPanel.IsInteracting(); !uiInteracting)
+    {
+        switch (m_cameraMode)
+        {
+            case CameraMode::Fps:
+                UpdateFpsCamera(context, deltaTime);
+                break;
+
+            case CameraMode::Orbit:
+                UpdateOrbitCamera(context, deltaTime);
+                break;
+
+            default:
+                break;
+        }
     }
 
     m_scene.Update(deltaTime);
+
+    RawInputHandler::Instance().ClearFrameDeltas();
 }
 
 void SolarSystemGame::Render(AppContext &context) {
@@ -142,6 +180,7 @@ void SolarSystemGame::Render(AppContext &context) {
         BitmapFont::DrawString(*context.Shape2D, 16.0f, 116.0f, "ORBIT: RMB ROTATE  W/S ZOOM",
                                Color(0.70f, 0.78f, 0.9f, 1.0f), helpScale);
     }
+    m_settingsPanel.Render(*context.Shape2D);
 }
 
 void SolarSystemGame::Shutdown(AppContext &context) {
@@ -180,6 +219,10 @@ void SolarSystemGame::HandleGlobalInput(const AppContext &context) {
 
     if (keyboard.WasKeyPressed(Key::Escape)) {
         PostQuitMessage(0);
+    }
+    if (keyboard.WasKeyPressed(Key::Tab))
+    {
+        m_settingsPanel.Toggle();
     }
 }
 

@@ -5,7 +5,6 @@
 #ifndef PINGPONG_UITHEME_H
 #define PINGPONG_UITHEME_H
 #include "Core/Graphics/Color.h"
-#include "Game/SolarSystem/SolarSystemGame.h"
 
 struct UITheme final {
     Color PanelBackground{0.05f, 0.07f, 0.11f, 0.92f};

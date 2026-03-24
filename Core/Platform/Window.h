@@ -25,6 +25,7 @@ public:
     [[nodiscard]] int GetWidth() const noexcept;
     [[nodiscard]] int GetHeight() const noexcept;
 
+
 private:
     static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
     LRESULT HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) const;

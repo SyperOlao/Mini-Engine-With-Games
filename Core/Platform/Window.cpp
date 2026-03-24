@@ -98,6 +98,8 @@ int Window::GetHeight() const noexcept
     return m_height;
 }
 
+
+
 LRESULT CALLBACK Window::WindowProc(HWND__ *const hWnd, const UINT message, const WPARAM wParam, const LPARAM lParam)
 {
     if (message == WM_NCCREATE)

@@ -7,13 +7,9 @@
 #include "SolarSystemScene.h"
 #include "Core/App/IGame.h"
 #include "Core/Graphics/FpsCamera.h"
-#include <memory>
-
-#include "Core/App/IGame.h"
-#include "Core/Graphics/FpsCamera.h"
 #include "../../Core/Graphics/OrbitCamera.h"
 #include "Core/Graphics/PrimitiveRenderer3D.h"
-#include "Game/SolarSystem/SolarSystemScene.h"
+#include "UI/SolarSystemSettingsPanel.h"
 
 struct AppContext;
 class Camera;
@@ -58,7 +54,9 @@ private:
     FpsCamera m_fpsCamera{};
     OrbitCamera m_orbitCamera{};
     CameraMode m_cameraMode{CameraMode::Orbit};
+    SolarSystemSettingsPanel m_settingsPanel;
 
+    bool m_prevLeftMouseDown{false};
     float m_orbitCameraYaw{0.6f};
     float m_orbitCameraPitch{0.5f};
     float m_orbitCameraRadius{45.0f};
