@@ -8,13 +8,13 @@
 #include "Core/App/IGame.h"
 #include "Core/Graphics/FpsCamera.h"
 #include "Core/Graphics/OrbitCamera.h"
-#include "Core/Graphics/Rendering/PrimitiveRenderer3D.h"
 #include "Rendering/SpaceBackdropRenderer.h"
 #include "UI/SolarSystemSettingsPanel.h"
 
 struct AppContext;
 class Camera;
 class OrbitalBody;
+class PrimitiveRenderer3D;
 #include "Systems/SolarSystemEngineAudioController.h"
 enum class CameraMode : std::uint8_t
 {
@@ -48,22 +48,23 @@ private:
     [[nodiscard]] const Camera& GetActiveCamera() const noexcept;
 
     void RenderOrbitRecursive(
-        const OrbitalBody& body,
-        const DirectX::SimpleMath::Matrix& parentWorld,
-        const DirectX::SimpleMath::Matrix& view,
-        const DirectX::SimpleMath::Matrix& projection
+        PrimitiveRenderer3D &primitiveRenderer,
+        const OrbitalBody &body,
+        const DirectX::SimpleMath::Matrix &parentWorld,
+        const DirectX::SimpleMath::Matrix &view,
+        const DirectX::SimpleMath::Matrix &projection
     );
 
     void RenderBodyRecursive(
-        const OrbitalBody& body,
-        const DirectX::SimpleMath::Matrix& view,
-        const DirectX::SimpleMath::Matrix& projection
+        PrimitiveRenderer3D &primitiveRenderer,
+        const OrbitalBody &body,
+        const DirectX::SimpleMath::Matrix &view,
+        const DirectX::SimpleMath::Matrix &projection
     );
 
 private:
     SolarSystemScene m_scene{};
 
-    PrimitiveRenderer3D m_renderer3D{};
     SpaceBackdropRenderer m_spaceBackdrop{};
 
     FpsCamera m_fpsCamera{};

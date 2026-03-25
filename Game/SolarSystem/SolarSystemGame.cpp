@@ -22,6 +22,7 @@
 #include "Core/Graphics/Camera.h"
 #include "Core/Graphics/Color.h"
 #include "Core/Graphics/GraphicsDevice.h"
+#include "Core/Graphics/Rendering/PrimitiveRenderer3D.h"
 #include "Core/Input/InputSystem.h"
 #include "Core/Input/Keyboard.h"
 #include "Core/Input/RawInputHandler.h"
@@ -63,7 +64,6 @@ void SolarSystemGame::Initialize(AppContext &context) {
 
     m_scene.Initialize();
 
-    m_renderer3D.Initialize(*context.Graphics.Device);
     m_spaceBackdrop.Initialize();
 
     m_fpsCamera.SetPosition(Vector3(0.0f, 8.0f, -30.0f));
@@ -155,14 +155,16 @@ void SolarSystemGame::Render(AppContext &context) {
     const Matrix view = activeCamera.GetViewMatrix();
     const Matrix projection = activeCamera.GetProjectionMatrix(aspectRatio);
 
-    m_spaceBackdrop.Render(m_renderer3D, activeCamera, view, projection);
+    PrimitiveRenderer3D &primitiveRenderer = context.GetPrimitiveRenderer3D();
+
+    m_spaceBackdrop.Render(primitiveRenderer, activeCamera, view, projection);
 
     for (const auto &root: m_scene.GetRoots()) {
-        RenderOrbitRecursive(*root, Matrix::Identity, view, projection);
+        RenderOrbitRecursive(primitiveRenderer, *root, Matrix::Identity, view, projection);
     }
 
     for (const auto &root: m_scene.GetRoots()) {
-        RenderBodyRecursive(*root, view, projection);
+        RenderBodyRecursive(primitiveRenderer, *root, view, projection);
     }
 
     if (context.Ui.Font != nullptr) {
@@ -371,6 +373,7 @@ const Camera &SolarSystemGame::GetActiveCamera() const noexcept {
 }
 
 void SolarSystemGame::RenderOrbitRecursive(
+    PrimitiveRenderer3D &primitiveRenderer,
     const OrbitalBody &body,
     const Matrix &parentWorld,
     const Matrix &view,
@@ -388,30 +391,31 @@ void SolarSystemGame::RenderOrbitRecursive(
             orbitPoints.push_back(world);
         }
 
-        m_renderer3D.DrawOrbit(orbitPoints, view, projection, body.OrbitColor);
+        primitiveRenderer.DrawOrbit(orbitPoints, view, projection, body.OrbitColor);
     }
 
     const Matrix currentWorld = body.GetWorldMatrix();
     for (const auto &child: body.GetChildren()) {
-        RenderOrbitRecursive(*child, currentWorld, view, projection);
+        RenderOrbitRecursive(primitiveRenderer, *child, currentWorld, view, projection);
     }
 }
 
 void SolarSystemGame::RenderBodyRecursive(
+    PrimitiveRenderer3D &primitiveRenderer,
     const OrbitalBody &body,
     const Matrix &view,
     const Matrix &projection) {
     switch (body.MeshType) {
         case BodyMeshType::Sphere:
-            m_renderer3D.DrawSphere(body.GetWorldMatrix(), view, projection, body.BaseColor);
+            primitiveRenderer.DrawSphere(body.GetWorldMatrix(), view, projection, body.BaseColor);
             break;
 
         case BodyMeshType::Box:
-            m_renderer3D.DrawBox(body.GetWorldMatrix(), view, projection, body.BaseColor);
+            primitiveRenderer.DrawBox(body.GetWorldMatrix(), view, projection, body.BaseColor);
             break;
     }
 
     for (const auto &child: body.GetChildren()) {
-        RenderBodyRecursive(*child, view, projection);
+        RenderBodyRecursive(primitiveRenderer, *child, view, projection);
     }
 }

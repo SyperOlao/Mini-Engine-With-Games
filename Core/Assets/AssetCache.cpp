@@ -39,7 +39,7 @@ std::shared_ptr<ModelAsset> AssetCache::LoadModel(const std::filesystem::path &c
     }
 
     auto asset = std::make_shared<ModelAsset>();
-    if (!asset->LoadFromCmo(*m_graphics, *m_effectFactory, resolvedPath))
+    if (!asset->LoadFromFile(*m_graphics, *m_effectFactory, resolvedPath))
     {
         return nullptr;
     }

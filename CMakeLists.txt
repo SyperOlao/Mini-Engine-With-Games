@@ -56,6 +56,7 @@ add_executable(PingPong
         Core/Graphics/ObjectConstants.h
         Core/Graphics/ModelAsset.h
         Core/Graphics/ModelAsset.cpp
+        Core/Graphics/ModelAssetAssimp.cpp
         Core/Graphics/ModelRenderer.h
         Core/Graphics/ModelRenderer.cpp
         Core/Graphics/Debug/DebugDrawQueue.h
@@ -113,6 +114,8 @@ add_executable(PingPong
         Core/Physics/Collision2D/CollisionQueries2D.h
         Core/Physics/Collision2D/HorizontalBoundsExit.h
         Core/Physics/Collision3D/AxisAlignedBox3D.h
+        Core/Physics/UniformSpatialGrid3D.h
+        Core/Physics/UniformSpatialGrid3D.cpp
         Core/Physics/Collision3D/BoundingSphere3D.h
         Core/Physics/Collision3D/CollisionContact3D.h
         Core/Physics/Collision3D/CollisionQueries3D.cpp
@@ -208,9 +211,11 @@ add_executable(PingPong
         Game/Katamari/Data/KatamariGameConfig.h
         Game/Katamari/UI/KatamariHud.cpp
         Game/Katamari/UI/KatamariHud.h
+        Core/Graphics/ModelAssetAssimp.cpp
 )
 
 find_package(directxtk CONFIG REQUIRED)
+find_package(assimp CONFIG REQUIRED)
 target_include_directories(PingPong PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
@@ -230,6 +235,7 @@ target_link_libraries(SolarSystemGame PRIVATE
 
 target_link_libraries(PingPong PRIVATE
         Microsoft::DirectXTK
+        assimp::assimp
         d3d11
         dxgi
         d3dcompiler

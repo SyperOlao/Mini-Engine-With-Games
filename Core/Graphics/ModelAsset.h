@@ -20,7 +20,19 @@ class GraphicsDevice;
 class ModelAsset final
 {
 public:
+    bool LoadFromFile(
+        GraphicsDevice &graphics,
+        DirectX::IEffectFactory &effectFactory,
+        const std::filesystem::path &resolvedFilePath
+    );
+
     bool LoadFromCmo(
+        GraphicsDevice &graphics,
+        DirectX::IEffectFactory &effectFactory,
+        const std::filesystem::path &resolvedFilePath
+    );
+
+    bool LoadFromSdkMesh(
         GraphicsDevice &graphics,
         DirectX::IEffectFactory &effectFactory,
         const std::filesystem::path &resolvedFilePath

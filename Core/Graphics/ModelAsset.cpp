@@ -5,6 +5,94 @@
 #include <directxtk/Effects.h>
 #include <directxtk/Model.h>
 
+#include <cwctype>
+#include <exception>
+#include <filesystem>
+#include <memory>
+#include <string>
+
+bool ModelAssetTryLoadAssimp(
+    ID3D11Device *device,
+    DirectX::IEffectFactory &effectFactory,
+    const std::filesystem::path &resolvedFilePath,
+    std::unique_ptr<DirectX::Model> &outModel
+);
+
+namespace
+{
+    std::wstring ToLowerInvariant(std::wstring value)
+    {
+        for (wchar_t &character : value)
+        {
+            character = static_cast<wchar_t>(std::towlower(character));
+        }
+        return value;
+    }
+}
+
+bool ModelAsset::LoadFromFile(
+    GraphicsDevice &graphics,
+    DirectX::IEffectFactory &effectFactory,
+    const std::filesystem::path &resolvedFilePath
+)
+{
+    m_model.reset();
+    m_resolvedSourcePath.clear();
+
+    const std::wstring extensionLower = ToLowerInvariant(resolvedFilePath.extension().wstring());
+    if (extensionLower == L".cmo")
+    {
+        return LoadFromCmo(graphics, effectFactory, resolvedFilePath);
+    }
+    if (extensionLower == L".sdkmesh")
+    {
+        return LoadFromSdkMesh(graphics, effectFactory, resolvedFilePath);
+    }
+    if (extensionLower == L".obj" || extensionLower == L".fbx" || extensionLower == L".gltf" || extensionLower == L".glb" ||
+        extensionLower == L".dae" || extensionLower == L".blend" || extensionLower == L".3ds" || extensionLower == L".ase")
+    {
+        try
+        {
+            if (!ModelAssetTryLoadAssimp(graphics.GetDevice(), effectFactory, resolvedFilePath, m_model))
+            {
+                return false;
+            }
+        }
+        catch (const std::exception &)
+        {
+            return false;
+        }
+        catch (...)
+        {
+            return false;
+        }
+
+        m_resolvedSourcePath = resolvedFilePath;
+        return true;
+    }
+
+    return false;
+}
+
+bool ModelAsset::LoadFromSdkMesh(
+    GraphicsDevice &graphics,
+    DirectX::IEffectFactory &effectFactory,
+    const std::filesystem::path &resolvedFilePath
+)
+{
+    m_model.reset();
+    m_resolvedSourcePath.clear();
+
+    m_model = DirectX::Model::CreateFromSDKMESH(graphics.GetDevice(), resolvedFilePath.c_str(), effectFactory);
+    if (m_model == nullptr)
+    {
+        return false;
+    }
+
+    m_resolvedSourcePath = resolvedFilePath;
+    return true;
+}
+
 bool ModelAsset::LoadFromCmo(
     GraphicsDevice &graphics,
     DirectX::IEffectFactory &effectFactory,
