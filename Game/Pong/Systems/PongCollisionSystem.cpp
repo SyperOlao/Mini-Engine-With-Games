@@ -12,8 +12,7 @@
 
 #include <algorithm>
 #include <cmath>
-
-#include "Core/Common/Constants.h"
+#include "Game/Pong/Common/Constants.h"
 #include "Core/Math/MathHelpers.h"
 #include "Core/Physics/CollisionSystem.h"
 #include "Game/Pong/Entities/Ball.h"

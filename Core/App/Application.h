@@ -17,7 +17,7 @@
 #include "AppContext.h"
 #include "IGame.h"
 #include "Timer.h"
-#include "../Common/Constants.h"
+#include "Game/Pong/Common/Constants.h"
 #include "Core/UI/BitmapFont.h"
 #include "Core/Audio/AudioSystem.h"
 

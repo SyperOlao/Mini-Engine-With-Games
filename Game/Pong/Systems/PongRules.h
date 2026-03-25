@@ -6,7 +6,7 @@
 #define MYPROJECT_PONGRULES_H
 #include <string>
 
-#include "Core/Common/Types.h"
+#include "Game/Pong/Common/Types.h"
 #include "Game/Pong/PongTypes.h"
 
 

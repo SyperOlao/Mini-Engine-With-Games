@@ -7,7 +7,7 @@
 #include <SimpleMath.h>
 
 #include "AABB.h"
-#include "../Common/Types.h"
+#include "Game/Pong/Common/Types.h"
 
 struct CollisionManifold final
 {

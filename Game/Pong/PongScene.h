@@ -5,7 +5,7 @@
 #ifndef PINGPONG_PONGSCENE_H
 #define PINGPONG_PONGSCENE_H
 
-#include "Core/Common/Types.h"
+#include "Game/Pong/Common/Types.h"
 #include "Game/Pong/Entities/PlayField.h"
 #include "Game/Pong/Entities/ScoreBoard.h"
 #include "Game/Pong/PongTypes.h"

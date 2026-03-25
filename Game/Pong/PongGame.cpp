@@ -13,7 +13,7 @@
 #include <string_view>
 
 #include "Core/App/AppContext.h"
-#include "Core/Common/Constants.h"
+#include "Game/Pong/Common/Constants.h"
 #include "Core/Graphics/Color.h"
 #include "Core/Input/InputSystem.h"
 #include "Core/Math/MathHelpers.h"

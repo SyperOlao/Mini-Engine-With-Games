@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <string>
 
-#include "Core/Common/Types.h"
+#include "Game/Pong/Common/Types.h"
 #include "Core/UI/Button.h"
 #include "Core/UI/Switcher.h"
 #include "Game/Pong/PongTypes.h"

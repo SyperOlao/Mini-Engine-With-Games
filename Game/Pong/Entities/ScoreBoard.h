@@ -5,7 +5,7 @@
 #ifndef PINGPONG_SCOREBOARD_H
 #define PINGPONG_SCOREBOARD_H
 
-#include "Core/Common/Types.h"
+#include "Game/Pong/Common/Types.h"
 #include "Game/Pong/PongTypes.h"
 
 class ShapeRenderer2D;

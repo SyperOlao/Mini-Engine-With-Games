@@ -145,6 +145,7 @@ add_executable(PingPong
         Game/Katamari/Data/KatamariGameConfig.h
         Game/Katamari/UI/KatamariHud.cpp
         Game/Katamari/UI/KatamariHud.h
+        Game/Pong/Common/Types.h
 )
 find_package(directxtk CONFIG REQUIRED)
 target_include_directories(PingPong PRIVATE

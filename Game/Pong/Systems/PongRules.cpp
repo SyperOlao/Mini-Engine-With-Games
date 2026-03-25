@@ -14,7 +14,7 @@
 #include <sstream>
 #include <array>
 #include <string>
-#include "Core/Common/Constants.h"
+#include "Game/Pong/Common/Constants.h"
 #include "Game/Pong/PongTypes.h"
 
 

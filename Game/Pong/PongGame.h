@@ -6,7 +6,7 @@
 #define PINGPONG_GAME_H
 
 #include "Core/App/IGame.h"
-#include "Core/Common/Types.h"
+#include "Game/Pong/Common/Types.h"
 #include "Core/Input/InputSystem.h"
 #include "Game/Pong/Entities/Ball.h"
 #include "Game/Pong/Entities/Paddle.h"

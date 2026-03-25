@@ -3,7 +3,7 @@
 //
 
 #include "../Entities/CenterLine.h"
-#include "Core/Common/Constants.h"
+#include "Game/Pong/Common/Constants.h"
 #include "Core/Graphics/Color.h"
 #include "Core/Graphics2D/ShapeRenderer2D.h"
 

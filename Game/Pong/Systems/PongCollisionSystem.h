@@ -5,7 +5,7 @@
 #ifndef MYPROJECT_PONGCOLLISIONSYSTEM_H
 #define MYPROJECT_PONGCOLLISIONSYSTEM_H
 
-#include "Core/Common/Types.h"
+#include "Game/Pong/Common/Types.h"
 
 class Ball;
 class Paddle;
