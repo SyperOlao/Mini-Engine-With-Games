@@ -135,7 +135,7 @@ target_link_libraries(PingPong PRIVATE
         gdi32
 )
 file(COPY ${CMAKE_SOURCE_DIR}/Game/Pong/Assets DESTINATION ${CMAKE_BINARY_DIR}/Game/Pong)
-
+file(COPY ${CMAKE_SOURCE_DIR}/Game/SolarSystem/Assets DESTINATION ${CMAKE_BINARY_DIR}/Game/SolarSystem)
 file(COPY
         ${CMAKE_SOURCE_DIR}/Core/Shaders
         DESTINATION ${CMAKE_BINARY_DIR}/Core

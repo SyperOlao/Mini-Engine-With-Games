@@ -19,6 +19,7 @@
 #include <stdexcept>
 #include <string>
 
+
 namespace {
     [[nodiscard]] std::filesystem::path GetExecutableDirectory() {
         std::wstring buffer(MAX_PATH, L'\0');
@@ -78,7 +79,10 @@ void AudioSystem::Shutdown() {
     }
 
     StopAllLoops();
+    StopAllInstances();
+
     m_loopInstances.clear();
+    m_instances.clear();
     m_effects.clear();
     m_engine.reset();
     m_initialized = false;
@@ -165,6 +169,58 @@ bool AudioSystem::IsLoopPlaying(const std::string_view id) const {
     return it->second->GetState() == DirectX::SoundState::PLAYING;
 }
 
+void AudioSystem::CreateInstance(std::string instanceId, const std::string_view effectId) {
+    if (!m_initialized || !m_engine) {
+        throw std::runtime_error("AudioSystem::CreateInstance called before Initialize.");
+    }
+
+    if (instanceId.empty()) {
+        throw std::invalid_argument("AudioSystem::CreateInstance received empty instance id.");
+    }
+
+    auto instance = GetEffect(effectId).CreateInstance();
+    m_instances[std::move(instanceId)] = std::move(instance);
+}
+
+void AudioSystem::PlayInstance(
+    const std::string_view instanceId,
+    const bool looped,
+    const float volume,
+    const float pitch,
+    const float pan
+) {
+    auto &instance = GetInstance(instanceId);
+
+    instance.Stop(true);
+    instance.SetVolume(volume);
+    instance.SetPitch(pitch);
+    instance.SetPan(pan);
+    instance.Play(looped);
+}
+
+void AudioSystem::StopInstance(const std::string_view instanceId, const bool immediate) {
+    if (auto *instance = FindInstance(instanceId); instance != nullptr) {
+        const_cast<DirectX::SoundEffectInstance *>(instance)->Stop(immediate);
+    }
+}
+
+void AudioSystem::StopAllInstances() {
+    for (auto &[_, instance]: m_instances) {
+        if (instance) {
+            instance->Stop(true);
+        }
+    }
+}
+
+bool AudioSystem::IsInstancePlaying(const std::string_view instanceId) {
+    auto *instance = FindInstance(instanceId);
+    if (instance == nullptr) {
+        return false;
+    }
+
+    return instance->GetState() == DirectX::SoundState::PLAYING;
+}
+
 DirectX::SoundEffect &AudioSystem::GetEffect(const std::string_view id) {
     const auto it = m_effects.find(std::string{id});
     if (it == m_effects.end() || !it->second) {
@@ -172,6 +228,33 @@ DirectX::SoundEffect &AudioSystem::GetEffect(const std::string_view id) {
     }
 
     return *it->second;
+}
+
+DirectX::SoundEffectInstance &AudioSystem::GetInstance(const std::string_view instanceId) {
+    const auto it = m_instances.find(std::string{instanceId});
+    if (it == m_instances.end() || !it->second) {
+        throw std::runtime_error("Audio instance not created: " + std::string{instanceId});
+    }
+
+    return *it->second;
+}
+
+DirectX::SoundEffectInstance *AudioSystem::FindInstance(const std::string_view instanceId) noexcept {
+    const auto it = m_instances.find(std::string(instanceId));
+    if (it == m_instances.end()) {
+        return nullptr;
+    }
+
+    return it->second.get();
+}
+
+const DirectX::SoundEffectInstance *AudioSystem::FindInstance(const std::string_view instanceId) const noexcept {
+    const auto it = m_instances.find(std::string(instanceId));
+    if (it == m_instances.end()) {
+        return nullptr;
+    }
+
+    return it->second.get();
 }
 
 const DirectX::SoundEffectInstance *AudioSystem::GetLoopInstance(std::string_view id) const {

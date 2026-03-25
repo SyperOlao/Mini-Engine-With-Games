@@ -22,6 +22,14 @@ enum class CameraMode : std::uint8_t
     Orbit
 };
 
+enum class EngineAudioState : std::uint8_t
+{
+    Idle = 0,
+    Starting,
+    Working,
+    Stopping
+};
+
 class SolarSystemGame final : public IGame
 {
 public:
@@ -36,6 +44,11 @@ private:
     void HandleGlobalInput(const AppContext& context);
     void UpdateFpsCamera(const AppContext& context, float deltaTime);
     void UpdateOrbitCamera(const AppContext& context, float deltaTime);
+
+    void InitializeEngineAudio(AppContext& context);
+    void UpdateEngineAudio(const AppContext& context, float deltaTime);
+    void ShutdownEngineAudio(AppContext& context) noexcept;
+    [[nodiscard]] bool IsEngineMovementInputActive(const AppContext& context) const noexcept;
 
     void SetCameraMode(CameraMode mode) noexcept;
     [[nodiscard]] Camera& GetActiveCamera() noexcept;
@@ -63,7 +76,7 @@ private:
     FpsCamera m_fpsCamera{};
     OrbitCamera m_orbitCamera{};
     CameraMode m_cameraMode{CameraMode::Orbit};
-    SolarSystemSettingsPanel m_settingsPanel;
+    SolarSystemSettingsPanel m_settingsPanel{};
 
     bool m_prevLeftMouseDown{false};
     float m_orbitCameraYaw{0.6f};
@@ -74,7 +87,9 @@ private:
     int m_fpsFrames{0};
     int m_displayFps{0};
 
+    EngineAudioState m_engineAudioState{EngineAudioState::Idle};
+    float m_engineStartElapsed{0.0f};
+
     bool m_initialized{false};
 };
-
 #endif //PINGPONG_SOLARSYSTEMGAME_H
