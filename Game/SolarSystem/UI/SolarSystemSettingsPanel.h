@@ -14,23 +14,32 @@
 
 class ShapeRenderer2D;
 
-class SolarSystemSettingsPanel final
-{
+enum class SolarSystemUiAction : std::uint8_t {
+    None = 0,
+    SliderMoved
+};
+
+class SolarSystemSettingsPanel final {
 public:
     void Initialize();
-    void SetBounds(const RectF& bounds) noexcept;
 
-    void Update(const MouseState& mouse);
-    void Render(ShapeRenderer2D& shapeRenderer) const;
+    void SetBounds(const RectF &bounds) noexcept;
+
+    [[nodiscard]] SolarSystemUiAction Update(const MouseState &mouse);
+
+    void Render(ShapeRenderer2D &shapeRenderer) const;
 
     [[nodiscard]] SolarSystemTuning GetTuning() const noexcept;
 
     [[nodiscard]] bool IsOpen() const noexcept;
+
     [[nodiscard]] bool IsInteracting() const noexcept;
+
     void Toggle() noexcept;
 
 private:
     void UpdateLayout() noexcept;
+
     [[nodiscard]] float CalculateContentHeight() const noexcept;
 
 private:
@@ -50,4 +59,5 @@ private:
     SliderWidget m_moonOrbitRadiusSlider;
     SliderWidget m_eccentricitySlider;
 };
+
 #endif //PINGPONG_SOLARSYSTEMSETTINGSPANEL_H

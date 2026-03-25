@@ -4,8 +4,20 @@
 
 #include "SolarSystemSettingsPanel.h"
 
+#include <cmath>
+
 #include "Core/Graphics2D/ShapeRenderer2D.h"
 #include "Core/UI/BitmapFont.h"
+
+namespace
+{
+    constexpr float kSliderChangeEpsilon = 0.0001f;
+
+    [[nodiscard]] bool DidSliderValueChange(const float before, const float after) noexcept
+    {
+        return std::fabs(before - after) > kSliderChangeEpsilon;
+    }
+}
 
 void SolarSystemSettingsPanel::Initialize()
 {
@@ -49,7 +61,7 @@ void SolarSystemSettingsPanel::Initialize()
 
     m_eccentricitySlider.SetTheme(&m_theme);
     m_eccentricitySlider.SetLabel("Orbit eccentricity");
-    m_eccentricitySlider.SetRange(0.3f, 2.0f);
+    m_eccentricitySlider.SetRange(0.01f, 2.0f);
     m_eccentricitySlider.SetValue(1.0f);
 
     UpdateLayout();
@@ -61,12 +73,14 @@ void SolarSystemSettingsPanel::SetBounds(const RectF& bounds) noexcept
     UpdateLayout();
 }
 
-void SolarSystemSettingsPanel::Update(const MouseState& mouse)
+SolarSystemUiAction SolarSystemSettingsPanel::Update(const MouseState& mouse)
 {
     if (!m_isOpen)
     {
-        return;
+        return SolarSystemUiAction::None;
     }
+
+    bool sliderMoved = false;
 
     m_dynamicsSection.Update(mouse);
     m_orbitSection.Update(mouse);
@@ -75,18 +89,54 @@ void SolarSystemSettingsPanel::Update(const MouseState& mouse)
 
     if (m_dynamicsSection.IsExpanded())
     {
-        m_planetRotationSlider.Update(mouse);
-        m_moonRotationSlider.Update(mouse);
-        m_planetOrbitSpeedSlider.Update(mouse);
-        m_moonOrbitSpeedSlider.Update(mouse);
+        {
+            const float before = m_planetRotationSlider.GetValue();
+            m_planetRotationSlider.Update(mouse);
+            sliderMoved = sliderMoved || DidSliderValueChange(before, m_planetRotationSlider.GetValue());
+        }
+
+        {
+            const float before = m_moonRotationSlider.GetValue();
+            m_moonRotationSlider.Update(mouse);
+            sliderMoved = sliderMoved || DidSliderValueChange(before, m_moonRotationSlider.GetValue());
+        }
+
+        {
+            const float before = m_planetOrbitSpeedSlider.GetValue();
+            m_planetOrbitSpeedSlider.Update(mouse);
+            sliderMoved = sliderMoved || DidSliderValueChange(before, m_planetOrbitSpeedSlider.GetValue());
+        }
+
+        {
+            const float before = m_moonOrbitSpeedSlider.GetValue();
+            m_moonOrbitSpeedSlider.Update(mouse);
+            sliderMoved = sliderMoved || DidSliderValueChange(before, m_moonOrbitSpeedSlider.GetValue());
+        }
     }
 
     if (m_orbitSection.IsExpanded())
     {
-        m_planetOrbitRadiusSlider.Update(mouse);
-        m_moonOrbitRadiusSlider.Update(mouse);
-        m_eccentricitySlider.Update(mouse);
+        {
+            const float before = m_planetOrbitRadiusSlider.GetValue();
+            m_planetOrbitRadiusSlider.Update(mouse);
+            sliderMoved = sliderMoved || DidSliderValueChange(before, m_planetOrbitRadiusSlider.GetValue());
+        }
+
+        {
+            const float before = m_moonOrbitRadiusSlider.GetValue();
+            m_moonOrbitRadiusSlider.Update(mouse);
+            sliderMoved = sliderMoved || DidSliderValueChange(before, m_moonOrbitRadiusSlider.GetValue());
+        }
+
+        {
+            const float before = m_eccentricitySlider.GetValue();
+            m_eccentricitySlider.Update(mouse);
+            sliderMoved = sliderMoved || DidSliderValueChange(before, m_eccentricitySlider.GetValue());
+        }
     }
+
+    return sliderMoved ? SolarSystemUiAction::SliderMoved
+                       : SolarSystemUiAction::None;
 }
 
 void SolarSystemSettingsPanel::Render(ShapeRenderer2D& shapeRenderer) const

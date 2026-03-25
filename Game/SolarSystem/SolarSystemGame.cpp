@@ -28,6 +28,7 @@
 #include "Core/Platform/Window.h"
 #include "Core/UI/BitmapFont.h"
 #include "Game/SolarSystem/Entities/OrbitalBody.h"
+
 using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector3;
 
@@ -105,7 +106,10 @@ void SolarSystemGame::Update(AppContext &context, const float deltaTime) {
     mouse.LeftPressed = raw.IsLeftMouseDown() && !m_prevLeftMouseDown;
     mouse.LeftReleased = !raw.IsLeftMouseDown() && m_prevLeftMouseDown;
 
-    m_settingsPanel.Update(mouse);
+    if (const SolarSystemUiAction uiAction = m_settingsPanel.Update(mouse); uiAction == SolarSystemUiAction::SliderMoved && context.Audio != nullptr)
+    {
+        context.Audio->PlayOneShot("solar_ui_move",  0.45f);
+    }
     m_prevLeftMouseDown = raw.IsLeftMouseDown();
 
     const SolarSystemTuning tuning = m_settingsPanel.GetTuning();
