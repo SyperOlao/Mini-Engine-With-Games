@@ -73,6 +73,21 @@ add_executable(PingPong
         Core/Graphics/Rendering/FrameRenderTypes.h
         Core/Graphics/Rendering/FrameRenderer.h
         Core/Graphics/Rendering/FrameRenderer.cpp
+        Core/Graphics/Rendering/Pipeline/FrameRenderResources.h
+        Core/Graphics/Rendering/Pipeline/FrameRenderResources.cpp
+        Core/Graphics/Rendering/Pipeline/FramePassRenderContext.h
+        Core/Graphics/Rendering/Pipeline/FramePassRenderContext.cpp
+        Core/Graphics/Rendering/Pipeline/IRenderPass.h
+        Core/Graphics/Rendering/Pipeline/FrameRenderPipeline.h
+        Core/Graphics/Rendering/Pipeline/FrameRenderPipeline.cpp
+        Core/Graphics/Rendering/Pipeline/Passes/ShadowDepthRenderPass.h
+        Core/Graphics/Rendering/Pipeline/Passes/ShadowDepthRenderPass.cpp
+        Core/Graphics/Rendering/Pipeline/Passes/MainGeometryBindRenderPass.h
+        Core/Graphics/Rendering/Pipeline/Passes/MainGeometryBindRenderPass.cpp
+        Core/Graphics/Rendering/Pipeline/Passes/DebugOverlayRenderPass.h
+        Core/Graphics/Rendering/Pipeline/Passes/DebugOverlayRenderPass.cpp
+        Core/Graphics/Rendering/Pipeline/Passes/UserInterfaceRenderPass.h
+        Core/Graphics/Rendering/Pipeline/Passes/UserInterfaceRenderPass.cpp
         Core/Graphics/Rendering/Deferred/GBufferLayout.h
         Core/Graphics/Rendering/Deferred/DeferredShaderConstants3D.h
         Core/Graphics/Rendering/Deferred/ColorRenderTarget2D.h

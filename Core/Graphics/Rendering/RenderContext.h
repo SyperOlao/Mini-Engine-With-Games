@@ -12,9 +12,13 @@
 #include "Core/Graphics/Debug/DebugDrawQueue.h"
 #include "Core/Graphics/ModelRenderer.h"
 #include "Core/Graphics/Rendering/FrameRenderer.h"
+#include "Core/Graphics/Rendering/Pipeline/FrameRenderPipeline.h"
+#include "Core/Graphics/Rendering/Pipeline/FrameRenderResources.h"
 #include "Core/Graphics/Rendering/Renderables/SceneRenderer3D.h"
 
+class Camera;
 class GraphicsDevice;
+class Scene;
 
 class RenderContext final {
 public:
@@ -62,6 +66,18 @@ public:
 
     [[nodiscard]] const DeferredFrameResources &GetDeferredFrameResources() const noexcept;
 
+    [[nodiscard]] FrameRenderResources &GetFrameRenderResources() noexcept;
+
+    [[nodiscard]] const FrameRenderResources &GetFrameRenderResources() const noexcept;
+
+    [[nodiscard]] FrameRenderPipeline &GetFrameRenderPipeline() noexcept;
+
+    [[nodiscard]] const FrameRenderPipeline &GetFrameRenderPipeline() const noexcept;
+
+    void BuildDefaultForwardRenderPipeline();
+
+    void ExecuteFramePipeline(Camera *activeCamera, Scene *gameplayScene, float frameDeltaTimeSeconds);
+
 private:
     GraphicsDevice *m_graphics{nullptr};
     ShapeRenderer2D m_shapeRenderer2D;
@@ -71,6 +87,8 @@ private:
     DebugDrawQueue m_debugDraw{};
     FrameRenderer m_frameRenderer{};
     DeferredFrameResources m_deferredFrameResources{};
+    FrameRenderResources m_frameRenderResources{};
+    FrameRenderPipeline m_frameRenderPipeline{};
 };
 
 #endif

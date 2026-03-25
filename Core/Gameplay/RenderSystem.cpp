@@ -19,7 +19,7 @@ void RenderSystem::Update(Scene &, AppContext &, float)
 
 void RenderSystem::Render(Scene &scene, AppContext &context)
 {
-    Camera *const camera = scene.GetActiveCamera();
+    const Camera *const camera = scene.GetActiveCamera();
     if (camera == nullptr)
     {
         return;
