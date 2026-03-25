@@ -8,6 +8,8 @@ struct CollisionContact3D final
     bool HasOverlap{false};
     DirectX::SimpleMath::Vector3 Normal{0.0f, 1.0f, 0.0f};
     float PenetrationDepth{0.0f};
+    bool HasContactPoint{false};
+    DirectX::SimpleMath::Vector3 ContactPoint{0.0f, 0.0f, 0.0f};
 };
 
 using SphereContact = CollisionContact3D;

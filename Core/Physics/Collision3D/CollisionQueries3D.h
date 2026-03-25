@@ -30,6 +30,13 @@ public:
         const AxisAlignedBox3D &axisAlignedBox
     ) noexcept;
 
+    [[nodiscard]] static CollisionContact3D FindContactSphereOrientedBox(
+        const BoundingSphere3D &worldSphere,
+        const DirectX::SimpleMath::Vector3 &localBoxCenterInEntitySpace,
+        const DirectX::SimpleMath::Vector3 &halfExtents,
+        const DirectX::SimpleMath::Matrix &entityWorldMatrix
+    ) noexcept;
+
     [[nodiscard]] static bool OverlapTestPointAxisAlignedBox(
         const DirectX::SimpleMath::Vector3 &point,
         const AxisAlignedBox3D &axisAlignedBox

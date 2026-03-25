@@ -85,6 +85,8 @@ CollisionContact3D CollisionQueries3D::FindContactSphereAxisAlignedBox(
         contact.HasOverlap = true;
         contact.Normal = SpatialMath::SafeNormalizeVector3(delta, DirectX::SimpleMath::Vector3::UnitY);
         contact.PenetrationDepth = sphere.Radius - distance;
+        contact.HasContactPoint = true;
+        contact.ContactPoint = sphere.Center - contact.Normal * sphere.Radius;
         return contact;
     }
 
@@ -130,11 +132,77 @@ CollisionContact3D CollisionQueries3D::FindContactSphereAxisAlignedBox(
     {
         contact.PenetrationDepth = 0.0f;
         contact.Normal = DirectX::SimpleMath::Vector3::UnitY;
+        contact.HasContactPoint = true;
+        contact.ContactPoint = sphere.Center - contact.Normal * sphere.Radius;
         return contact;
     }
 
     contact.Normal = normal;
     contact.PenetrationDepth = sphere.Radius - minimumFaceDistance;
+    contact.HasContactPoint = true;
+    contact.ContactPoint = sphere.Center - contact.Normal * sphere.Radius;
+    return contact;
+}
+
+CollisionContact3D CollisionQueries3D::FindContactSphereOrientedBox(
+    const BoundingSphere3D &worldSphere,
+    const DirectX::SimpleMath::Vector3 &localBoxCenterInEntitySpace,
+    const DirectX::SimpleMath::Vector3 &halfExtents,
+    const DirectX::SimpleMath::Matrix &entityWorldMatrix
+) noexcept
+{
+    const DirectX::SimpleMath::Matrix worldToLocal = entityWorldMatrix.Invert();
+    const DirectX::SimpleMath::Vector3 localSphereCenter = DirectX::SimpleMath::Vector3::Transform(
+        worldSphere.Center,
+        worldToLocal
+    );
+
+    const DirectX::SimpleMath::Vector3 columnX = DirectX::SimpleMath::Vector3(
+        entityWorldMatrix._11,
+        entityWorldMatrix._21,
+        entityWorldMatrix._31
+    );
+    const DirectX::SimpleMath::Vector3 columnY = DirectX::SimpleMath::Vector3(
+        entityWorldMatrix._12,
+        entityWorldMatrix._22,
+        entityWorldMatrix._32
+    );
+    const DirectX::SimpleMath::Vector3 columnZ = DirectX::SimpleMath::Vector3(
+        entityWorldMatrix._13,
+        entityWorldMatrix._23,
+        entityWorldMatrix._33
+    );
+    const float scaleX = columnX.Length();
+    const float scaleY = columnY.Length();
+    const float scaleZ = columnZ.Length();
+    const float maxScale = std::max(std::max(scaleX, scaleY), scaleZ);
+    const float localRadius = maxScale > 1.0e-8f ? worldSphere.Radius / maxScale : worldSphere.Radius;
+
+    const AxisAlignedBox3D localBox = AxisAlignedBox3D::FromCenterExtents(localBoxCenterInEntitySpace, halfExtents);
+    BoundingSphere3D localSphere{};
+    localSphere.Center = localSphereCenter;
+    localSphere.Radius = localRadius;
+
+    CollisionContact3D contact = FindContactSphereAxisAlignedBox(localSphere, localBox);
+    if (!contact.HasOverlap)
+    {
+        return contact;
+    }
+
+    DirectX::SimpleMath::Vector3 worldNormal = DirectX::SimpleMath::Vector3::TransformNormal(contact.Normal, entityWorldMatrix);
+    if (worldNormal.LengthSquared() > 1.0e-12f)
+    {
+        worldNormal.Normalize();
+    }
+    else
+    {
+        worldNormal = DirectX::SimpleMath::Vector3::UnitY;
+    }
+
+    contact.Normal = worldNormal;
+    contact.PenetrationDepth = contact.PenetrationDepth * maxScale;
+    contact.HasContactPoint = true;
+    contact.ContactPoint = worldSphere.Center - worldNormal * worldSphere.Radius;
     return contact;
 }
 

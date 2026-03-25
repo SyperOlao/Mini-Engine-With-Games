@@ -35,6 +35,16 @@ struct SphereColliderComponent final
     bool IsTrigger{false};
 };
 
+struct BoxColliderComponent final
+{
+    DirectX::SimpleMath::Vector3 LocalCenter{0.0f, 0.0f, 0.0f};
+    DirectX::SimpleMath::Vector3 HalfExtents{0.5f, 0.5f, 0.5f};
+    std::uint32_t CollisionLayer{0u};
+    std::uint32_t CollidesWithMask{0xFFFFFFFFu};
+    bool IsTrigger{false};
+    bool IsStatic{true};
+};
+
 struct TagComponent final
 {
     std::string TagText{};

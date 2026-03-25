@@ -77,6 +77,8 @@ public:
 
     void ForEachEntityWithTransformAndSphereCollider(const std::function<void(Entity &)> &callback);
 
+    void ForEachEntityWithTransformAndBoxCollider(const std::function<void(Entity &)> &callback);
+
     [[nodiscard]] TransformComponent *TryGetTransformComponent(EntityId entityId);
 
     [[nodiscard]] const TransformComponent *TryGetTransformComponent(EntityId entityId) const;
@@ -100,6 +102,14 @@ public:
     bool AddSphereColliderComponent(EntityId entityId, const SphereColliderComponent &component);
 
     bool RemoveSphereColliderComponent(EntityId entityId);
+
+    [[nodiscard]] BoxColliderComponent *TryGetBoxColliderComponent(EntityId entityId);
+
+    [[nodiscard]] const BoxColliderComponent *TryGetBoxColliderComponent(EntityId entityId) const;
+
+    bool AddBoxColliderComponent(EntityId entityId, const BoxColliderComponent &component);
+
+    bool RemoveBoxColliderComponent(EntityId entityId);
 
     [[nodiscard]] TagComponent *TryGetTagComponent(EntityId entityId);
 
@@ -137,6 +147,7 @@ private:
         std::optional<TransformComponent> Transform{};
         std::optional<ModelComponent> Model{};
         std::optional<SphereColliderComponent> SphereCollider{};
+        std::optional<BoxColliderComponent> BoxCollider{};
         std::optional<TagComponent> Tag{};
         std::optional<VelocityComponent> Velocity{};
         std::optional<AttachmentComponent> Attachment{};

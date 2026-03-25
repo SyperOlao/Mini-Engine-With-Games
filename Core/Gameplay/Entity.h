@@ -49,6 +49,16 @@ public:
 
     bool RemoveSphereColliderComponent();
 
+    [[nodiscard]] bool HasBoxColliderComponent() const;
+
+    [[nodiscard]] BoxColliderComponent *TryGetBoxColliderComponent();
+
+    [[nodiscard]] const BoxColliderComponent *TryGetBoxColliderComponent() const;
+
+    bool AddBoxColliderComponent(const BoxColliderComponent &component);
+
+    bool RemoveBoxColliderComponent();
+
     [[nodiscard]] bool HasTagComponent() const;
 
     [[nodiscard]] TagComponent *TryGetTagComponent();

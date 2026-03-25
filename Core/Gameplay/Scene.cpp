@@ -230,6 +230,25 @@ void Scene::ForEachEntityWithTransformAndSphereCollider(const std::function<void
     }
 }
 
+void Scene::ForEachEntityWithTransformAndBoxCollider(const std::function<void(Entity &)> &callback)
+{
+    for (EntitySlot &slot : m_slots)
+    {
+        if (!slot.Active)
+        {
+            continue;
+        }
+
+        if (!slot.Transform.has_value() || !slot.BoxCollider.has_value())
+        {
+            continue;
+        }
+
+        Entity entity(slot.Id, this);
+        callback(entity);
+    }
+}
+
 std::optional<std::size_t> Scene::TryFindSlotIndex(const EntityId entityId) const
 {
     const auto iterator = m_indexById.find(entityId);
@@ -478,6 +497,86 @@ bool Scene::RemoveSphereColliderComponent(const EntityId entityId)
     }
 
     slot.SphereCollider.reset();
+    return true;
+}
+
+BoxColliderComponent *Scene::TryGetBoxColliderComponent(const EntityId entityId)
+{
+    const std::optional<std::size_t> slotIndex = TryFindSlotIndex(entityId);
+    if (!slotIndex.has_value())
+    {
+        return nullptr;
+    }
+
+    EntitySlot &slot = m_slots[*slotIndex];
+    if (!slot.Active)
+    {
+        return nullptr;
+    }
+
+    if (!slot.BoxCollider.has_value())
+    {
+        return nullptr;
+    }
+
+    return &(*slot.BoxCollider);
+}
+
+const BoxColliderComponent *Scene::TryGetBoxColliderComponent(const EntityId entityId) const
+{
+    const std::optional<std::size_t> slotIndex = TryFindSlotIndex(entityId);
+    if (!slotIndex.has_value())
+    {
+        return nullptr;
+    }
+
+    const EntitySlot &slot = m_slots[*slotIndex];
+    if (!slot.Active)
+    {
+        return nullptr;
+    }
+
+    if (!slot.BoxCollider.has_value())
+    {
+        return nullptr;
+    }
+
+    return &(*slot.BoxCollider);
+}
+
+bool Scene::AddBoxColliderComponent(const EntityId entityId, const BoxColliderComponent &component)
+{
+    const std::optional<std::size_t> slotIndex = TryFindSlotIndex(entityId);
+    if (!slotIndex.has_value())
+    {
+        return false;
+    }
+
+    EntitySlot &slot = m_slots[*slotIndex];
+    if (!slot.Active)
+    {
+        return false;
+    }
+
+    slot.BoxCollider = component;
+    return true;
+}
+
+bool Scene::RemoveBoxColliderComponent(const EntityId entityId)
+{
+    const std::optional<std::size_t> slotIndex = TryFindSlotIndex(entityId);
+    if (!slotIndex.has_value())
+    {
+        return false;
+    }
+
+    EntitySlot &slot = m_slots[*slotIndex];
+    if (!slot.Active)
+    {
+        return false;
+    }
+
+    slot.BoxCollider.reset();
     return true;
 }
 

@@ -1,6 +1,13 @@
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 #include "Core/Gameplay/CollisionSystem.h"
 
-#include "Core/App/AppContext.h"
 #include "Core/Gameplay/GameplayComponents.h"
 #include "Core/Gameplay/Scene.h"
 #include "Core/Gameplay/SceneCollisionTypes.h"
@@ -8,14 +15,93 @@
 #include "Core/Physics/Collision3D/BoundingSphere3D.h"
 #include "Core/Physics/Collision3D/CollisionQueries3D.h"
 
+#include <algorithm>
+#include <array>
+#include <limits>
+
 namespace
 {
-bool LayersOverlap(const SphereColliderComponent &first, const SphereColliderComponent &second)
+bool LayersOverlapSphereSphere(const SphereColliderComponent &first, const SphereColliderComponent &second)
 {
     const std::uint32_t bitFirst = 1u << first.CollisionLayer;
     const std::uint32_t bitSecond = 1u << second.CollisionLayer;
     return (first.CollidesWithMask & bitSecond) != 0u && (second.CollidesWithMask & bitFirst) != 0u;
 }
+
+bool LayersOverlapSphereBox(const SphereColliderComponent &sphere, const BoxColliderComponent &box)
+{
+    const std::uint32_t bitSphere = 1u << sphere.CollisionLayer;
+    const std::uint32_t bitBox = 1u << box.CollisionLayer;
+    return (sphere.CollidesWithMask & bitBox) != 0u && (box.CollidesWithMask & bitSphere) != 0u;
+}
+
+AxisAlignedBox3D ComputeWorldAxisAlignedBoundsForBox(
+    const DirectX::SimpleMath::Matrix &entityWorldMatrix,
+    const DirectX::SimpleMath::Vector3 &localCenter,
+    const DirectX::SimpleMath::Vector3 &halfExtents
+)
+{
+    constexpr std::array<std::array<int, 3>, 8> cornerSigns{{
+        {{-1, -1, -1}},
+        {{1, -1, -1}},
+        {{-1, 1, -1}},
+        {{1, 1, -1}},
+        {{-1, -1, 1}},
+        {{1, -1, 1}},
+        {{-1, 1, 1}},
+        {{1, 1, 1}},
+    }};
+
+    float minimumX = std::numeric_limits<float>::max();
+    float minimumY = std::numeric_limits<float>::max();
+    float minimumZ = std::numeric_limits<float>::max();
+    float maximumX = -std::numeric_limits<float>::max();
+    float maximumY = -std::numeric_limits<float>::max();
+    float maximumZ = -std::numeric_limits<float>::max();
+
+    for (const std::array<int, 3> &signs : cornerSigns)
+    {
+        DirectX::SimpleMath::Vector3 localCorner = localCenter;
+        localCorner.x += static_cast<float>(signs[0]) * halfExtents.x;
+        localCorner.y += static_cast<float>(signs[1]) * halfExtents.y;
+        localCorner.z += static_cast<float>(signs[2]) * halfExtents.z;
+
+        const DirectX::SimpleMath::Vector3 worldCorner = DirectX::SimpleMath::Vector3::Transform(
+            localCorner,
+            entityWorldMatrix
+        );
+
+        minimumX = std::min(minimumX, worldCorner.x);
+        minimumY = std::min(minimumY, worldCorner.y);
+        minimumZ = std::min(minimumZ, worldCorner.z);
+        maximumX = std::max(maximumX, worldCorner.x);
+        maximumY = std::max(maximumY, worldCorner.y);
+        maximumZ = std::max(maximumZ, worldCorner.z);
+    }
+
+    AxisAlignedBox3D bounds{};
+    bounds.Min = DirectX::SimpleMath::Vector3(minimumX, minimumY, minimumZ);
+    bounds.Max = DirectX::SimpleMath::Vector3(maximumX, maximumY, maximumZ);
+    return bounds;
+}
+
+struct SphereCandidate final
+{
+    EntityId Id{0u};
+    BoundingSphere3D WorldSphere{};
+    SphereColliderComponent Collider{};
+};
+
+struct BoxCandidate final
+{
+    EntityId Id{0u};
+    DirectX::SimpleMath::Matrix WorldMatrix{DirectX::SimpleMath::Matrix::Identity};
+    DirectX::SimpleMath::Vector3 LocalCenter{0.0f, 0.0f, 0.0f};
+    DirectX::SimpleMath::Vector3 HalfExtents{0.5f, 0.5f, 0.5f};
+    BoxColliderComponent Collider{};
+    AxisAlignedBox3D WorldBoundsForBroadphase{};
+};
+
 }
 
 void CollisionSystem::Initialize(Scene &, AppContext &)
@@ -25,170 +111,270 @@ void CollisionSystem::Initialize(Scene &, AppContext &)
 
 void CollisionSystem::Update(Scene &scene, AppContext &, float)
 {
-    struct Candidate final
-    {
-        EntityId Id{0u};
-        BoundingSphere3D WorldSphere{};
-        SphereColliderComponent Collider{};
-    };
+    std::vector<SphereCandidate> spheres{};
+    spheres.reserve(scene.m_slots.size());
 
-    std::vector<Candidate> candidates{};
-    candidates.reserve(scene.m_slots.size());
+    std::vector<BoxCandidate> boxes{};
+    boxes.reserve(scene.m_slots.size());
 
     for (std::size_t slotIndex = 0; slotIndex < scene.m_slots.size(); ++slotIndex)
     {
         const Scene::EntitySlot &slot = scene.m_slots[slotIndex];
-        if (!slot.Active)
+        if (!slot.Active || !slot.Transform.has_value())
         {
             continue;
         }
 
-        if (!slot.Transform.has_value() || !slot.SphereCollider.has_value())
+        if (slot.SphereCollider.has_value())
         {
-            continue;
+            const DirectX::SimpleMath::Vector3 worldCenter = DirectX::SimpleMath::Vector3::Transform(
+                slot.SphereCollider->LocalCenter,
+                slot.Transform->WorldMatrix
+            );
+
+            SphereCandidate sphereCandidate{};
+            sphereCandidate.Id = slot.Id;
+            sphereCandidate.WorldSphere.Center = worldCenter;
+            sphereCandidate.WorldSphere.Radius = slot.SphereCollider->Radius;
+            sphereCandidate.Collider = *slot.SphereCollider;
+            spheres.push_back(sphereCandidate);
         }
 
-        const DirectX::SimpleMath::Vector3 worldCenter = DirectX::SimpleMath::Vector3::Transform(
-            slot.SphereCollider->LocalCenter,
-            slot.Transform->WorldMatrix
-        );
-
-        Candidate candidate{};
-        candidate.Id = slot.Id;
-        candidate.WorldSphere.Center = worldCenter;
-        candidate.WorldSphere.Radius = slot.SphereCollider->Radius;
-        candidate.Collider = *slot.SphereCollider;
-        candidates.push_back(candidate);
+        if (slot.BoxCollider.has_value())
+        {
+            BoxCandidate boxCandidate{};
+            boxCandidate.Id = slot.Id;
+            boxCandidate.WorldMatrix = slot.Transform->WorldMatrix;
+            boxCandidate.LocalCenter = slot.BoxCollider->LocalCenter;
+            boxCandidate.HalfExtents = slot.BoxCollider->HalfExtents;
+            boxCandidate.Collider = *slot.BoxCollider;
+            boxCandidate.WorldBoundsForBroadphase = ComputeWorldAxisAlignedBoundsForBox(
+                slot.Transform->WorldMatrix,
+                slot.BoxCollider->LocalCenter,
+                slot.BoxCollider->HalfExtents
+            );
+            boxes.push_back(boxCandidate);
+        }
     }
 
     std::vector<CollisionPair> pairs{};
-    if (candidates.size() < 2u)
-    {
-        scene.ReplaceCollisionFrameResults(std::move(pairs));
-        return;
-    }
+    pairs.reserve(spheres.size() * 2u + spheres.size() * boxes.size());
 
     const float cellSize = scene.GetCollisionCellSize();
-    if (cellSize <= 0.0f)
+    const AxisAlignedBox3D worldBounds = scene.GetCollisionWorldBounds();
+
+    if (spheres.size() >= 2u)
     {
-        for (std::size_t indexA = 0; indexA < candidates.size(); ++indexA)
+        if (cellSize <= 0.0f)
         {
-            for (std::size_t indexB = indexA + 1; indexB < candidates.size(); ++indexB)
+            for (std::size_t indexA = 0; indexA < spheres.size(); ++indexA)
             {
-                const Candidate &first = candidates[indexA];
-                const Candidate &second = candidates[indexB];
-                if (!LayersOverlap(first.Collider, second.Collider))
+                for (std::size_t indexB = indexA + 1; indexB < spheres.size(); ++indexB)
                 {
-                    continue;
-                }
+                    const SphereCandidate &first = spheres[indexA];
+                    const SphereCandidate &second = spheres[indexB];
+                    if (!LayersOverlapSphereSphere(first.Collider, second.Collider))
+                    {
+                        continue;
+                    }
 
-                if (!CollisionQueries3D::OverlapTestSphereSphere(first.WorldSphere, second.WorldSphere))
-                {
-                    continue;
-                }
+                    if (!CollisionQueries3D::OverlapTestSphereSphere(first.WorldSphere, second.WorldSphere))
+                    {
+                        continue;
+                    }
 
-                const CollisionContact3D contact = CollisionQueries3D::FindContactSphereSphere(
-                    first.WorldSphere,
-                    second.WorldSphere
-                );
-                if (!contact.HasOverlap)
-                {
-                    continue;
-                }
+                    const CollisionContact3D contact = CollisionQueries3D::FindContactSphereSphere(
+                        first.WorldSphere,
+                        second.WorldSphere
+                    );
+                    if (!contact.HasOverlap)
+                    {
+                        continue;
+                    }
 
-                CollisionPair pair{};
-                if (first.Id < second.Id)
-                {
-                    pair.EntityA = first.Id;
-                    pair.EntityB = second.Id;
-                }
-                else
-                {
-                    pair.EntityA = second.Id;
-                    pair.EntityB = first.Id;
-                }
+                    CollisionPair pair{};
+                    pair.Kind = CollisionPairKind::SphereSphere;
+                    if (first.Id < second.Id)
+                    {
+                        pair.EntityA = first.Id;
+                        pair.EntityB = second.Id;
+                    }
+                    else
+                    {
+                        pair.EntityA = second.Id;
+                        pair.EntityB = first.Id;
+                    }
 
-                pair.Contact = contact;
-                pairs.push_back(pair);
+                    pair.Contact = contact;
+                    pairs.push_back(pair);
+                }
             }
         }
-
-        scene.ReplaceCollisionFrameResults(std::move(pairs));
-        return;
-    }
-
-    m_spatialGrid.Initialize(cellSize, scene.GetCollisionWorldBounds());
-    m_spatialGrid.Clear();
-
-    for (std::uint32_t candidateIndex = 0u; candidateIndex < static_cast<std::uint32_t>(candidates.size()); ++candidateIndex)
-    {
-        const Candidate &candidate = candidates[candidateIndex];
-        const AxisAlignedBox3D bounds = AxisAlignedBox3D::FromCenterExtents(
-            candidate.WorldSphere.Center,
-            DirectX::SimpleMath::Vector3(
-                candidate.WorldSphere.Radius,
-                candidate.WorldSphere.Radius,
-                candidate.WorldSphere.Radius
-            )
-        );
-        m_spatialGrid.InsertObject(candidateIndex, bounds);
-    }
-
-    for (std::uint32_t candidateIndex = 0u; candidateIndex < static_cast<std::uint32_t>(candidates.size()); ++candidateIndex)
-    {
-        const Candidate &first = candidates[candidateIndex];
-        const AxisAlignedBox3D queryBounds = AxisAlignedBox3D::FromCenterExtents(
-            first.WorldSphere.Center,
-            DirectX::SimpleMath::Vector3(
-                first.WorldSphere.Radius,
-                first.WorldSphere.Radius,
-                first.WorldSphere.Radius
-            )
-        );
-
-        m_spatialGrid.QueryOverlapping(queryBounds, m_queryScratch);
-
-        for (const std::uint32_t otherIndex : m_queryScratch)
+        else
         {
-            if (otherIndex <= candidateIndex)
+            m_spatialGrid.Initialize(cellSize, worldBounds);
+            m_spatialGrid.Clear();
+
+            for (std::uint32_t candidateIndex = 0u; candidateIndex < static_cast<std::uint32_t>(spheres.size());
+                 ++candidateIndex)
             {
-                continue;
+                const SphereCandidate &candidate = spheres[candidateIndex];
+                const AxisAlignedBox3D bounds = AxisAlignedBox3D::FromCenterExtents(
+                    candidate.WorldSphere.Center,
+                    DirectX::SimpleMath::Vector3(
+                        candidate.WorldSphere.Radius,
+                        candidate.WorldSphere.Radius,
+                        candidate.WorldSphere.Radius
+                    )
+                );
+                m_spatialGrid.InsertObject(candidateIndex, bounds);
             }
 
-            const Candidate &second = candidates[otherIndex];
-            if (!LayersOverlap(first.Collider, second.Collider))
+            for (std::uint32_t candidateIndex = 0u; candidateIndex < static_cast<std::uint32_t>(spheres.size());
+                 ++candidateIndex)
             {
-                continue;
+                const SphereCandidate &first = spheres[candidateIndex];
+                const AxisAlignedBox3D queryBounds = AxisAlignedBox3D::FromCenterExtents(
+                    first.WorldSphere.Center,
+                    DirectX::SimpleMath::Vector3(
+                        first.WorldSphere.Radius,
+                        first.WorldSphere.Radius,
+                        first.WorldSphere.Radius
+                    )
+                );
+
+                m_spatialGrid.QueryOverlapping(queryBounds, m_queryScratch);
+
+                for (const std::uint32_t otherIndex : m_queryScratch)
+                {
+                    if (otherIndex <= candidateIndex)
+                    {
+                        continue;
+                    }
+
+                    const SphereCandidate &second = spheres[otherIndex];
+                    if (!LayersOverlapSphereSphere(first.Collider, second.Collider))
+                    {
+                        continue;
+                    }
+
+                    if (!CollisionQueries3D::OverlapTestSphereSphere(first.WorldSphere, second.WorldSphere))
+                    {
+                        continue;
+                    }
+
+                    const CollisionContact3D contact = CollisionQueries3D::FindContactSphereSphere(
+                        first.WorldSphere,
+                        second.WorldSphere
+                    );
+                    if (!contact.HasOverlap)
+                    {
+                        continue;
+                    }
+
+                    CollisionPair pair{};
+                    pair.Kind = CollisionPairKind::SphereSphere;
+                    if (first.Id < second.Id)
+                    {
+                        pair.EntityA = first.Id;
+                        pair.EntityB = second.Id;
+                    }
+                    else
+                    {
+                        pair.EntityA = second.Id;
+                        pair.EntityB = first.Id;
+                    }
+
+                    pair.Contact = contact;
+                    pairs.push_back(pair);
+                }
+            }
+        }
+    }
+
+    if (!spheres.empty() && !boxes.empty())
+    {
+        if (cellSize <= 0.0f)
+        {
+            for (const SphereCandidate &sphereCandidate : spheres)
+            {
+                for (const BoxCandidate &boxCandidate : boxes)
+                {
+                    if (!LayersOverlapSphereBox(sphereCandidate.Collider, boxCandidate.Collider))
+                    {
+                        continue;
+                    }
+
+                    const CollisionContact3D contact = CollisionQueries3D::FindContactSphereOrientedBox(
+                        sphereCandidate.WorldSphere,
+                        boxCandidate.LocalCenter,
+                        boxCandidate.HalfExtents,
+                        boxCandidate.WorldMatrix
+                    );
+                    if (!contact.HasOverlap)
+                    {
+                        continue;
+                    }
+
+                    CollisionPair pair{};
+                    pair.Kind = CollisionPairKind::SphereBox;
+                    pair.EntityA = sphereCandidate.Id;
+                    pair.EntityB = boxCandidate.Id;
+                    pair.Contact = contact;
+                    pairs.push_back(pair);
+                }
+            }
+        }
+        else
+        {
+            m_spatialGrid.Initialize(cellSize, worldBounds);
+            m_spatialGrid.Clear();
+
+            for (std::uint32_t boxIndex = 0u; boxIndex < static_cast<std::uint32_t>(boxes.size()); ++boxIndex)
+            {
+                m_spatialGrid.InsertObject(boxIndex, boxes[boxIndex].WorldBoundsForBroadphase);
             }
 
-            if (!CollisionQueries3D::OverlapTestSphereSphere(first.WorldSphere, second.WorldSphere))
+            for (const SphereCandidate &sphereCandidate : spheres)
             {
-                continue;
-            }
+                const AxisAlignedBox3D queryBounds = AxisAlignedBox3D::FromCenterExtents(
+                    sphereCandidate.WorldSphere.Center,
+                    DirectX::SimpleMath::Vector3(
+                        sphereCandidate.WorldSphere.Radius,
+                        sphereCandidate.WorldSphere.Radius,
+                        sphereCandidate.WorldSphere.Radius
+                    )
+                );
 
-            const CollisionContact3D contact = CollisionQueries3D::FindContactSphereSphere(
-                first.WorldSphere,
-                second.WorldSphere
-            );
-            if (!contact.HasOverlap)
-            {
-                continue;
-            }
+                m_spatialGrid.QueryOverlapping(queryBounds, m_queryScratch);
 
-            CollisionPair pair{};
-            if (first.Id < second.Id)
-            {
-                pair.EntityA = first.Id;
-                pair.EntityB = second.Id;
-            }
-            else
-            {
-                pair.EntityA = second.Id;
-                pair.EntityB = first.Id;
-            }
+                for (const std::uint32_t boxIndex : m_queryScratch)
+                {
+                    const BoxCandidate &boxCandidate = boxes[boxIndex];
+                    if (!LayersOverlapSphereBox(sphereCandidate.Collider, boxCandidate.Collider))
+                    {
+                        continue;
+                    }
 
-            pair.Contact = contact;
-            pairs.push_back(pair);
+                    const CollisionContact3D contact = CollisionQueries3D::FindContactSphereOrientedBox(
+                        sphereCandidate.WorldSphere,
+                        boxCandidate.LocalCenter,
+                        boxCandidate.HalfExtents,
+                        boxCandidate.WorldMatrix
+                    );
+                    if (!contact.HasOverlap)
+                    {
+                        continue;
+                    }
+
+                    CollisionPair pair{};
+                    pair.Kind = CollisionPairKind::SphereBox;
+                    pair.EntityA = sphereCandidate.Id;
+                    pair.EntityB = boxCandidate.Id;
+                    pair.Contact = contact;
+                    pairs.push_back(pair);
+                }
+            }
         }
     }
 

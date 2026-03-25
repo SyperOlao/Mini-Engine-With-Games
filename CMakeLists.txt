@@ -147,6 +147,10 @@ add_executable(PingPong
         Core/Gameplay/CollisionSystem.cpp
         Core/Gameplay/RenderSystem.h
         Core/Gameplay/RenderSystem.cpp
+        Core/Gameplay/SphereStaticWorldCollisionResolver.h
+        Core/Gameplay/SphereStaticWorldCollisionResolver.cpp
+        Core/Gameplay/CollisionDebugDraw.h
+        Core/Gameplay/CollisionDebugDraw.cpp
 
         Core/UI/BitmapFont.cpp
         Core/UI/BitmapFont.h

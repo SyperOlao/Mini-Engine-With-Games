@@ -176,6 +176,56 @@ bool Entity::RemoveSphereColliderComponent()
     return m_ownerScene->RemoveSphereColliderComponent(m_entityId);
 }
 
+bool Entity::HasBoxColliderComponent() const
+{
+    if (m_ownerScene == nullptr)
+    {
+        return false;
+    }
+
+    return m_ownerScene->TryGetBoxColliderComponent(m_entityId) != nullptr;
+}
+
+BoxColliderComponent *Entity::TryGetBoxColliderComponent()
+{
+    if (m_ownerScene == nullptr)
+    {
+        return nullptr;
+    }
+
+    return m_ownerScene->TryGetBoxColliderComponent(m_entityId);
+}
+
+const BoxColliderComponent *Entity::TryGetBoxColliderComponent() const
+{
+    if (m_ownerScene == nullptr)
+    {
+        return nullptr;
+    }
+
+    return m_ownerScene->TryGetBoxColliderComponent(m_entityId);
+}
+
+bool Entity::AddBoxColliderComponent(const BoxColliderComponent &component)
+{
+    if (m_ownerScene == nullptr)
+    {
+        return false;
+    }
+
+    return m_ownerScene->AddBoxColliderComponent(m_entityId, component);
+}
+
+bool Entity::RemoveBoxColliderComponent()
+{
+    if (m_ownerScene == nullptr)
+    {
+        return false;
+    }
+
+    return m_ownerScene->RemoveBoxColliderComponent(m_entityId);
+}
+
 bool Entity::HasTagComponent() const
 {
     if (m_ownerScene == nullptr)
