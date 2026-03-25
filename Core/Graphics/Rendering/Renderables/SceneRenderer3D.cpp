@@ -82,7 +82,22 @@ void SceneRenderer3D::RenderScene(const SceneRenderData3D &sceneRenderData) cons
                             return;
                         }
 
-                        m_modelRenderer->DrawModel(*geometry.Model, world, view, projection, renderable.Material);
+                        if (renderable.Material.ReceiveLighting)
+                        {
+                            m_modelRenderer->DrawModelLit(
+                                *geometry.Model,
+                                world,
+                                view,
+                                projection,
+                                cameraWorldPosition,
+                                sceneRenderData.Lighting,
+                                renderable.Material
+                            );
+                        }
+                        else
+                        {
+                            m_modelRenderer->DrawModel(*geometry.Model, world, view, projection, renderable.Material);
+                        }
                     }
                 },
                 renderable.Geometry

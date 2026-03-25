@@ -143,6 +143,26 @@ Camera *Scene::GetActiveCamera() const
     return m_activeCamera;
 }
 
+void Scene::SetForwardLightingEnabled(const bool enabled)
+{
+    m_forwardLightingEnabled = enabled;
+}
+
+bool Scene::GetForwardLightingEnabled() const noexcept
+{
+    return m_forwardLightingEnabled;
+}
+
+SceneLightingDescriptor3D &Scene::GetSceneLightingDescriptor() noexcept
+{
+    return m_sceneLighting;
+}
+
+const SceneLightingDescriptor3D &Scene::GetSceneLightingDescriptor() const noexcept
+{
+    return m_sceneLighting;
+}
+
 void Scene::SetCollisionWorldBounds(const AxisAlignedBox3D &worldBounds)
 {
     m_collisionWorldBounds = worldBounds;

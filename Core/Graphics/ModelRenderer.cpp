@@ -1,52 +1,83 @@
 #include "Core/Graphics/ModelRenderer.h"
 
+#include "Core/Graphics/D3d11Helpers.h"
 #include "Core/Graphics/GraphicsDevice.h"
 #include "Core/Graphics/ModelAsset.h"
+#include "Core/Graphics/Rendering/ForwardPhongGpuUpload.h"
+#include "Core/Graphics/Rendering/Lighting/ForwardPhongMaterialGpu.h"
+#include "Core/Graphics/Rendering/Lighting/SceneLighting3D.h"
+#include "Core/Graphics/Rendering/Lighting/ShaderConstants3D.h"
+#include "Core/Graphics/ShaderCompiler.h"
 
 #include <directxtk/Effects.h>
 #include <directxtk/Model.h>
+#include <directxtk/VertexTypes.h>
 
 #include <stdexcept>
 
+using DirectX::SimpleMath::Matrix;
+using DirectX::SimpleMath::Vector3;
+
+namespace
+{
+    void CreateDynamicConstantBuffer(
+        ID3D11Device *device,
+        const UINT byteWidth,
+        Microsoft::WRL::ComPtr<ID3D11Buffer> &buffer
+    )
+    {
+        D3D11_BUFFER_DESC description{};
+        description.Usage = D3D11_USAGE_DYNAMIC;
+        description.ByteWidth = byteWidth;
+        description.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        description.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+        D3d11Helpers::ThrowIfFailed(
+            device->CreateBuffer(&description, nullptr, buffer.GetAddressOf()),
+            "ModelRenderer failed to create dynamic constant buffer."
+        );
+    }
+}
+
 static void ApplyTintToEffect(
-    DirectX::IEffect *EffectTarget,
-    const DirectX::XMVECTOR &ColorAndAlpha
+    DirectX::IEffect *effectTarget,
+    const DirectX::XMVECTOR &colorAndAlpha
 )
 {
-    if (DirectX::BasicEffect *const EffectBasic = dynamic_cast<DirectX::BasicEffect *>(EffectTarget))
+    if (DirectX::BasicEffect *const effectBasic = dynamic_cast<DirectX::BasicEffect *>(effectTarget))
     {
-        EffectBasic->SetColorAndAlpha(ColorAndAlpha);
+        effectBasic->SetColorAndAlpha(colorAndAlpha);
         return;
     }
 
-    if (DirectX::AlphaTestEffect *const EffectAlphaTest = dynamic_cast<DirectX::AlphaTestEffect *>(EffectTarget))
+    if (DirectX::AlphaTestEffect *const effectAlphaTest = dynamic_cast<DirectX::AlphaTestEffect *>(effectTarget))
     {
-        EffectAlphaTest->SetColorAndAlpha(ColorAndAlpha);
+        effectAlphaTest->SetColorAndAlpha(colorAndAlpha);
         return;
     }
 
-    if (DirectX::DualTextureEffect *const EffectDualTexture = dynamic_cast<DirectX::DualTextureEffect *>(EffectTarget))
+    if (DirectX::DualTextureEffect *const effectDualTexture = dynamic_cast<DirectX::DualTextureEffect *>(effectTarget))
     {
-        EffectDualTexture->SetDiffuseColor(ColorAndAlpha);
-        EffectDualTexture->SetAlpha(DirectX::XMVectorGetW(ColorAndAlpha));
+        effectDualTexture->SetDiffuseColor(colorAndAlpha);
+        effectDualTexture->SetAlpha(DirectX::XMVectorGetW(colorAndAlpha));
         return;
     }
 
-    if (DirectX::EnvironmentMapEffect *const EffectEnvironmentMap = dynamic_cast<DirectX::EnvironmentMapEffect *>(EffectTarget))
+    if (DirectX::EnvironmentMapEffect *const effectEnvironmentMap = dynamic_cast<DirectX::EnvironmentMapEffect *>(effectTarget))
     {
-        EffectEnvironmentMap->SetColorAndAlpha(ColorAndAlpha);
+        effectEnvironmentMap->SetColorAndAlpha(colorAndAlpha);
         return;
     }
 
-    if (DirectX::SkinnedEffect *const EffectSkinned = dynamic_cast<DirectX::SkinnedEffect *>(EffectTarget))
+    if (DirectX::SkinnedEffect *const effectSkinned = dynamic_cast<DirectX::SkinnedEffect *>(effectTarget))
     {
-        EffectSkinned->SetColorAndAlpha(ColorAndAlpha);
+        effectSkinned->SetColorAndAlpha(colorAndAlpha);
         return;
     }
 
-    if (DirectX::NormalMapEffect *const EffectNormalMap = dynamic_cast<DirectX::NormalMapEffect *>(EffectTarget))
+    if (DirectX::NormalMapEffect *const effectNormalMap = dynamic_cast<DirectX::NormalMapEffect *>(effectTarget))
     {
-        EffectNormalMap->SetColorAndAlpha(ColorAndAlpha);
+        effectNormalMap->SetColorAndAlpha(colorAndAlpha);
         return;
     }
 }
@@ -55,13 +86,92 @@ void ModelRenderer::Initialize(GraphicsDevice &graphics)
 {
     m_graphics = &graphics;
     m_commonStates = std::make_unique<DirectX::CommonStates>(graphics.GetDevice());
+    CreateForwardPhongResources(graphics);
+}
+
+void ModelRenderer::CreateForwardPhongResources(GraphicsDevice &graphics)
+{
+    ID3D11Device *const device = graphics.GetDevice();
+    if (device == nullptr)
+    {
+        throw std::logic_error("ModelRenderer::CreateForwardPhongResources failed: null device.");
+    }
+
+    const auto modelVertexShaderBlob = ShaderCompiler::CompileFromFile(
+        "Core/Shaders/ForwardPhong3D.hlsl",
+        "VSMainNoVertexColor",
+        "vs_5_0"
+    );
+    const auto pixelShaderBlob = ShaderCompiler::CompileFromFile(
+        "Core/Shaders/ForwardPhong3D.hlsl",
+        "PSMain",
+        "ps_5_0"
+    );
+
+    D3d11Helpers::ThrowIfFailed(
+        device->CreateVertexShader(
+            modelVertexShaderBlob->GetBufferPointer(),
+            modelVertexShaderBlob->GetBufferSize(),
+            nullptr,
+            m_forwardPhongModelVertexShader.GetAddressOf()
+        ),
+        "ModelRenderer failed to create forward Phong model vertex shader."
+    );
+
+    D3d11Helpers::ThrowIfFailed(
+        device->CreatePixelShader(
+            pixelShaderBlob->GetBufferPointer(),
+            pixelShaderBlob->GetBufferSize(),
+            nullptr,
+            m_forwardPhongPixelShader.GetAddressOf()
+        ),
+        "ModelRenderer failed to create forward Phong pixel shader."
+    );
+
+    constexpr D3D11_INPUT_ELEMENT_DESC modelInputElements[] =
+    {
+        {
+            "POSITION",
+            0,
+            DXGI_FORMAT_R32G32B32_FLOAT,
+            0,
+            0,
+            D3D11_INPUT_PER_VERTEX_DATA,
+            0
+        },
+        {
+            "NORMAL",
+            0,
+            DXGI_FORMAT_R32G32B32_FLOAT,
+            0,
+            12,
+            D3D11_INPUT_PER_VERTEX_DATA,
+            0
+        }
+    };
+
+    D3d11Helpers::ThrowIfFailed(
+        device->CreateInputLayout(
+            modelInputElements,
+            2u,
+            modelVertexShaderBlob->GetBufferPointer(),
+            modelVertexShaderBlob->GetBufferSize(),
+            m_forwardPhongModelInputLayout.GetAddressOf()
+        ),
+        "ModelRenderer failed to create forward Phong model input layout."
+    );
+
+    CreateDynamicConstantBuffer(device, static_cast<UINT>(sizeof(CameraGpuConstants)), m_forwardPhongCameraConstantBuffer);
+    CreateDynamicConstantBuffer(device, static_cast<UINT>(sizeof(ObjectGpuConstants)), m_forwardPhongObjectConstantBuffer);
+    CreateDynamicConstantBuffer(device, static_cast<UINT>(sizeof(MaterialGpuConstants)), m_forwardPhongMaterialConstantBuffer);
+    CreateDynamicConstantBuffer(device, static_cast<UINT>(sizeof(LightsGpuConstants)), m_forwardPhongLightsConstantBuffer);
 }
 
 void ModelRenderer::DrawModel(
     const ModelAsset &model,
-    const DirectX::SimpleMath::Matrix &world,
-    const DirectX::SimpleMath::Matrix &view,
-    const DirectX::SimpleMath::Matrix &projection,
+    const Matrix &world,
+    const Matrix &view,
+    const Matrix &projection,
     const RenderMaterialParameters &material
 ) const
 {
@@ -70,36 +180,170 @@ void ModelRenderer::DrawModel(
         throw std::logic_error("ModelRenderer::DrawModel called before Initialize.");
     }
 
-    DirectX::Model *const DrawableModel = model.Get();
-    if (DrawableModel == nullptr)
+    DirectX::Model *const drawableModel = model.Get();
+    if (drawableModel == nullptr)
     {
         return;
     }
 
-    ID3D11DeviceContext *const DeviceContext = m_graphics->GetImmediateContext();
-    if (DeviceContext == nullptr)
+    ID3D11DeviceContext *const deviceContext = m_graphics->GetImmediateContext();
+    if (deviceContext == nullptr)
     {
         throw std::logic_error("ModelRenderer::DrawModel failed: null device context.");
     }
 
     m_graphics->BindMainRenderTargets();
 
-    const DirectX::XMFLOAT4 &BaseColorFloat4 = static_cast<const DirectX::XMFLOAT4 &>(material.BaseColor);
-    const DirectX::XMVECTOR ColorAndAlpha = DirectX::XMLoadFloat4(&BaseColorFloat4);
+    const DirectX::XMFLOAT4 &baseColorFloat4 = static_cast<const DirectX::XMFLOAT4 &>(material.BaseColor);
+    const DirectX::XMVECTOR colorAndAlpha = DirectX::XMLoadFloat4(&baseColorFloat4);
 
-    DrawableModel->UpdateEffects(
-        [&](DirectX::IEffect *EffectTarget)
+    drawableModel->UpdateEffects(
+        [&](DirectX::IEffect *effectTarget)
         {
-            ApplyTintToEffect(EffectTarget, ColorAndAlpha);
+            ApplyTintToEffect(effectTarget, colorAndAlpha);
         }
     );
 
-    DrawableModel->Draw(
-        DeviceContext,
+    drawableModel->Draw(
+        deviceContext,
         *m_commonStates,
         world,
         view,
         projection,
         material.Wireframe
     );
+}
+
+void ModelRenderer::DrawModelLit(
+    const ModelAsset &model,
+    const Matrix &world,
+    const Matrix &view,
+    const Matrix &projection,
+    const Vector3 &cameraWorldPosition,
+    const SceneLightingDescriptor3D &lighting,
+    const RenderMaterialParameters &material
+) const
+{
+    if (m_graphics == nullptr || m_commonStates == nullptr)
+    {
+        throw std::logic_error("ModelRenderer::DrawModelLit called before Initialize.");
+    }
+
+    if (m_forwardPhongModelVertexShader == nullptr || m_forwardPhongPixelShader == nullptr || m_forwardPhongModelInputLayout == nullptr)
+    {
+        throw std::logic_error("ModelRenderer::DrawModelLit called before forward Phong resources were created.");
+    }
+
+    DirectX::Model *const drawableModel = model.Get();
+    if (drawableModel == nullptr)
+    {
+        return;
+    }
+
+    ID3D11DeviceContext *const deviceContext = m_graphics->GetImmediateContext();
+    if (deviceContext == nullptr)
+    {
+        throw std::logic_error("ModelRenderer::DrawModelLit failed: null device context.");
+    }
+
+    m_graphics->BindMainRenderTargets();
+
+    const Matrix viewProjection = view * projection;
+
+    CameraGpuConstants cameraConstants{};
+    cameraConstants.View = view.Transpose();
+    cameraConstants.Projection = projection.Transpose();
+    cameraConstants.ViewProjection = viewProjection.Transpose();
+    cameraConstants.WorldPosition = DirectX::XMFLOAT4(
+        cameraWorldPosition.x,
+        cameraWorldPosition.y,
+        cameraWorldPosition.z,
+        1.0f
+    );
+
+    const Matrix worldInverse = world.Invert();
+    const Matrix worldInverseTranspose = worldInverse.Transpose();
+
+    ObjectGpuConstants objectConstants{};
+    objectConstants.World = world.Transpose();
+    objectConstants.WorldInverseTranspose = worldInverseTranspose.Transpose();
+
+    MaterialGpuConstants materialConstants{};
+    FillMaterialGpuConstantsFromRenderMaterial(material, materialConstants);
+
+    LightsGpuConstants lightsConstants{};
+    FillLightsGpuConstants(lighting, lightsConstants);
+
+    ForwardPhongUploadConstantBuffers(
+        deviceContext,
+        cameraConstants,
+        objectConstants,
+        materialConstants,
+        lightsConstants,
+        m_forwardPhongCameraConstantBuffer.Get(),
+        m_forwardPhongObjectConstantBuffer.Get(),
+        m_forwardPhongMaterialConstantBuffer.Get(),
+        m_forwardPhongLightsConstantBuffer.Get()
+    );
+
+    ID3D11Buffer *const constantBuffers[] =
+    {
+        m_forwardPhongCameraConstantBuffer.Get(),
+        m_forwardPhongObjectConstantBuffer.Get(),
+        m_forwardPhongMaterialConstantBuffer.Get(),
+        m_forwardPhongLightsConstantBuffer.Get()
+    };
+
+    deviceContext->VSSetShader(m_forwardPhongModelVertexShader.Get(), nullptr, 0);
+    deviceContext->PSSetShader(m_forwardPhongPixelShader.Get(), nullptr, 0);
+    deviceContext->VSSetConstantBuffers(0, 4, constantBuffers);
+    deviceContext->PSSetConstantBuffers(0, 4, constantBuffers);
+
+    deviceContext->IASetInputLayout(m_forwardPhongModelInputLayout.Get());
+
+    ID3D11RasterizerState *const rasterizerState = material.Wireframe
+        ? m_commonStates->Wireframe()
+        : m_commonStates->CullCounterClockwise();
+    deviceContext->RSSetState(rasterizerState);
+
+    deviceContext->OMSetBlendState(m_commonStates->Opaque(), nullptr, 0xFFFFFFFFu);
+    deviceContext->OMSetDepthStencilState(m_commonStates->DepthDefault(), 0u);
+
+    constexpr UINT expectedStride = sizeof(DirectX::VertexPositionNormalTexture);
+
+    for (const std::shared_ptr<DirectX::ModelMesh> &meshShared : drawableModel->meshes)
+    {
+        if (meshShared == nullptr)
+        {
+            continue;
+        }
+
+        for (const std::unique_ptr<DirectX::ModelMeshPart> &partUnique : meshShared->meshParts)
+        {
+            if (partUnique == nullptr)
+            {
+                continue;
+            }
+
+            const DirectX::ModelMeshPart &meshPart = *partUnique;
+            if (meshPart.vertexStride != expectedStride)
+            {
+                continue;
+            }
+
+            const UINT stride = meshPart.vertexStride;
+            const UINT bufferOffset = 0u;
+            ID3D11Buffer *const vertexBuffers[] = {meshPart.vertexBuffer.Get()};
+            const UINT strides[] = {stride};
+            const UINT offsets[] = {bufferOffset};
+
+            deviceContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
+            deviceContext->IASetIndexBuffer(meshPart.indexBuffer.Get(), meshPart.indexFormat, 0);
+            deviceContext->IASetPrimitiveTopology(meshPart.primitiveType);
+
+            deviceContext->DrawIndexed(meshPart.indexCount, meshPart.startIndex, meshPart.vertexOffset);
+        }
+    }
+
+    deviceContext->RSSetState(nullptr);
 }

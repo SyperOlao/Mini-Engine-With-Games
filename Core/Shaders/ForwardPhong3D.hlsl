@@ -68,6 +68,28 @@ PSInput VSMain(VSInput input)
     return output;
 }
 
+struct VSInputNoVertexColor
+{
+    float3 Position : POSITION;
+    float3 Normal : NORMAL;
+};
+
+PSInput VSMainNoVertexColor(VSInputNoVertexColor input)
+{
+    PSInput output;
+
+    float4 worldPosition = mul(float4(input.Position, 1.0f), World);
+    output.WorldPosition = worldPosition.xyz;
+
+    float3x3 worldInverseTranspose = (float3x3)WorldInverseTranspose;
+    output.WorldNormal = normalize(mul(input.Normal, worldInverseTranspose));
+
+    output.Position = mul(worldPosition, ViewProjection);
+    output.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+
+    return output;
+}
+
 static const float kDirectionalKind = 0.0f;
 static const float kPointKind = 1.0f;
 static const float kSpotKind = 2.0f;

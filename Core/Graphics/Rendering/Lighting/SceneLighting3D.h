@@ -24,4 +24,16 @@ void FillLightsGpuConstants(
     LightsGpuConstants &lightsGpuConstants
 );
 
+[[nodiscard]] inline SceneLightingDescriptor3D SceneLighting3DCreateDefaultOutdoor()
+{
+    SceneLightingDescriptor3D result{};
+    DirectionalLight3D sun{};
+    sun.Direction = DirectX::SimpleMath::Vector3(0.0f, -1.0f, 0.0f);
+    sun.LightColor = DirectX::SimpleMath::Color(1.0f, 1.0f, 1.0f, 1.0f);
+    sun.Intensity = 1.0f;
+    sun.Enabled = true;
+    result.DirectionalLights.push_back(sun);
+    return result;
+}
+
 #endif

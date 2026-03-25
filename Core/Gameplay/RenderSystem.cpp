@@ -6,6 +6,7 @@
 #include "Core/Graphics/Camera.h"
 #include "Core/Graphics/ModelAsset.h"
 #include "Core/Graphics/ModelRenderer.h"
+#include "Core/Graphics/Rendering/Lighting/SceneLighting3D.h"
 #include "Core/Graphics/Rendering/Renderables/RenderMaterialParameters.h"
 #include "Core/Platform/Window.h"
 
@@ -41,6 +42,7 @@ void RenderSystem::Render(Scene &scene, AppContext &context)
     const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
     const DirectX::SimpleMath::Matrix viewMatrix = camera->GetViewMatrix();
     const DirectX::SimpleMath::Matrix projectionMatrix = camera->GetProjectionMatrix(aspectRatio);
+    const DirectX::SimpleMath::Vector3 cameraWorldPosition = CameraWorldPositionFromViewMatrix(viewMatrix);
 
     scene.ForEachEntityWithTransformAndModel([&](Entity &entity) {
         ModelComponent *const model = entity.TryGetModelComponent();
@@ -57,12 +59,28 @@ void RenderSystem::Render(Scene &scene, AppContext &context)
 
         RenderMaterialParameters material{};
         material.BaseColor = model->Tint;
-        context.GetModelRenderer().DrawModel(
-            *model->Asset,
-            transform->WorldMatrix,
-            viewMatrix,
-            projectionMatrix,
-            material
-        );
+
+        if (scene.GetForwardLightingEnabled() && material.ReceiveLighting)
+        {
+            context.GetModelRenderer().DrawModelLit(
+                *model->Asset,
+                transform->WorldMatrix,
+                viewMatrix,
+                projectionMatrix,
+                cameraWorldPosition,
+                scene.GetSceneLightingDescriptor(),
+                material
+            );
+        }
+        else
+        {
+            context.GetModelRenderer().DrawModel(
+                *model->Asset,
+                transform->WorldMatrix,
+                viewMatrix,
+                projectionMatrix,
+                material
+            );
+        }
     });
 }

@@ -2,9 +2,12 @@
 #define PINGPONG_MODELRENDERER_H
 
 #include <SimpleMath.h>
+#include <d3d11.h>
 #include <directxtk/CommonStates.h>
 #include <memory>
+#include <wrl/client.h>
 
+#include "Core/Graphics/Rendering/Lighting/SceneLighting3D.h"
 #include "Core/Graphics/Rendering/Renderables/RenderMaterialParameters.h"
 
 class GraphicsDevice;
@@ -23,9 +26,30 @@ public:
         const RenderMaterialParameters &material
     ) const;
 
+    void DrawModelLit(
+        const ModelAsset &model,
+        const DirectX::SimpleMath::Matrix &world,
+        const DirectX::SimpleMath::Matrix &view,
+        const DirectX::SimpleMath::Matrix &projection,
+        const DirectX::SimpleMath::Vector3 &cameraWorldPosition,
+        const SceneLightingDescriptor3D &lighting,
+        const RenderMaterialParameters &material
+    ) const;
+
+private:
+    void CreateForwardPhongResources(GraphicsDevice &graphics);
+
 private:
     GraphicsDevice *m_graphics{nullptr};
     std::unique_ptr<DirectX::CommonStates> m_commonStates{};
+
+    Microsoft::WRL::ComPtr<ID3D11VertexShader> m_forwardPhongModelVertexShader;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader> m_forwardPhongPixelShader;
+    Microsoft::WRL::ComPtr<ID3D11InputLayout> m_forwardPhongModelInputLayout;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> m_forwardPhongCameraConstantBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> m_forwardPhongObjectConstantBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> m_forwardPhongMaterialConstantBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> m_forwardPhongLightsConstantBuffer;
 };
 
 #endif

@@ -18,6 +18,8 @@ add_executable(PingPong
         Core/App/EngineServices.h
         Core/App/AppContext.h
         Core/App/AppContext.cpp
+        Core/App/FatalErrorReport.h
+        Core/App/FatalErrorReport.cpp
 
         Core/Platform/Window.cpp
         Core/Platform/Window.h
@@ -47,6 +49,9 @@ add_executable(PingPong
         Core/Graphics/Rendering/Lighting/ShaderConstants3D.h
         Core/Graphics/Rendering/Lighting/SceneLighting3D.h
         Core/Graphics/Rendering/Lighting/SceneLighting3D.cpp
+        Core/Graphics/Rendering/Lighting/ForwardPhongMaterialGpu.h
+        Core/Graphics/Rendering/ForwardPhongGpuUpload.h
+        Core/Graphics/Rendering/ForwardPhongGpuUpload.cpp
         Core/Graphics/ProjectionMode.h
         Core/Graphics/Camera.h
         Core/Graphics/Camera.cpp

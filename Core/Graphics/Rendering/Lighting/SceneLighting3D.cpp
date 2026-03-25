@@ -64,6 +64,11 @@ void FillLightsGpuConstants(
             break;
         }
 
+        if (!directionalLight.Enabled)
+        {
+            continue;
+        }
+
         Vector3 propagation = directionalLight.Direction;
         propagation.Normalize();
         const Vector3 towardLight = propagation * -1.0f;

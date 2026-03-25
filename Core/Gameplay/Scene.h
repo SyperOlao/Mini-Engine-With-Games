@@ -5,6 +5,7 @@
 #include "Core/Gameplay/GameplayComponents.h"
 #include "Core/Gameplay/ISceneSystem.h"
 #include "Core/Gameplay/SceneCollisionTypes.h"
+#include "Core/Graphics/Rendering/Lighting/SceneLighting3D.h"
 #include "Core/Physics/Collision3D/AxisAlignedBox3D.h"
 
 #include <cstddef>
@@ -58,6 +59,14 @@ public:
     void SetActiveCamera(Camera *camera);
 
     [[nodiscard]] Camera *GetActiveCamera() const;
+
+    void SetForwardLightingEnabled(bool enabled);
+
+    [[nodiscard]] bool GetForwardLightingEnabled() const noexcept;
+
+    [[nodiscard]] SceneLightingDescriptor3D &GetSceneLightingDescriptor() noexcept;
+
+    [[nodiscard]] const SceneLightingDescriptor3D &GetSceneLightingDescriptor() const noexcept;
 
     void SetCollisionWorldBounds(const AxisAlignedBox3D &worldBounds);
 
@@ -167,6 +176,8 @@ private:
     };
     float m_collisionCellSize{4.0f};
     std::vector<CollisionPair> m_collisionFrameResults{};
+    bool m_forwardLightingEnabled{false};
+    SceneLightingDescriptor3D m_sceneLighting{};
 };
 
 #endif

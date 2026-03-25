@@ -11,6 +11,7 @@ struct RenderMaterialParameters final
     float SpecularPower{48.0f};
     DirectX::SimpleMath::Color SpecularColor{1.0f, 1.0f, 1.0f, 1.0f};
     DirectX::SimpleMath::Color EmissiveColor{0.0f, 0.0f, 0.0f, 1.0f};
+    bool ReceiveLighting{true};
 };
 
 #endif

@@ -5,8 +5,11 @@
 #include "Application.h"
 
 #include "AppContext.h"
+#include "FatalErrorReport.h"
 #include "Core/Graphics/GraphicsDevice.h"
+
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 Application::Application(
@@ -75,21 +78,44 @@ void Application::ShutdownEngineServices() {
 }
 
 int Application::Run() {
-    while (m_isRunning) {
-        if (!Window::ProcessMessages()) {
-            m_isRunning = false;
-            break;
+    try {
+        while (m_isRunning) {
+            if (!Window::ProcessMessages()) {
+                m_isRunning = false;
+                break;
+            }
+
+            m_timer.Tick();
+
+            Update(m_timer.GetDeltaTime());
+            Render();
         }
 
-        m_timer.Tick();
-
-        Update(m_timer.GetDeltaTime());
-        Render();
+        m_game->Shutdown(m_context);
+        ShutdownEngineServices();
+        return 0;
     }
-
-    m_game->Shutdown(m_context);
-    ShutdownEngineServices();
-    return 0;
+    catch (const std::exception &exception) {
+        const std::string message = std::string("Runtime error:\n") + exception.what();
+        FatalErrorReport::Report(message);
+        try {
+            m_game->Shutdown(m_context);
+        }
+        catch (...) {
+        }
+        ShutdownEngineServices();
+        return -1;
+    }
+    catch (...) {
+        FatalErrorReport::Report("Unknown runtime error (non-std::exception).");
+        try {
+            m_game->Shutdown(m_context);
+        }
+        catch (...) {
+        }
+        ShutdownEngineServices();
+        return -1;
+    }
 }
 
 void Application::Update(const float deltaTime) {

@@ -4,6 +4,8 @@
 #include "Core/Graphics/MeshGenerator.h"
 #include "Core/Graphics/MeshLitData.h"
 #include "Core/Graphics/ObjectConstants.h"
+#include "Core/Graphics/Rendering/ForwardPhongGpuUpload.h"
+#include "Core/Graphics/Rendering/Lighting/ForwardPhongMaterialGpu.h"
 #include "Core/Graphics/Rendering/Lighting/SceneLighting3D.h"
 #include "Core/Graphics/Rendering/Lighting/ShaderConstants3D.h"
 #include "Core/Graphics/ShaderCompiler.h"
@@ -22,27 +24,6 @@ namespace
 {
     constexpr UINT kMaxOrbitVertices = 512;
     constexpr UINT kMaxDebugLineVerticesPerDraw = 65536u;
-
-    static void FillMaterialGpuConstants(
-        const RenderMaterialParameters &material,
-        MaterialGpuConstants &destination
-    )
-    {
-        const DirectX::XMFLOAT4 &baseColorFloat4 = static_cast<const DirectX::XMFLOAT4 &>(material.BaseColor);
-        destination.BaseColor = baseColorFloat4;
-        destination.SpecularColorAndPower = DirectX::XMFLOAT4(
-            material.SpecularColor.x,
-            material.SpecularColor.y,
-            material.SpecularColor.z,
-            material.SpecularPower
-        );
-        destination.EmissiveAndAmbient = DirectX::XMFLOAT4(
-            material.EmissiveColor.x,
-            material.EmissiveColor.y,
-            material.EmissiveColor.z,
-            material.AmbientFactor
-        );
-    }
 
     static void CreateImmutableBuffer(
         ID3D11Device *device,
@@ -623,42 +604,22 @@ void PrimitiveRenderer3D::DrawLitMesh(
     objectConstants.WorldInverseTranspose = worldInverseTranspose.Transpose();
 
     MaterialGpuConstants materialConstants{};
-    FillMaterialGpuConstants(material, materialConstants);
+    FillMaterialGpuConstantsFromRenderMaterial(material, materialConstants);
 
     LightsGpuConstants lightsConstants{};
     FillLightsGpuConstants(lighting, lightsConstants);
 
-    D3D11_MAPPED_SUBRESOURCE mappedCamera{};
-    D3d11Helpers::ThrowIfFailed(
-        context->Map(m_cameraConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedCamera),
-        "PrimitiveRenderer3D failed to map camera constant buffer."
+    ForwardPhongUploadConstantBuffers(
+        context,
+        cameraConstants,
+        objectConstants,
+        materialConstants,
+        lightsConstants,
+        m_cameraConstantBuffer.Get(),
+        m_objectConstantBuffer.Get(),
+        m_materialConstantBuffer.Get(),
+        m_lightsConstantBuffer.Get()
     );
-    std::memcpy(mappedCamera.pData, &cameraConstants, sizeof(CameraGpuConstants));
-    context->Unmap(m_cameraConstantBuffer.Get(), 0);
-
-    D3D11_MAPPED_SUBRESOURCE mappedObject{};
-    D3d11Helpers::ThrowIfFailed(
-        context->Map(m_objectConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedObject),
-        "PrimitiveRenderer3D failed to map object constant buffer."
-    );
-    std::memcpy(mappedObject.pData, &objectConstants, sizeof(ObjectGpuConstants));
-    context->Unmap(m_objectConstantBuffer.Get(), 0);
-
-    D3D11_MAPPED_SUBRESOURCE mappedMaterial{};
-    D3d11Helpers::ThrowIfFailed(
-        context->Map(m_materialConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedMaterial),
-        "PrimitiveRenderer3D failed to map material constant buffer."
-    );
-    std::memcpy(mappedMaterial.pData, &materialConstants, sizeof(MaterialGpuConstants));
-    context->Unmap(m_materialConstantBuffer.Get(), 0);
-
-    D3D11_MAPPED_SUBRESOURCE mappedLights{};
-    D3d11Helpers::ThrowIfFailed(
-        context->Map(m_lightsConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedLights),
-        "PrimitiveRenderer3D failed to map lights constant buffer."
-    );
-    std::memcpy(mappedLights.pData, &lightsConstants, sizeof(LightsGpuConstants));
-    context->Unmap(m_lightsConstantBuffer.Get(), 0);
 
     constexpr UINT kLitVertexStride = sizeof(MeshVertexLit3D);
     constexpr UINT kVertexOffset = 0;

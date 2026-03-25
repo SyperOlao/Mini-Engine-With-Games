@@ -1,5 +1,5 @@
 #include "Core/App/Application.h"
-#include <iostream>
+#include "Core/App/FatalErrorReport.h"
 
 #include <Windows.h>
 #include <exception>
@@ -36,24 +36,15 @@ int main()
         Application app(hInstance, std::move(game));
         return app.Run();
     }
-    catch (const std::exception& exception)
+    catch (const std::exception &exception)
     {
         const std::string message = std::string("Fatal error:\n") + exception.what();
-
-        std::cerr << message << std::endl;
-        OutputDebugStringA(message.c_str());
-        MessageBoxA(nullptr, message.c_str(), "Fatal Error", MB_OK | MB_ICONERROR);
-
+        FatalErrorReport::Report(message);
         return -1;
     }
     catch (...)
     {
-        const char* message = "Unknown fatal error";
-
-        std::cerr << message << std::endl;
-        OutputDebugStringA(message);
-        MessageBoxA(nullptr, message, "Fatal Error", MB_OK | MB_ICONERROR);
-
+        FatalErrorReport::Report("Unknown fatal error (non-std::exception).");
         return -1;
     }
 }
