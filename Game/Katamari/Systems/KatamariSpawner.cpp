@@ -17,20 +17,21 @@ namespace
 {
 [[nodiscard]] float RadiusFromMergedModelBounds(
     std::shared_ptr<ModelAsset> const &modelAsset,
-    float visualUniformScale,
     float archetypeRadiusFallback
 )
 {
-    const float minimumRadius = archetypeRadiusFallback > 0.0f ? archetypeRadiusFallback : 0.2f;
+    if (archetypeRadiusFallback > 0.0f)
+    {
+        return archetypeRadiusFallback;
+    }
 
     if (modelAsset == nullptr || !modelAsset->IsLoaded())
     {
-        return (std::max)(minimumRadius, 0.35f);
+        return 0.35f;
     }
 
     const DirectX::BoundingSphere merged = modelAsset->GetMergedBoundingSphere();
-    const float scaled = merged.Radius * visualUniformScale;
-    return (std::max)(scaled, minimumRadius);
+    return (std::max)(merged.Radius, 0.2f);
 }
 }
 
@@ -73,19 +74,19 @@ void KatamariSpawner::SpawnPickups(
             continue;
         }
 
-        const float colliderRadius = RadiusFromMergedModelBounds(
+        const float colliderRadiusLocal = RadiusFromMergedModelBounds(
             model,
-            archetype.VisualUniformScale,
             archetype.CollisionSphereRadius
         );
+        const float colliderRadiusWorld = colliderRadiusLocal * archetype.VisualUniformScale;
 
         Vector3 position{};
         bool placed = false;
         for (unsigned int attempt = 0u; attempt < maxAttempts; ++attempt)
         {
             position = SampleSpawnPosition(world);
-            position.y = colliderRadius;
-            if (!IsSpawnPositionTooClose(scene, world, position, separation + colliderRadius))
+            position.y = colliderRadiusWorld;
+            if (!IsSpawnPositionTooClose(scene, world, position, separation + colliderRadiusWorld))
             {
                 placed = true;
                 break;
@@ -114,7 +115,7 @@ void KatamariSpawner::SpawnPickups(
         pickup.AddModelComponent(modelComponent);
 
         SphereColliderComponent sphere{};
-        sphere.Radius = colliderRadius;
+        sphere.Radius = colliderRadiusLocal;
         sphere.CollisionLayer = KatamariCollisionLayer::Pickup;
         sphere.CollidesWithMask = 1u << KatamariCollisionLayer::PlayerBall;
         sphere.IsTrigger = false;
@@ -128,7 +129,7 @@ void KatamariSpawner::SpawnPickups(
         KatamariPickupRecord record{};
         record.AbsorbVolumeContribution = archetype.AbsorbVolumeContribution;
         record.MinimumBallRadiusToAbsorb = archetype.MinimumBallRadiusToAbsorb;
-        record.CollisionSphereRadius = colliderRadius;
+        record.CollisionSphereRadius = colliderRadiusWorld;
         record.Absorbed = false;
         world.Pickups[pickup.GetId()] = record;
         ++world.TotalPickups;

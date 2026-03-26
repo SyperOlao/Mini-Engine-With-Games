@@ -9,8 +9,8 @@ std::vector<PickupArchetype> KatamariPickupCatalog::BuildDefaultPickupArchetypes
     PickupArchetype kakashi{};
     kakashi.DisplayName = "Kakashi";
     kakashi.ModelPath = std::filesystem::path("Game/Katamari/Assets/kakashi_free_fire/scene.gltf");
-    kakashi.VisualUniformScale = 3.5f;
-    kakashi.CollisionSphereRadius = 0.0f;
+    kakashi.VisualUniformScale = 500.0f;
+    kakashi.CollisionSphereRadius = 0.01f;
     kakashi.AbsorbVolumeContribution = 2.2f;
     kakashi.MinimumBallRadiusToAbsorb = 1.8f;
     archetypes.push_back(std::move(kakashi));

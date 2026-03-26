@@ -21,6 +21,14 @@
 
 namespace
 {
+float ComputeMaximumWorldScaleAxis(const DirectX::SimpleMath::Matrix &worldMatrix)
+{
+    const DirectX::SimpleMath::Vector3 basisX(worldMatrix._11, worldMatrix._12, worldMatrix._13);
+    const DirectX::SimpleMath::Vector3 basisY(worldMatrix._21, worldMatrix._22, worldMatrix._23);
+    const DirectX::SimpleMath::Vector3 basisZ(worldMatrix._31, worldMatrix._32, worldMatrix._33);
+    return (std::max)(basisX.Length(), (std::max)(basisY.Length(), basisZ.Length()));
+}
+
 AxisAlignedBox3D ComputeWorldAxisAlignedBoundsForBox(
     const DirectX::SimpleMath::Matrix &entityWorldMatrix,
     const DirectX::SimpleMath::Vector3 &localCenter,
@@ -148,7 +156,8 @@ void CollisionDebugDraw::DrawSphereColliderWorldBounds(
             sphere->LocalCenter,
             transform->WorldMatrix
         );
-        queue.AddWireSphere(worldCenter, sphere->Radius, color, 16);
+        const float worldScaleMaximumAxis = ComputeMaximumWorldScaleAxis(transform->WorldMatrix);
+        queue.AddWireSphere(worldCenter, sphere->Radius * worldScaleMaximumAxis, color, 16);
     });
 }
 
