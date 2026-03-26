@@ -110,6 +110,8 @@ add_executable(PingPong
         Core/Graphics/Rendering/Shadows/ShadowComparisonSamplerState.cpp
         Core/Graphics/Rendering/Shadows/ShadowDepthPassRasterizerState.h
         Core/Graphics/Rendering/Shadows/ShadowDepthPassRasterizerState.cpp
+        Core/Graphics/Rendering/Shadows/DirectionalShadowResources.h
+        Core/Graphics/Rendering/Shadows/DirectionalShadowResources.cpp
         Core/Graphics/Rendering/Renderables/RenderMaterialParameters.h
         Core/Graphics/Rendering/Renderables/RenderTransform3D.h
         Core/Graphics/Rendering/Renderables/RenderGeometry3D.h
@@ -254,6 +256,7 @@ add_executable(PingPong
         Game/Katamari/UI/KatamariHud.cpp
         Game/Katamari/UI/KatamariHud.h
         Core/Graphics/ModelAssetAssimp.cpp
+        Core/Graphics/Rendering/Shadows/DirectionalShadowResources.cpp
 )
 
 find_package(directxtk CONFIG REQUIRED)

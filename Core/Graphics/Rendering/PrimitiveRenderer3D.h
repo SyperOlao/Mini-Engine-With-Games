@@ -14,6 +14,7 @@
 #include "Core/Graphics/Vertex3D.h"
 
 class GraphicsDevice;
+class RenderContext;
 
 class PrimitiveRenderer3D final
 {
@@ -21,6 +22,8 @@ public:
     void Initialize(GraphicsDevice &graphics);
 
     ~PrimitiveRenderer3D();
+
+    void SetShadowBindingHost(RenderContext *host) noexcept;
 
     void DrawBox(
         const DirectX::SimpleMath::Matrix &world,
@@ -91,6 +94,7 @@ private:
 
 private:
     GraphicsDevice *m_graphics{nullptr};
+    RenderContext *m_shadowBindingHost{nullptr};
 
     std::unique_ptr<DirectX::DX11::GeometricPrimitive> m_box;
     std::unique_ptr<DirectX::DX11::GeometricPrimitive> m_sphere;

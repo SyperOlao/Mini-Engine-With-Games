@@ -24,6 +24,7 @@ struct ModelComponent final
     bool Visible{true};
     DirectX::SimpleMath::Color Tint{1.0f, 1.0f, 1.0f, 1.0f};
     bool DebugDrawBounds{false};
+    bool CastsShadow{true};
 };
 
 struct SphereColliderComponent final

@@ -15,6 +15,9 @@
 #include "Core/Graphics/Rendering/Pipeline/FrameRenderPipeline.h"
 #include "Core/Graphics/Rendering/Pipeline/FrameRenderResources.h"
 #include "Core/Graphics/Rendering/Renderables/SceneRenderer3D.h"
+#include "Core/Graphics/Rendering/Shadows/DirectionalShadowResources.h"
+
+#include <d3d11.h>
 
 class Camera;
 class GraphicsDevice;
@@ -24,7 +27,7 @@ class RenderContext final {
 public:
     RenderContext() = default;
 
-    ~RenderContext() = default;
+    ~RenderContext();
 
     RenderContext(const RenderContext &) = delete;
 
@@ -36,7 +39,17 @@ public:
 
     void Initialize(GraphicsDevice &graphics);
 
+    void BeginRenderFrame();
+
     void ResizeDeferredResources();
+
+    void PrepareDirectionalShadowPass(Scene &scene, Camera &camera);
+
+    void InvalidateDirectionalShadowPass();
+
+    void BindForwardPhongShadowRegisters(ID3D11DeviceContext *deviceContext) const;
+
+    void UnbindForwardPhongShadowShaderResource(ID3D11DeviceContext *deviceContext) const;
 
     [[nodiscard]] ShapeRenderer2D &GetShapeRenderer2D() noexcept;
 
@@ -89,8 +102,8 @@ private:
     DeferredFrameResources m_deferredFrameResources{};
     FrameRenderResources m_frameRenderResources{};
     FrameRenderPipeline m_frameRenderPipeline{};
+    DirectionalShadowResources m_directionalShadowResources{};
+    bool m_directionalShadowPassCompletedThisFrame{false};
 };
 
 #endif
-
-

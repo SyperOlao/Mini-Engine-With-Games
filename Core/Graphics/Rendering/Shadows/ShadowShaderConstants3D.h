@@ -9,6 +9,24 @@
 
 constexpr std::uint32_t kMaximumShadowCascades = 4u;
 
+struct alignas(16) ShadowDepthObjectGpuConstants final
+{
+    DirectX::SimpleMath::Matrix World{};
+    DirectX::SimpleMath::Matrix LightViewProjection{};
+};
+
+struct alignas(16) ShadowSamplingGpuConstants final
+{
+    DirectX::XMFLOAT4 DepthBiasAndPcfKernel{};
+    DirectX::XMFLOAT2 InvShadowMapTexelSize{};
+    float PaddingFloat0{};
+    float PaddingFloat1{};
+    std::uint32_t ShadowEnabled{0u};
+    std::uint32_t ShadowedDirectionalLightGpuIndex{0u};
+    std::uint32_t CascadeCount{0u};
+    std::uint32_t PaddingUint{};
+};
+
 struct alignas(16) ShadowPassLightConstantsGpu final
 {
     DirectX::SimpleMath::Matrix LightViewProjection{};
@@ -25,6 +43,8 @@ struct alignas(16) ShadowCascadeConstantsGpu final
     std::uint32_t Padding2{0u};
 };
 
+static_assert(sizeof(ShadowDepthObjectGpuConstants) % 16u == 0u);
+static_assert(sizeof(ShadowSamplingGpuConstants) % 16u == 0u);
 static_assert(sizeof(ShadowPassLightConstantsGpu) % 16u == 0u);
 static_assert(sizeof(ShadowCascadeConstantsGpu) % 16u == 0u);
 

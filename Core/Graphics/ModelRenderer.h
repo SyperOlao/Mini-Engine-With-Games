@@ -12,11 +12,21 @@
 
 class GraphicsDevice;
 class ModelAsset;
+class RenderContext;
 
 class ModelRenderer final
 {
 public:
     void Initialize(GraphicsDevice &graphics);
+
+    void SetShadowBindingHost(RenderContext *host) noexcept;
+
+    void DrawModelShadowDepth(
+        ID3D11RasterizerState *shadowRasterizerState,
+        const ModelAsset &model,
+        const DirectX::SimpleMath::Matrix &world,
+        const DirectX::SimpleMath::Matrix &lightViewProjection
+    ) const;
 
     void DrawModel(
         const ModelAsset &model,
@@ -39,8 +49,11 @@ public:
 private:
     void CreateForwardPhongResources(GraphicsDevice &graphics);
 
+    void CreateShadowDepthPassResources(GraphicsDevice &graphics);
+
 private:
     GraphicsDevice *m_graphics{nullptr};
+    RenderContext *m_shadowBindingHost{nullptr};
     std::unique_ptr<DirectX::CommonStates> m_commonStates{};
 
     Microsoft::WRL::ComPtr<ID3D11VertexShader> m_forwardPhongModelVertexShader;
@@ -50,6 +63,10 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_forwardPhongObjectConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_forwardPhongMaterialConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_forwardPhongLightsConstantBuffer;
+
+    Microsoft::WRL::ComPtr<ID3D11VertexShader> m_shadowDepthVertexShader;
+    Microsoft::WRL::ComPtr<ID3D11InputLayout> m_shadowDepthInputLayout;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> m_shadowDepthConstantBuffer;
 };
 
 #endif

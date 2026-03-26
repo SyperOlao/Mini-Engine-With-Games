@@ -8,6 +8,7 @@
 #include "Core/Graphics/Rendering/Lighting/ForwardPhongMaterialGpu.h"
 #include "Core/Graphics/Rendering/Lighting/SceneLighting3D.h"
 #include "Core/Graphics/Rendering/Lighting/ShaderConstants3D.h"
+#include "Core/Graphics/Rendering/RenderContext.h"
 #include "Core/Graphics/ShaderCompiler.h"
 #include "Core/Graphics/Vertex3D.h"
 #include "Core/Graphics/GraphicsDevice.h"
@@ -67,6 +68,11 @@ namespace
 }
 
 PrimitiveRenderer3D::~PrimitiveRenderer3D() = default;
+
+void PrimitiveRenderer3D::SetShadowBindingHost(RenderContext *const host) noexcept
+{
+    m_shadowBindingHost = host;
+}
 
 void PrimitiveRenderer3D::Initialize(GraphicsDevice &graphics)
 {
@@ -575,6 +581,11 @@ void PrimitiveRenderer3D::DrawLitMesh(
         throw std::logic_error("PrimitiveRenderer3D::DrawLitMesh requires initialized graphics.");
     }
 
+    if (m_shadowBindingHost == nullptr)
+    {
+        throw std::logic_error("PrimitiveRenderer3D::DrawLitMesh requires a shadow binding host from RenderContext::Initialize.");
+    }
+
     BindTargets();
 
     ID3D11DeviceContext *const context = m_graphics->GetImmediateContext();
@@ -643,6 +654,9 @@ void PrimitiveRenderer3D::DrawLitMesh(
 
     context->PSSetShader(m_litPixelShader.Get(), nullptr, 0);
     context->PSSetConstantBuffers(0, 4, constantBuffers);
+    m_shadowBindingHost->BindForwardPhongShadowRegisters(context);
 
     context->DrawIndexed(indexCount, 0, 0);
+
+    m_shadowBindingHost->UnbindForwardPhongShadowShaderResource(context);
 }

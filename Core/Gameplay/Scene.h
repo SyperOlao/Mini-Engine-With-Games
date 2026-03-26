@@ -64,6 +64,10 @@ public:
 
     [[nodiscard]] bool GetForwardLightingEnabled() const noexcept;
 
+    void SetDirectionalShadowMappingEnabled(bool enabled);
+
+    [[nodiscard]] bool GetDirectionalShadowMappingEnabled() const noexcept;
+
     [[nodiscard]] SceneLightingDescriptor3D &GetSceneLightingDescriptor() noexcept;
 
     [[nodiscard]] const SceneLightingDescriptor3D &GetSceneLightingDescriptor() const noexcept;
@@ -177,6 +181,7 @@ private:
     float m_collisionCellSize{4.0f};
     std::vector<CollisionPair> m_collisionFrameResults{};
     bool m_forwardLightingEnabled{false};
+    bool m_directionalShadowMappingEnabled{true};
     SceneLightingDescriptor3D m_sceneLighting{};
 };
 

@@ -126,6 +126,7 @@ void Application::Update(const float deltaTime) {
 }
 
 void Application::Render() {
+    m_renderContext.BeginRenderFrame();
     m_renderContext.GetFrameRenderer().BeginFrame(m_desc.ClearColor);
     m_game->Render(m_context);
     m_renderContext.GetFrameRenderer().EndFrame(m_desc.VSync);

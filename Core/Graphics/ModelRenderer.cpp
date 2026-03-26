@@ -7,12 +7,15 @@
 #include "Core/Graphics/Rendering/Lighting/ForwardPhongMaterialGpu.h"
 #include "Core/Graphics/Rendering/Lighting/SceneLighting3D.h"
 #include "Core/Graphics/Rendering/Lighting/ShaderConstants3D.h"
+#include "Core/Graphics/Rendering/RenderContext.h"
+#include "Core/Graphics/Rendering/Shadows/ShadowShaderConstants3D.h"
 #include "Core/Graphics/ShaderCompiler.h"
 
 #include <directxtk/Effects.h>
 #include <directxtk/Model.h>
 #include <directxtk/VertexTypes.h>
 
+#include <cstring>
 #include <stdexcept>
 
 using DirectX::SimpleMath::Matrix;
@@ -82,11 +85,86 @@ static void ApplyTintToEffect(
     }
 }
 
+void ModelRenderer::SetShadowBindingHost(RenderContext *const host) noexcept
+{
+    m_shadowBindingHost = host;
+}
+
 void ModelRenderer::Initialize(GraphicsDevice &graphics)
 {
     m_graphics = &graphics;
     m_commonStates = std::make_unique<DirectX::CommonStates>(graphics.GetDevice());
     CreateForwardPhongResources(graphics);
+    CreateShadowDepthPassResources(graphics);
+}
+
+void ModelRenderer::CreateShadowDepthPassResources(GraphicsDevice &graphics)
+{
+    ID3D11Device *const device = graphics.GetDevice();
+    if (device == nullptr)
+    {
+        throw std::logic_error("ModelRenderer::CreateShadowDepthPassResources failed: null device.");
+    }
+
+    const auto shadowVertexShaderBlob = ShaderCompiler::CompileFromFile(
+        "Core/Shaders/ShadowDepth3D.hlsl",
+        "VSMain",
+        "vs_5_0"
+    );
+
+    D3d11Helpers::ThrowIfFailed(
+        device->CreateVertexShader(
+            shadowVertexShaderBlob->GetBufferPointer(),
+            shadowVertexShaderBlob->GetBufferSize(),
+            nullptr,
+            m_shadowDepthVertexShader.GetAddressOf()
+        ),
+        "ModelRenderer failed to create shadow depth vertex shader."
+    );
+
+    constexpr D3D11_INPUT_ELEMENT_DESC shadowInputElements[] =
+    {
+        {
+            "POSITION",
+            0,
+            DXGI_FORMAT_R32G32B32_FLOAT,
+            0,
+            0,
+            D3D11_INPUT_PER_VERTEX_DATA,
+            0
+        },
+        {
+            "NORMAL",
+            0,
+            DXGI_FORMAT_R32G32B32_FLOAT,
+            0,
+            12,
+            D3D11_INPUT_PER_VERTEX_DATA,
+            0
+        },
+        {
+            "TEXCOORD",
+            0,
+            DXGI_FORMAT_R32G32_FLOAT,
+            0,
+            24,
+            D3D11_INPUT_PER_VERTEX_DATA,
+            0
+        }
+    };
+
+    D3d11Helpers::ThrowIfFailed(
+        device->CreateInputLayout(
+            shadowInputElements,
+            static_cast<UINT>(std::size(shadowInputElements)),
+            shadowVertexShaderBlob->GetBufferPointer(),
+            shadowVertexShaderBlob->GetBufferSize(),
+            m_shadowDepthInputLayout.GetAddressOf()
+        ),
+        "ModelRenderer failed to create shadow depth input layout."
+    );
+
+    CreateDynamicConstantBuffer(device, static_cast<UINT>(sizeof(ShadowDepthObjectGpuConstants)), m_shadowDepthConstantBuffer);
 }
 
 void ModelRenderer::CreateForwardPhongResources(GraphicsDevice &graphics)
@@ -167,6 +245,98 @@ void ModelRenderer::CreateForwardPhongResources(GraphicsDevice &graphics)
     CreateDynamicConstantBuffer(device, static_cast<UINT>(sizeof(LightsGpuConstants)), m_forwardPhongLightsConstantBuffer);
 }
 
+void ModelRenderer::DrawModelShadowDepth(
+    ID3D11RasterizerState *const shadowRasterizerState,
+    const ModelAsset &model,
+    const Matrix &world,
+    const Matrix &lightViewProjection
+) const
+{
+    if (m_graphics == nullptr || m_commonStates == nullptr)
+    {
+        throw std::logic_error("ModelRenderer::DrawModelShadowDepth called before Initialize.");
+    }
+
+    if (m_shadowDepthVertexShader == nullptr || m_shadowDepthInputLayout == nullptr || m_shadowDepthConstantBuffer == nullptr)
+    {
+        throw std::logic_error("ModelRenderer::DrawModelShadowDepth called before shadow depth resources were created.");
+    }
+
+    DirectX::Model *const drawableModel = model.Get();
+    if (drawableModel == nullptr)
+    {
+        return;
+    }
+
+    ID3D11DeviceContext *const deviceContext = m_graphics->GetImmediateContext();
+    if (deviceContext == nullptr)
+    {
+        throw std::logic_error("ModelRenderer::DrawModelShadowDepth failed: null device context.");
+    }
+
+    ShadowDepthObjectGpuConstants depthConstants{};
+    depthConstants.World = world.Transpose();
+    depthConstants.LightViewProjection = lightViewProjection.Transpose();
+
+    D3D11_MAPPED_SUBRESOURCE mappedDepthConstants{};
+    D3d11Helpers::ThrowIfFailed(
+        deviceContext->Map(m_shadowDepthConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDepthConstants),
+        "ModelRenderer::DrawModelShadowDepth failed to map shadow depth constant buffer."
+    );
+    std::memcpy(mappedDepthConstants.pData, &depthConstants, sizeof(ShadowDepthObjectGpuConstants));
+    deviceContext->Unmap(m_shadowDepthConstantBuffer.Get(), 0);
+
+    ID3D11Buffer *const depthConstantBuffers[] = {m_shadowDepthConstantBuffer.Get()};
+    deviceContext->VSSetShader(m_shadowDepthVertexShader.Get(), nullptr, 0);
+    deviceContext->VSSetConstantBuffers(0, 1, depthConstantBuffers);
+    deviceContext->PSSetShader(nullptr, nullptr, 0);
+    deviceContext->IASetInputLayout(m_shadowDepthInputLayout.Get());
+
+    if (shadowRasterizerState != nullptr)
+    {
+        deviceContext->RSSetState(shadowRasterizerState);
+    }
+
+    deviceContext->OMSetBlendState(m_commonStates->Opaque(), nullptr, 0xFFFFFFFFu);
+    deviceContext->OMSetDepthStencilState(m_commonStates->DepthDefault(), 0u);
+
+    constexpr UINT expectedStride = sizeof(DirectX::VertexPositionNormalTexture);
+
+    for (const std::shared_ptr<DirectX::ModelMesh> &meshShared : drawableModel->meshes)
+    {
+        if (meshShared == nullptr)
+        {
+            continue;
+        }
+
+        for (const std::unique_ptr<DirectX::ModelMeshPart> &partUnique : meshShared->meshParts)
+        {
+            if (partUnique == nullptr)
+            {
+                continue;
+            }
+
+            const DirectX::ModelMeshPart &meshPart = *partUnique;
+            if (meshPart.vertexStride != expectedStride)
+            {
+                continue;
+            }
+
+            const UINT stride = meshPart.vertexStride;
+            const UINT bufferOffset = 0u;
+            ID3D11Buffer *const vertexBuffers[] = {meshPart.vertexBuffer.Get()};
+            const UINT strides[] = {stride};
+            const UINT offsets[] = {bufferOffset};
+
+            deviceContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
+            deviceContext->IASetIndexBuffer(meshPart.indexBuffer.Get(), meshPart.indexFormat, 0);
+            deviceContext->IASetPrimitiveTopology(meshPart.primitiveType);
+
+            deviceContext->DrawIndexed(meshPart.indexCount, meshPart.startIndex, meshPart.vertexOffset);
+        }
+    }
+}
+
 void ModelRenderer::DrawModel(
     const ModelAsset &model,
     const Matrix &world,
@@ -227,6 +397,11 @@ void ModelRenderer::DrawModelLit(
     if (m_graphics == nullptr || m_commonStates == nullptr)
     {
         throw std::logic_error("ModelRenderer::DrawModelLit called before Initialize.");
+    }
+
+    if (m_shadowBindingHost == nullptr)
+    {
+        throw std::logic_error("ModelRenderer::DrawModelLit requires a shadow binding host from RenderContext::Initialize.");
     }
 
     if (m_forwardPhongModelVertexShader == nullptr || m_forwardPhongPixelShader == nullptr || m_forwardPhongModelInputLayout == nullptr)
@@ -298,6 +473,7 @@ void ModelRenderer::DrawModelLit(
     deviceContext->PSSetShader(m_forwardPhongPixelShader.Get(), nullptr, 0);
     deviceContext->VSSetConstantBuffers(0, 4, constantBuffers);
     deviceContext->PSSetConstantBuffers(0, 4, constantBuffers);
+    m_shadowBindingHost->BindForwardPhongShadowRegisters(deviceContext);
 
     deviceContext->IASetInputLayout(m_forwardPhongModelInputLayout.Get());
 
@@ -344,6 +520,8 @@ void ModelRenderer::DrawModelLit(
             deviceContext->DrawIndexed(meshPart.indexCount, meshPart.startIndex, meshPart.vertexOffset);
         }
     }
+
+    m_shadowBindingHost->UnbindForwardPhongShadowShaderResource(deviceContext);
 
     deviceContext->RSSetState(nullptr);
 }

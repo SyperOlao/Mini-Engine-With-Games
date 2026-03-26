@@ -1,6 +1,7 @@
 #include "Core/Gameplay/Scene.h"
 
 #include "Core/App/AppContext.h"
+#include "Core/Graphics/Rendering/RenderContext.h"
 
 Entity Scene::CreateEntity()
 {
@@ -122,6 +123,11 @@ void Scene::Update(AppContext &context, const float deltaTime)
 
 void Scene::Render(AppContext &context)
 {
+    if (m_activeCamera != nullptr && context.Graphics.Render != nullptr)
+    {
+        context.Graphics.Render->PrepareDirectionalShadowPass(*this, *m_activeCamera);
+    }
+
     for (std::unique_ptr<ISceneSystem> &system : m_systems)
     {
         if (system == nullptr)
@@ -151,6 +157,16 @@ void Scene::SetForwardLightingEnabled(const bool enabled)
 bool Scene::GetForwardLightingEnabled() const noexcept
 {
     return m_forwardLightingEnabled;
+}
+
+void Scene::SetDirectionalShadowMappingEnabled(const bool enabled)
+{
+    m_directionalShadowMappingEnabled = enabled;
+}
+
+bool Scene::GetDirectionalShadowMappingEnabled() const noexcept
+{
+    return m_directionalShadowMappingEnabled;
 }
 
 SceneLightingDescriptor3D &Scene::GetSceneLightingDescriptor() noexcept
