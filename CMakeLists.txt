@@ -255,8 +255,6 @@ add_executable(PingPong
         Game/Katamari/Data/KatamariGameConfig.h
         Game/Katamari/UI/KatamariHud.cpp
         Game/Katamari/UI/KatamariHud.h
-        Core/Graphics/ModelAssetAssimp.cpp
-        Core/Graphics/Rendering/Shadows/DirectionalShadowResources.cpp
 )
 
 find_package(directxtk CONFIG REQUIRED)
@@ -297,3 +295,16 @@ file(COPY
         ${CMAKE_SOURCE_DIR}/Core/Shaders
         DESTINATION ${CMAKE_BINARY_DIR}/Core
 )
+
+set(CORE_SHADER_SOURCES
+        Core/Shaders/Basic3D.hlsl
+        Core/Shaders/BasicPS.hlsl
+        Core/Shaders/BasicVS.hlsl
+        Core/Shaders/ForwardPhong3D.hlsl
+        Core/Shaders/ShadowDepth3D.hlsl
+        Core/Shaders/Shape2D.hlsl
+)
+
+target_sources(PingPong PRIVATE ${CORE_SHADER_SOURCES})
+set_source_files_properties(${CORE_SHADER_SOURCES} PROPERTIES HEADER_FILE_ONLY TRUE)
+source_group("Core/Shaders" FILES ${CORE_SHADER_SOURCES})
