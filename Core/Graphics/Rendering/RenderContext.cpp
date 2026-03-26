@@ -10,13 +10,18 @@
 #include "Core/Graphics/Rendering/Lighting/LightTypes3D.h"
 #include "Core/Graphics/Rendering/Lighting/SceneLighting3D.h"
 #include "Core/Graphics/Rendering/Pipeline/FramePassRenderContext.h"
+#include "Core/Graphics/Rendering/Pipeline/Passes/DeferredCompositeRenderPass.h"
+#include "Core/Graphics/Rendering/Pipeline/Passes/DeferredGeometryRenderPass.h"
+#include "Core/Graphics/Rendering/Pipeline/Passes/DeferredLightingRenderPass.h"
 #include "Core/Graphics/Rendering/Pipeline/Passes/DebugOverlayRenderPass.h"
+#include "Core/Graphics/Rendering/Pipeline/Passes/GameRenderPass.h"
 #include "Core/Graphics/Rendering/Pipeline/Passes/MainGeometryBindRenderPass.h"
 #include "Core/Graphics/Rendering/Pipeline/Passes/ShadowDepthRenderPass.h"
 #include "Core/Graphics/Rendering/Pipeline/Passes/UserInterfaceRenderPass.h"
 #include "Core/Graphics/Rendering/Shadows/ShadowProjection.h"
 
 #include <memory>
+#include <utility>
 
 RenderContext::~RenderContext()
 {
@@ -357,14 +362,71 @@ void RenderContext::BuildDefaultForwardRenderPipeline()
     m_frameRenderPipeline.ClearPasses();
     m_frameRenderPipeline.AddPass(std::make_unique<ShadowDepthRenderPass>());
     m_frameRenderPipeline.AddPass(std::make_unique<MainGeometryBindRenderPass>());
+    m_frameRenderPipeline.AddPass(std::make_unique<GameRenderPass>());
     m_frameRenderPipeline.AddPass(std::make_unique<DebugOverlayRenderPass>());
     m_frameRenderPipeline.AddPass(std::make_unique<UserInterfaceRenderPass>());
     m_frameRenderPipeline.Initialize(*m_graphics, m_frameRenderResources);
 }
 
+void RenderContext::BuildDefaultDeferredRenderPipeline()
+{
+    if (m_graphics == nullptr)
+    {
+        return;
+    }
+
+    m_frameRenderPipeline.ClearPasses();
+    m_frameRenderPipeline.AddPass(std::make_unique<ShadowDepthRenderPass>());
+    m_frameRenderPipeline.AddPass(std::make_unique<DeferredGeometryRenderPass>());
+    m_frameRenderPipeline.AddPass(std::make_unique<GameRenderPass>());
+    m_frameRenderPipeline.AddPass(std::make_unique<DeferredLightingRenderPass>());
+    m_frameRenderPipeline.AddPass(std::make_unique<DeferredCompositeRenderPass>());
+    m_frameRenderPipeline.AddPass(std::make_unique<DebugOverlayRenderPass>());
+    m_frameRenderPipeline.AddPass(std::make_unique<UserInterfaceRenderPass>());
+    m_frameRenderPipeline.Initialize(*m_graphics, m_frameRenderResources);
+}
+
+void RenderContext::SetRenderMode(const RenderMode renderMode)
+{
+    m_renderMode = renderMode;
+    if (m_renderMode == RenderMode::Deferred)
+    {
+        BuildDefaultDeferredRenderPipeline();
+        return;
+    }
+
+    BuildDefaultForwardRenderPipeline();
+}
+
+RenderMode RenderContext::GetRenderMode() const noexcept
+{
+    return m_renderMode;
+}
+
+bool RenderContext::IsDeferredRenderingEnabled() const noexcept
+{
+    return m_renderMode == RenderMode::Deferred;
+}
+
+RenderPassKind RenderContext::GetActiveRenderPassKind() const noexcept
+{
+    return m_frameRenderer.GetActivePass();
+}
+
+bool RenderContext::ShouldBindMainRenderTargetsForDraw() const noexcept
+{
+    if (!IsDeferredRenderingEnabled())
+    {
+        return true;
+    }
+
+    return GetActiveRenderPassKind() != RenderPassKind::DeferredGeometry;
+}
+
 void RenderContext::ExecuteFramePipeline(
     Camera *const activeCamera,
     Scene *const gameplayScene,
+    std::function<void()> gameRenderCallback,
     const float frameDeltaTimeSeconds
 )
 {
@@ -373,6 +435,7 @@ void RenderContext::ExecuteFramePipeline(
         m_frameRenderResources,
         activeCamera,
         gameplayScene,
+        std::move(gameRenderCallback),
         static_cast<float>(m_frameRenderResources.GetBackbufferWidth()),
         static_cast<float>(m_frameRenderResources.GetBackbufferHeight()),
         frameDeltaTimeSeconds

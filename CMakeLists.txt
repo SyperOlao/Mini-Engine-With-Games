@@ -89,6 +89,14 @@ add_executable(PingPong
         Core/Graphics/Rendering/Pipeline/Passes/ShadowDepthRenderPass.cpp
         Core/Graphics/Rendering/Pipeline/Passes/MainGeometryBindRenderPass.h
         Core/Graphics/Rendering/Pipeline/Passes/MainGeometryBindRenderPass.cpp
+        Core/Graphics/Rendering/Pipeline/Passes/GameRenderPass.h
+        Core/Graphics/Rendering/Pipeline/Passes/GameRenderPass.cpp
+        Core/Graphics/Rendering/Pipeline/Passes/DeferredGeometryRenderPass.h
+        Core/Graphics/Rendering/Pipeline/Passes/DeferredGeometryRenderPass.cpp
+        Core/Graphics/Rendering/Pipeline/Passes/DeferredLightingRenderPass.h
+        Core/Graphics/Rendering/Pipeline/Passes/DeferredLightingRenderPass.cpp
+        Core/Graphics/Rendering/Pipeline/Passes/DeferredCompositeRenderPass.h
+        Core/Graphics/Rendering/Pipeline/Passes/DeferredCompositeRenderPass.cpp
         Core/Graphics/Rendering/Pipeline/Passes/DebugOverlayRenderPass.h
         Core/Graphics/Rendering/Pipeline/Passes/DebugOverlayRenderPass.cpp
         Core/Graphics/Rendering/Pipeline/Passes/UserInterfaceRenderPass.h
@@ -296,6 +304,9 @@ set(CORE_SHADER_SOURCES
         Core/Shaders/BasicPS.hlsl
         Core/Shaders/BasicVS.hlsl
         Core/Shaders/ForwardPhong3D.hlsl
+        Core/Shaders/DeferredGeometry3D.hlsl
+        Core/Shaders/DeferredLighting3D.hlsl
+        Core/Shaders/DeferredComposite3D.hlsl
         Core/Shaders/ShadowDepth3D.hlsl
         Core/Shaders/Shape2D.hlsl
 )

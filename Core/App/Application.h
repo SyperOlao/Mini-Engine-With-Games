@@ -20,6 +20,7 @@
 #include "IGame.h"
 #include "Timer.h"
 #include "Core/UI/BitmapFont.h"
+#include "Core/UI/Button.h"
 #include "Core/Audio/AudioSystem.h"
 
 struct ApplicationDesc final {
@@ -57,6 +58,10 @@ private:
 
     void Render();
 
+    void UpdateGlobalRenderModeButton();
+
+    void RenderGlobalRenderModeButton() const;
+
 private:
     HINSTANCE m_hInstance{nullptr};
     ApplicationDesc m_desc{};
@@ -71,6 +76,8 @@ private:
     AppContext m_context{};
     AudioSystem m_audio{};
     AssetCache m_assetCache{};
+    Button m_globalRenderModeButton{};
+    bool m_previousLeftMouseDown{false};
     bool m_isRunning{true};
 };
 

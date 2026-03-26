@@ -32,6 +32,8 @@ public:
     bool Enabled{true};
 
     [[nodiscard]] bool HandleKeyboard(const InputSystem& input, bool isSelected) const noexcept;
+    [[nodiscard]] bool IsHovered(float mousePositionX, float mousePositionY) const noexcept;
+    [[nodiscard]] bool HandleMouseClick(float mousePositionX, float mousePositionY, bool wasLeftPressed) const noexcept;
     void Draw(const ShapeRenderer2D& renderer, const BitmapFont& font, const ButtonStyle& style, bool isSelected) const;
 };
 

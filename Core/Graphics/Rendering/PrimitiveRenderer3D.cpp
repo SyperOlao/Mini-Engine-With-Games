@@ -561,7 +561,10 @@ void PrimitiveRenderer3D::BindTargets() const
         throw std::logic_error("PrimitiveRenderer3D::BindTargets requires initialized graphics.");
     }
 
-    m_graphics->BindMainRenderTargets();
+    if (m_shadowBindingHost == nullptr || m_shadowBindingHost->ShouldBindMainRenderTargetsForDraw())
+    {
+        m_graphics->BindMainRenderTargets();
+    }
 }
 
 void PrimitiveRenderer3D::DrawLitMesh(

@@ -7,6 +7,7 @@
 #include "AppContext.h"
 #include "FatalErrorReport.h"
 #include "Core/Graphics/GraphicsDevice.h"
+#include "Core/Input/RawInputHandler.h"
 
 #include <stdexcept>
 #include <string>
@@ -54,6 +55,7 @@ void Application::Initialize() {
     m_audio.Initialize();
 
     m_renderContext.Initialize(m_graphics);
+    m_renderContext.BuildDefaultForwardRenderPipeline();
     m_assetCache.Initialize(m_graphics);
 
     m_context.Platform.MainWindow = &m_window;
@@ -123,11 +125,85 @@ void Application::Update(const float deltaTime) {
     m_input.Update();
     m_audio.Update();
     m_game->Update(m_context, deltaTime);
+    UpdateGlobalRenderModeButton();
 }
 
 void Application::Render() {
     m_renderContext.BeginRenderFrame();
     m_renderContext.GetFrameRenderer().BeginFrame(m_desc.ClearColor);
-    m_game->Render(m_context);
+    m_renderContext.ExecuteFramePipeline(
+        nullptr,
+        nullptr,
+        [&]() {
+            m_game->Render(m_context);
+        },
+        m_timer.GetDeltaTime()
+    );
+    RenderGlobalRenderModeButton();
     m_renderContext.GetFrameRenderer().EndFrame(m_desc.VSync);
+}
+
+void Application::UpdateGlobalRenderModeButton() {
+    if (m_context.Platform.MainWindow == nullptr) {
+        return;
+    }
+
+    const int windowWidth = m_context.Platform.MainWindow->GetWidth();
+    const int windowHeight = m_context.Platform.MainWindow->GetHeight();
+    if (windowWidth <= 0 || windowHeight <= 0) {
+        return;
+    }
+
+    m_globalRenderModeButton.Bounds = RectF{
+        20.0f,
+        static_cast<float>(windowHeight) - 68.0f,
+        250.0f,
+        48.0f
+    };
+
+    const RenderMode renderMode = m_context.GetRenderMode();
+    if (renderMode == RenderMode::Deferred) {
+        m_globalRenderModeButton.Label = "RENDER: DEFERRED";
+    } else {
+        m_globalRenderModeButton.Label = "RENDER: FORWARD";
+    }
+
+    POINT cursorPoint{};
+    GetCursorPos(&cursorPoint);
+    ScreenToClient(m_context.Platform.MainWindow->GetHandle(), &cursorPoint);
+
+    const bool isLeftMouseDown = RawInputHandler::Instance().IsLeftMouseDown();
+    const bool wasLeftPressed = isLeftMouseDown && !m_previousLeftMouseDown;
+    m_previousLeftMouseDown = isLeftMouseDown;
+
+    if (m_globalRenderModeButton.HandleMouseClick(
+        static_cast<float>(cursorPoint.x),
+        static_cast<float>(cursorPoint.y),
+        wasLeftPressed
+    )) {
+        m_context.ToggleRenderMode();
+    }
+}
+
+void Application::RenderGlobalRenderModeButton() const {
+    if (m_context.Ui.Font == nullptr || m_context.Platform.MainWindow == nullptr) {
+        return;
+    }
+
+    POINT cursorPoint{};
+    GetCursorPos(&cursorPoint);
+    ScreenToClient(m_context.Platform.MainWindow->GetHandle(), &cursorPoint);
+    const bool isHovered = m_globalRenderModeButton.IsHovered(
+        static_cast<float>(cursorPoint.x),
+        static_cast<float>(cursorPoint.y)
+    );
+
+    ButtonStyle buttonStyle{};
+    buttonStyle.TextScale = 0.72f;
+    m_globalRenderModeButton.Draw(
+        m_context.GetShapeRenderer2D(),
+        *m_context.Ui.Font,
+        buttonStyle,
+        isHovered
+    );
 }

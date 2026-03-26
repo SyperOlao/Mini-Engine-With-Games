@@ -69,12 +69,12 @@ void PongGame::Update(AppContext &context, const float deltaTime) {
         case PongUI::ScreenState::MainMenu:
         case PongUI::ScreenState::Settings:
         case PongUI::ScreenState::GameOver:
-            HandleUiAction(m_ui.Update(context));
+            HandleUiAction(context, m_ui.Update(context));
             return;
 
         case PongUI::ScreenState::Playing: {
             const auto action = m_ui.Update(context);
-            HandleUiAction(action);
+            HandleUiAction(context, action);
 
             if (m_ui.GetScreen() != PongUI::ScreenState::Playing || action == PongUI::Action::ResetMatch) {
                 return;
@@ -102,7 +102,7 @@ void PongGame::Render(AppContext &context) {
     );
 }
 
-void PongGame::HandleUiAction(const PongUI::Action action) {
+void PongGame::HandleUiAction(AppContext &context, const PongUI::Action action) {
     switch (action) {
         case PongUI::Action::StartVsPlayer:
             StartGame(GameMode::TwoPlayers);
@@ -123,6 +123,10 @@ void PongGame::HandleUiAction(const PongUI::Action action) {
 
         case PongUI::Action::MatchRuleChanged:
             m_matchRule = m_ui.SelectedMatchRule();
+            break;
+
+        case PongUI::Action::ToggleRenderMode:
+            context.ToggleRenderMode();
             break;
 
         case PongUI::Action::ResetMatch:

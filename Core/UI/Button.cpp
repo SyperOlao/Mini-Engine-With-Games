@@ -14,6 +14,34 @@ bool Button::HandleKeyboard(const InputSystem &input, const bool isSelected) con
     return input.GetKeyboard().WasKeyPressed(Key::Enter);
 }
 
+bool Button::IsHovered(const float mousePositionX, const float mousePositionY) const noexcept {
+    if (!Enabled) {
+        return false;
+    }
+
+    if (mousePositionX < Bounds.X || mousePositionX > Bounds.X + Bounds.Width) {
+        return false;
+    }
+
+    if (mousePositionY < Bounds.Y || mousePositionY > Bounds.Y + Bounds.Height) {
+        return false;
+    }
+
+    return true;
+}
+
+bool Button::HandleMouseClick(
+    const float mousePositionX,
+    const float mousePositionY,
+    const bool wasLeftPressed
+) const noexcept {
+    if (!wasLeftPressed) {
+        return false;
+    }
+
+    return IsHovered(mousePositionX, mousePositionY);
+}
+
 void Button::Draw(
     const ShapeRenderer2D &renderer,
     const BitmapFont &font,

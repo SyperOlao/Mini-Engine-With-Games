@@ -362,7 +362,10 @@ void ModelRenderer::DrawModel(
         throw std::logic_error("ModelRenderer::DrawModel failed: null device context.");
     }
 
-    m_graphics->BindMainRenderTargets();
+    if (m_shadowBindingHost == nullptr || m_shadowBindingHost->ShouldBindMainRenderTargetsForDraw())
+    {
+        m_graphics->BindMainRenderTargets();
+    }
 
     const DirectX::XMFLOAT4 &baseColorFloat4 = static_cast<const DirectX::XMFLOAT4 &>(material.BaseColor);
     const DirectX::XMVECTOR colorAndAlpha = DirectX::XMLoadFloat4(&baseColorFloat4);
@@ -421,7 +424,10 @@ void ModelRenderer::DrawModelLit(
         throw std::logic_error("ModelRenderer::DrawModelLit failed: null device context.");
     }
 
-    m_graphics->BindMainRenderTargets();
+    if (m_shadowBindingHost == nullptr || m_shadowBindingHost->ShouldBindMainRenderTargetsForDraw())
+    {
+        m_graphics->BindMainRenderTargets();
+    }
 
     const Matrix viewProjection = view * projection;
 

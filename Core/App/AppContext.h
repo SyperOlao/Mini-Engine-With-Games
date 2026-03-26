@@ -6,6 +6,7 @@
 #define PINGPONG_APPCONTEXT_H
 
 #include "EngineServices.h"
+#include <cstdint>
 
 class ShapeRenderer2D;
 class PrimitiveRenderer3D;
@@ -13,6 +14,7 @@ class ModelRenderer;
 class DebugDrawQueue;
 class FrameRenderer;
 class DeferredFrameResources;
+enum class RenderMode : std::uint8_t;
 
 struct AppContext final {
     PlatformServices Platform{};
@@ -37,6 +39,10 @@ struct AppContext final {
     [[nodiscard]] DeferredFrameResources &GetDeferredFrameResources() const;
 
     void ResizeDeferredResources() const;
+
+    void SetRenderMode(RenderMode renderMode) const;
+    [[nodiscard]] RenderMode GetRenderMode() const;
+    void ToggleRenderMode() const;
 };
 
 #endif

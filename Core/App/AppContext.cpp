@@ -80,3 +80,28 @@ void AppContext::ResizeDeferredResources() const {
 
     const_cast<RenderContext *>(Graphics.Render)->ResizeDeferredResources();
 }
+
+void AppContext::SetRenderMode(const RenderMode renderMode) const {
+    if (Graphics.Render == nullptr) {
+        throw std::logic_error("AppContext::SetRenderMode: Graphics.Render is null.");
+    }
+
+    const_cast<RenderContext *>(Graphics.Render)->SetRenderMode(renderMode);
+}
+
+RenderMode AppContext::GetRenderMode() const {
+    if (Graphics.Render == nullptr) {
+        throw std::logic_error("AppContext::GetRenderMode: Graphics.Render is null.");
+    }
+
+    return Graphics.Render->GetRenderMode();
+}
+
+void AppContext::ToggleRenderMode() const {
+    const RenderMode currentRenderMode = GetRenderMode();
+    if (currentRenderMode == RenderMode::Forward) {
+        SetRenderMode(RenderMode::Deferred);
+    } else {
+        SetRenderMode(RenderMode::Forward);
+    }
+}

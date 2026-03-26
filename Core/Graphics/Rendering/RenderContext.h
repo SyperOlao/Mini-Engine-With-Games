@@ -14,14 +14,22 @@
 #include "Core/Graphics/Rendering/FrameRenderer.h"
 #include "Core/Graphics/Rendering/Pipeline/FrameRenderPipeline.h"
 #include "Core/Graphics/Rendering/Pipeline/FrameRenderResources.h"
+#include "Core/Graphics/Rendering/FrameRenderTypes.h"
 #include "Core/Graphics/Rendering/Renderables/SceneRenderer3D.h"
 #include "Core/Graphics/Rendering/Shadows/DirectionalShadowResources.h"
 
 #include <d3d11.h>
+#include <functional>
 
 class Camera;
 class GraphicsDevice;
 class Scene;
+
+enum class RenderMode : std::uint8_t
+{
+    Forward = 0,
+    Deferred
+};
 
 class RenderContext final {
 public:
@@ -88,8 +96,20 @@ public:
     [[nodiscard]] const FrameRenderPipeline &GetFrameRenderPipeline() const noexcept;
 
     void BuildDefaultForwardRenderPipeline();
+    void BuildDefaultDeferredRenderPipeline();
 
-    void ExecuteFramePipeline(Camera *activeCamera, Scene *gameplayScene, float frameDeltaTimeSeconds);
+    void SetRenderMode(RenderMode renderMode);
+    [[nodiscard]] RenderMode GetRenderMode() const noexcept;
+    [[nodiscard]] bool IsDeferredRenderingEnabled() const noexcept;
+    [[nodiscard]] RenderPassKind GetActiveRenderPassKind() const noexcept;
+    [[nodiscard]] bool ShouldBindMainRenderTargetsForDraw() const noexcept;
+
+    void ExecuteFramePipeline(
+        Camera *activeCamera,
+        Scene *gameplayScene,
+        std::function<void()> gameRenderCallback,
+        float frameDeltaTimeSeconds
+    );
 
 private:
     GraphicsDevice *m_graphics{nullptr};
@@ -103,6 +123,7 @@ private:
     FrameRenderResources m_frameRenderResources{};
     FrameRenderPipeline m_frameRenderPipeline{};
     DirectionalShadowResources m_directionalShadowResources{};
+    RenderMode m_renderMode{RenderMode::Forward};
     bool m_directionalShadowPassCompletedThisFrame{false};
 };
 

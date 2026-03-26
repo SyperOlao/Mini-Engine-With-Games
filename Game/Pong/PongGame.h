@@ -26,7 +26,7 @@ public:
     void Render(AppContext &context) override;
 
 private:
-    void HandleUiAction(PongUI::Action action);
+    void HandleUiAction(AppContext &context, PongUI::Action action);
 
     void ApplyDifficulty();
 
