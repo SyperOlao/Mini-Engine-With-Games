@@ -22,6 +22,7 @@
 #include "Core/Platform/Window.h"
 #include "Core/Graphics/Rendering/PrimitiveRenderer3D.h"
 
+#include <DirectXCollision.h>
 #include <cmath>
 #include <memory>
 #include <ranges>
@@ -41,6 +42,23 @@ constexpr std::array<Vector3, 16> NightStarPositions{
     Vector3(-0.4f, 0.5f, -0.14f), Vector3(-0.06f, 0.58f, -0.02f), Vector3(0.22f, 0.56f, -0.22f),
     Vector3(0.52f, 0.55f, 0.18f)
 };
+
+DirectX::BoundingBox ComputeMergedModelBoundingBox(std::shared_ptr<ModelAsset> const &modelAsset)
+{
+    DirectX::BoundingBox mergedBounds{};
+    if (modelAsset == nullptr || !modelAsset->IsLoaded() || modelAsset->Get() == nullptr || modelAsset->Get()->meshes.empty())
+    {
+        return mergedBounds;
+    }
+
+    mergedBounds = modelAsset->Get()->meshes[0]->boundingBox;
+    for (size_t meshIndex = 1; meshIndex < modelAsset->Get()->meshes.size(); ++meshIndex)
+    {
+        DirectX::BoundingBox::CreateMerged(mergedBounds, mergedBounds, modelAsset->Get()->meshes[meshIndex]->boundingBox);
+    }
+
+    return mergedBounds;
+}
 }
 
 void KatamariGame::Initialize(AppContext &context)
@@ -83,6 +101,14 @@ void KatamariGame::Initialize(AppContext &context)
     {
         GroundModel = assetCache->LoadModel("Game/Katamari/Assets/Environment/ground.obj");
         MoonModel = assetCache->LoadModel("Game/Katamari/Assets/Environment/moon_sphere.obj");
+    }
+
+    GroundModelVerticalOffset = 0.0f;
+    if (GroundModel != nullptr && GroundModel->IsLoaded() && GroundModel->Get() != nullptr)
+    {
+        const DirectX::BoundingBox groundBounds = ComputeMergedModelBoundingBox(GroundModel);
+        const float groundTopLocalY = groundBounds.Center.y + groundBounds.Extents.y;
+        GroundModelVerticalOffset = -groundTopLocalY;
     }
 
     if (!StaticWorldCreated)
@@ -284,7 +310,7 @@ void KatamariGame::Render(AppContext &context)
     {
         const Matrix groundWorld =
             Matrix::CreateScale(playfieldSpan, 1.0f, playfieldSpan) *
-            Matrix::CreateTranslation(0.0f, 0.0f, 0.0f);
+            Matrix::CreateTranslation(0.0f, GroundModelVerticalOffset, 0.0f);
         RenderMaterialParameters groundMaterial{};
         groundMaterial.BaseColor = DirectX::SimpleMath::Color(0.62f, 0.7f, 0.88f, 1.0f);
         modelRenderer.DrawModel(*GroundModel, groundWorld, viewMatrix, projectionMatrix, groundMaterial);

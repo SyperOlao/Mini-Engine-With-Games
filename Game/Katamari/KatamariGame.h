@@ -48,6 +48,7 @@ private:
     int FpsFrames{0};
     int DisplayFps{0};
     std::shared_ptr<ModelAsset> GroundModel{};
+    float GroundModelVerticalOffset{0.0f};
     std::shared_ptr<ModelAsset> MoonModel{};
     SceneLightingDescriptor3D KatamariLighting{};
 };
