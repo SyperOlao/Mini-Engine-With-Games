@@ -17,6 +17,8 @@ struct KatamariPickupRecord final
     float AbsorbVolumeContribution{1.0f};
     float MinimumBallRadiusToAbsorb{0.5f};
     float CollisionSphereRadius{1.0f};
+    DirectX::SimpleMath::Vector3 AttachedDirectionLocal{1.0f, 0.0f, 0.0f};
+    bool HasAttachmentDirection{false};
     bool Absorbed{false};
 };
 

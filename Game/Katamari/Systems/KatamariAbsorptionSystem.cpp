@@ -23,6 +23,30 @@ namespace
 
     return std::cbrt(volume / FourThirdsPi);
 }
+
+constexpr float PickupAttachPaddingFactor = 0.95f;
+
+void RefreshAbsorbedPickupOffsets(Scene &scene, KatamariWorldContext &world, const float paddingFactor)
+{
+    for (auto &pickupEntry : world.Pickups)
+    {
+        const EntityId pickupEntityId = pickupEntry.first;
+        KatamariPickupRecord &pickupRecord = pickupEntry.second;
+        if (!pickupRecord.Absorbed || !pickupRecord.HasAttachmentDirection)
+        {
+            continue;
+        }
+
+        AttachmentComponent *const attachment = scene.TryGetAttachmentComponent(pickupEntityId);
+        if (attachment == nullptr || attachment->ParentEntityId != world.BallEntityId)
+        {
+            continue;
+        }
+
+        const float attachmentDistanceFromBallCenter = world.BallRadius + pickupRecord.CollisionSphereRadius * paddingFactor;
+        attachment->LocalOffset = pickupRecord.AttachedDirectionLocal * attachmentDistanceFromBallCenter;
+    }
+}
 }
 
 KatamariAbsorptionSystem::KatamariAbsorptionSystem(KatamariWorldContext *const gameplayWorld) noexcept
@@ -109,15 +133,36 @@ void KatamariAbsorptionSystem::Update(Scene &scene, AppContext &, float)
 
         const Vector3 ballPosition = ballTransform->Local.Position;
         const Vector3 pickupPosition = pickupTransform->Local.Position;
-        const Vector3 offsetWorld = pickupPosition - ballPosition;
+        Vector3 directionFromBallToPickup = pickupPosition - ballPosition;
+        if (directionFromBallToPickup.LengthSquared() <= 1.0e-8f)
+        {
+            directionFromBallToPickup = Vector3::UnitX;
+        }
+        else
+        {
+            directionFromBallToPickup.Normalize();
+        }
+
+        const DirectX::SimpleMath::Matrix inverseBallWorld = ballTransform->WorldMatrix.Invert();
+        Vector3 directionLocal = Vector3::TransformNormal(directionFromBallToPickup, inverseBallWorld);
+        if (directionLocal.LengthSquared() <= 1.0e-8f)
+        {
+            directionLocal = Vector3::UnitX;
+        }
+        else
+        {
+            directionLocal.Normalize();
+        }
+
+        pickupRecord.AttachedDirectionLocal = directionLocal;
+        pickupRecord.HasAttachmentDirection = true;
 
         AttachmentComponent attachment{};
         attachment.ParentEntityId = ballId;
-        attachment.LocalOffset = offsetWorld;
+        attachment.LocalOffset = Vector3::Zero;
         pickup.AddAttachmentComponent(attachment);
 
         pickupTransform->Local.Position = Vector3::Zero;
-        pickupTransform->Local.RotationEulerRad = Vector3::Zero;
 
         scene.RemoveSphereColliderComponent(pickupEntityId);
         scene.RemoveVelocityComponent(pickupEntityId);
@@ -126,6 +171,7 @@ void KatamariAbsorptionSystem::Update(Scene &scene, AppContext &, float)
         GameplayWorld->BallVolume += pickupRecord.AbsorbVolumeContribution;
         GameplayWorld->BallRadius = RadiusFromSphereVolume(GameplayWorld->BallVolume);
         ballCollider->Radius = GameplayWorld->BallRadius;
+        RefreshAbsorbedPickupOffsets(scene, *GameplayWorld, PickupAttachPaddingFactor);
 
         ++GameplayWorld->CollectedCount;
     }
