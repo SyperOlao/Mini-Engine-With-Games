@@ -18,7 +18,6 @@
 #include "Game/Pong/Common/Constants.h"
 #include "Core/Graphics/Color.h"
 #include "Core/Graphics/Rendering/ShapeRenderer2D.h"
-#include "Core/Graphics/Rendering/RenderContext.h"
 #include "Core/Input/InputSystem.h"
 #include "Core/UI/BitmapFont.h"
 #include "Game/Pong/Entities/Ball.h"
@@ -29,15 +28,6 @@
 #include "PongUI.h"
 
 namespace {
-    std::string BuildRenderModeLabel(const RenderMode renderMode)
-    {
-        if (renderMode == RenderMode::Deferred)
-        {
-            return "RENDER MODE: DEFERRED";
-        }
-
-        return "RENDER MODE: FORWARD";
-    }
     constexpr Color kWhite{1.0f, 1.0f, 1.0f, 1.0f};
     constexpr Color kMuted{0.65f, 0.68f, 0.78f, 1.0f};
     constexpr Color kAccent{0.82f, 0.84f, 0.93f, 1.0f};
@@ -168,7 +158,7 @@ void PongUI::Initialize() {
     }
 
     {
-        const auto [X, Y, Width, Height] = BuildCenteredMenuItemLayout(1, 4);
+        const auto [X, Y, Width, Height] = BuildCenteredMenuItemLayout(1, 3);
         m_matchRuleSwitcher = Switcher{
             X,
             Y,
@@ -179,8 +169,7 @@ void PongUI::Initialize() {
         };
     }
 
-    m_renderModeButton = Button{BuildCenteredButtonRect(2, 4), "RENDER MODE: FORWARD", true};
-    m_settingsBackButton = Button{BuildCenteredButtonRect(3, 4), "BACK", true};
+    m_settingsBackButton = Button{BuildCenteredButtonRect(2, 3), "BACK", true};
 
     SyncSettings(m_difficulty, m_matchRule);
 }
@@ -337,8 +326,6 @@ PongUI::Action PongUI::UpdateMainMenu(AppContext &context) {
 
 PongUI::Action PongUI::UpdateSettingsMenu(AppContext &context) {
     auto &input = *context.Input.System;
-    m_renderModeButton.Label = BuildRenderModeLabel(context.GetRenderMode());
-
     if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
         context.Audio.System->PlayOneShot("ui_accept", 0.65f);
         m_screenState = ScreenState::MainMenu;
@@ -348,9 +335,9 @@ PongUI::Action PongUI::UpdateSettingsMenu(AppContext &context) {
     const int previousIndex = m_selectedSettingsIndex;
 
     if (WasMenuUpPressed(input)) {
-        m_selectedSettingsIndex = (m_selectedSettingsIndex + 3) % 4;
+        m_selectedSettingsIndex = (m_selectedSettingsIndex + 2) % 3;
     } else if (WasMenuDownPressed(input)) {
-        m_selectedSettingsIndex = (m_selectedSettingsIndex + 1) % 4;
+        m_selectedSettingsIndex = (m_selectedSettingsIndex + 1) % 3;
     }
 
     if (previousIndex != m_selectedSettingsIndex) {
@@ -372,15 +359,6 @@ PongUI::Action PongUI::UpdateSettingsMenu(AppContext &context) {
             context.Audio.System->PlayOneShot("ui_move", 0.5f);
             m_matchRule = static_cast<MatchRule>(m_matchRuleSwitcher.SelectedIndex());
             return Action::MatchRuleChanged;
-        }
-
-        return Action::None;
-    }
-
-    if (m_selectedSettingsIndex == 2) {
-        if (m_renderModeButton.HandleKeyboard(input, true)) {
-            context.Audio.System->PlayOneShot("ui_accept", 0.65f);
-            return Action::ToggleRenderMode;
         }
 
         return Action::None;
@@ -479,18 +457,11 @@ void PongUI::RenderSettingsMenu(const AppContext &context) const {
     ButtonStyle style{};
     style.TextScale = 0.85f;
 
-    m_renderModeButton.Draw(
-        renderer,
-        *context.Ui.Font,
-        style,
-        m_selectedSettingsIndex == 2
-    );
-
     m_settingsBackButton.Draw(
         renderer,
         *context.Ui.Font,
         style,
-        m_selectedSettingsIndex == 3
+        m_selectedSettingsIndex == 2
     );
 
     BitmapFont::DrawString(

@@ -258,6 +258,9 @@ add_executable(PingPong
         Game/Katamari/UI/KatamariHud.cpp
         Game/Katamari/UI/KatamariHud.h
         Game/Katamari/Data/KatamariPickupCatalog.cpp
+
+        Game/LightingTest/LightingTestGame.cpp
+        Game/LightingTest/LightingTestGame.h
 )
 
 find_package(directxtk CONFIG REQUIRED)

@@ -35,7 +35,6 @@ public:
         ExitRequested,
         DifficultyChanged,
         MatchRuleChanged,
-        ToggleRenderMode,
         ResetMatch,
         RestartGame
     };
@@ -113,7 +112,6 @@ private:
     std::array<Button, 4> m_mainMenuButtons{};
     Switcher m_difficultySwitcher{};
     Switcher m_matchRuleSwitcher{};
-    Button m_renderModeButton{};
     Button m_settingsBackButton{};
 
     int m_selectedMainMenuIndex{0};

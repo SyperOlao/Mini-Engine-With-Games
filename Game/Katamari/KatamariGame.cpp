@@ -313,6 +313,9 @@ void KatamariGame::Render(AppContext &context)
             Matrix::CreateTranslation(0.0f, GroundModelVerticalOffset, 0.0f);
         RenderMaterialParameters groundMaterial{};
         groundMaterial.BaseColor = DirectX::SimpleMath::Color(0.62f, 0.7f, 0.88f, 1.0f);
+        groundMaterial.AmbientFactor = 0.16f;
+        groundMaterial.SpecularPower = 92.0f;
+        groundMaterial.SpecularColor = DirectX::SimpleMath::Color(0.72f, 0.72f, 0.72f, 1.0f);
         modelRenderer.DrawModel(*GroundModel, groundWorld, viewMatrix, projectionMatrix, groundMaterial);
     }
     else
@@ -322,9 +325,9 @@ void KatamariGame::Render(AppContext &context)
             Matrix::CreateTranslation(0.0f, -GameConfig.FloorColliderHalfThickness, 0.0f);
         RenderMaterialParameters floorMaterial{};
         floorMaterial.BaseColor = DirectX::SimpleMath::Color(0.22f, 0.48f, 0.28f, 1.0f);
-        floorMaterial.AmbientFactor = 0.22f;
-        floorMaterial.SpecularPower = 12.0f;
-        floorMaterial.SpecularColor = DirectX::SimpleMath::Color(0.12f, 0.12f, 0.12f, 1.0f);
+        floorMaterial.AmbientFactor = 0.18f;
+        floorMaterial.SpecularPower = 64.0f;
+        floorMaterial.SpecularColor = DirectX::SimpleMath::Color(0.55f, 0.55f, 0.55f, 1.0f);
         primitives.DrawBoxLit(
             floorWorld,
             viewMatrix,
@@ -337,15 +340,16 @@ void KatamariGame::Render(AppContext &context)
 
     if (TransformComponent const *const ballTransform = SceneInstance.TryGetTransformComponent(WorldContext.BallEntityId); ballTransform != nullptr)
     {
-        const Matrix contactShadowWorld =
-            Matrix::CreateScale(WorldContext.BallRadius * 1.12f, 0.02f, WorldContext.BallRadius * 1.12f) *
-            Matrix::CreateTranslation(ballTransform->Local.Position.x, 0.01f, ballTransform->Local.Position.z);
-        primitives.DrawSphere(
-            contactShadowWorld,
-            viewMatrix,
-            projectionMatrix,
-            DirectX::SimpleMath::Color(0.02f, 0.03f, 0.03f, 0.45f)
-        );
+        // Contact shadow emulation disabled.
+        // const Matrix contactShadowWorld =
+        //     Matrix::CreateScale(WorldContext.BallRadius * 1.12f, 0.02f, WorldContext.BallRadius * 1.12f) *
+        //     Matrix::CreateTranslation(ballTransform->Local.Position.x, 0.01f, ballTransform->Local.Position.z);
+        // primitives.DrawSphere(
+        //     contactShadowWorld,
+        //     viewMatrix,
+        //     projectionMatrix,
+        //     DirectX::SimpleMath::Color(0.02f, 0.03f, 0.03f, 0.45f)
+        // );
 
         const Matrix ballWorld =
             Matrix::CreateScale(WorldContext.BallRadius, WorldContext.BallRadius, WorldContext.BallRadius) *

@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include <exception>
 #include "Game/Katamari/KatamariGame.h"
+#include "Game/LightingTest/LightingTestGame.h"
 #include "Game/Pong/PongGame.h"
 #include "Game/SolarSystem/SolarSystemGame.h"
 
@@ -11,7 +12,8 @@ enum class DemoType
 {
     Pong,
     SolarSystem,
-    Katamari
+    Katamari,
+    LightingTest
 };
 
 int main()
@@ -36,6 +38,10 @@ int main()
 
             case DemoType::Katamari:
                 game = std::make_unique<KatamariGame>();
+                break;
+
+            case DemoType::LightingTest:
+                game = std::make_unique<LightingTestGame>();
                 break;
         }
 

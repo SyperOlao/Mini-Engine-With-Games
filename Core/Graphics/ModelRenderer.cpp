@@ -44,12 +44,35 @@ namespace
 
 static void ApplyTintToEffect(
     DirectX::IEffect *effectTarget,
-    const DirectX::XMVECTOR &colorAndAlpha
+    const DirectX::XMVECTOR &colorAndAlpha,
+    const RenderMaterialParameters &material
 )
 {
     if (DirectX::BasicEffect *const effectBasic = dynamic_cast<DirectX::BasicEffect *>(effectTarget))
     {
         effectBasic->SetColorAndAlpha(colorAndAlpha);
+        effectBasic->SetLightingEnabled(material.ReceiveLighting);
+        if (material.ReceiveLighting)
+        {
+            effectBasic->EnableDefaultLighting();
+            effectBasic->SetPerPixelLighting(true);
+            effectBasic->SetAmbientLightColor(DirectX::SimpleMath::Vector3(
+                material.AmbientFactor,
+                material.AmbientFactor,
+                material.AmbientFactor
+            ));
+            effectBasic->SetSpecularColor(DirectX::SimpleMath::Vector3(
+                material.SpecularColor.x,
+                material.SpecularColor.y,
+                material.SpecularColor.z
+            ));
+            effectBasic->SetSpecularPower(material.SpecularPower);
+            effectBasic->SetEmissiveColor(DirectX::SimpleMath::Vector3(
+                material.EmissiveColor.x,
+                material.EmissiveColor.y,
+                material.EmissiveColor.z
+            ));
+        }
         return;
     }
 
@@ -75,12 +98,26 @@ static void ApplyTintToEffect(
     if (DirectX::SkinnedEffect *const effectSkinned = dynamic_cast<DirectX::SkinnedEffect *>(effectTarget))
     {
         effectSkinned->SetColorAndAlpha(colorAndAlpha);
+        effectSkinned->EnableDefaultLighting();
+        effectSkinned->SetPerPixelLighting(material.ReceiveLighting);
+        effectSkinned->SetSpecularColor(DirectX::SimpleMath::Vector3(
+            material.SpecularColor.x,
+            material.SpecularColor.y,
+            material.SpecularColor.z
+        ));
+        effectSkinned->SetSpecularPower(material.SpecularPower);
         return;
     }
 
     if (DirectX::NormalMapEffect *const effectNormalMap = dynamic_cast<DirectX::NormalMapEffect *>(effectTarget))
     {
         effectNormalMap->SetColorAndAlpha(colorAndAlpha);
+        effectNormalMap->SetSpecularColor(DirectX::SimpleMath::Vector3(
+            material.SpecularColor.x,
+            material.SpecularColor.y,
+            material.SpecularColor.z
+        ));
+        effectNormalMap->SetSpecularPower(material.SpecularPower);
         return;
     }
 }
@@ -373,7 +410,7 @@ void ModelRenderer::DrawModel(
     drawableModel->UpdateEffects(
         [&](DirectX::IEffect *effectTarget)
         {
-            ApplyTintToEffect(effectTarget, colorAndAlpha);
+            ApplyTintToEffect(effectTarget, colorAndAlpha, material);
         }
     );
 

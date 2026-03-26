@@ -125,10 +125,6 @@ void PongGame::HandleUiAction(AppContext &context, const PongUI::Action action) 
             m_matchRule = m_ui.SelectedMatchRule();
             break;
 
-        case PongUI::Action::ToggleRenderMode:
-            context.ToggleRenderMode();
-            break;
-
         case PongUI::Action::ResetMatch:
             ResetMatch();
             break;
