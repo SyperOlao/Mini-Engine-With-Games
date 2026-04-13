@@ -54,11 +54,14 @@ cbuffer ShadowSamplingConstants : register(b5)
     uint ShadowEnabled;
     uint ShadowedDirectionalLightGpuIndex;
     uint ShadowMapCascadeCount;
-    uint _ShadowSamplingPad1;
+    uint ShadowCascadeDebugMode;
 };
 
 Texture2D ShadowMapDepth : register(t0);
 SamplerComparisonState ShadowMapSampler : register(s0);
+
+Texture2D DiffuseTexture : register(t1);
+SamplerState DiffuseSampler : register(s1);
 
 struct VSInput
 {
@@ -73,6 +76,7 @@ struct PSInput
     float3 WorldNormal : NORMAL;
     float3 WorldPosition : TEXCOORD0;
     float4 Color : COLOR;
+    float2 TexCoord : TEXCOORD1;
 };
 
 PSInput VSMain(VSInput input)
@@ -87,17 +91,19 @@ PSInput VSMain(VSInput input)
 
     output.Position = mul(worldPosition, ViewProjection);
     output.Color = input.Color;
+    output.TexCoord = float2(0.0f, 0.0f);
 
     return output;
 }
 
-struct VSInputNoVertexColor
+struct VSInputPositionNormalTexture
 {
     float3 Position : POSITION;
     float3 Normal : NORMAL;
+    float2 TexCoord : TEXCOORD0;
 };
 
-PSInput VSMainNoVertexColor(VSInputNoVertexColor input)
+PSInput VSMainNoVertexColor(VSInputPositionNormalTexture input)
 {
     PSInput output;
 
@@ -109,6 +115,7 @@ PSInput VSMainNoVertexColor(VSInputNoVertexColor input)
 
     output.Position = mul(worldPosition, ViewProjection);
     output.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    output.TexCoord = input.TexCoord;
 
     return output;
 }
@@ -175,7 +182,7 @@ void EvaluateLight(
     specularContribution = SpecularColorAndPower.rgb * lightColor * specularTerm * attenuation;
 }
 
-float SampleShadowPcf(float2 shadowUv, float depthReference, int pcfRadius)
+float SampleShadowPcf(float2 shadowUvAtlas, float depthReference, int pcfRadius)
 {
     float accumulated = 0.0f;
     int sampleCount = 0;
@@ -183,12 +190,37 @@ float SampleShadowPcf(float2 shadowUv, float depthReference, int pcfRadius)
     {
         for (int offsetU = -pcfRadius; offsetU <= pcfRadius; ++offsetU)
         {
-            const float2 sampleUv = shadowUv + float2(offsetU, offsetV) * InvShadowMapTexelSize;
+            const float2 sampleUv = shadowUvAtlas + float2(offsetU, offsetV) * InvShadowMapTexelSize;
             accumulated += ShadowMapDepth.SampleCmpLevelZero(ShadowMapSampler, sampleUv, depthReference);
             sampleCount++;
         }
     }
     return accumulated / max(sampleCount, 1);
+}
+
+uint SelectShadowCascadeIndex(float viewSpaceZ)
+{
+    if (ShadowMapCascadeCount <= 1u)
+    {
+        return 0u;
+    }
+    if (viewSpaceZ <= CascadeSplits.x)
+    {
+        return 0u;
+    }
+    if (ShadowMapCascadeCount >= 2u && viewSpaceZ <= CascadeSplits.y)
+    {
+        return 1u;
+    }
+    if (ShadowMapCascadeCount >= 3u && viewSpaceZ <= CascadeSplits.z)
+    {
+        return 2u;
+    }
+    if (ShadowMapCascadeCount >= 4u)
+    {
+        return 3u;
+    }
+    return ShadowMapCascadeCount - 1u;
 }
 
 float DirectionalShadowAttenuation(float3 worldPosition, float3 worldNormal)
@@ -205,12 +237,19 @@ float DirectionalShadowAttenuation(float3 worldPosition, float3 worldNormal)
     const float3 towardLight = normalize(Lights[ShadowedDirectionalLightGpuIndex].Direction.xyz);
     const float3 biasedWorldPosition = worldPosition + worldNormal * DepthBiasAndPcfKernel.z;
 
-    const float4 lightClip = mul(float4(biasedWorldPosition, 1.0f), LightViewProjection[0]);
+    const float4 viewPosition = mul(float4(worldPosition, 1.0f), View);
+    const float viewSpaceZ = viewPosition.z;
+    const uint cascadeIndex = SelectShadowCascadeIndex(viewSpaceZ);
+
+    const float4 lightClip = mul(float4(biasedWorldPosition, 1.0f), LightViewProjection[cascadeIndex]);
     const float invW = 1.0f / max(abs(lightClip.w), 1.0e-5f);
     const float3 ndc = lightClip.xyz * invW;
-    const float2 shadowUv = float2(ndc.x * 0.5f + 0.5f, -ndc.y * 0.5f + 0.5f);
+    const float2 shadowUvLocal = float2(ndc.x * 0.5f + 0.5f, -ndc.y * 0.5f + 0.5f);
 
-    if (shadowUv.x < 0.0f || shadowUv.x > 1.0f || shadowUv.y < 0.0f || shadowUv.y > 1.0f)
+    const float2 atlasOrigin = float2(cascadeIndex & 1u, cascadeIndex / 2u) * 0.5f;
+    const float2 shadowUvAtlas = shadowUvLocal * 0.5f + atlasOrigin;
+
+    if (shadowUvLocal.x < 0.0f || shadowUvLocal.x > 1.0f || shadowUvLocal.y < 0.0f || shadowUvLocal.y > 1.0f)
     {
         return 1.0f;
     }
@@ -222,7 +261,7 @@ float DirectionalShadowAttenuation(float3 worldPosition, float3 worldNormal)
         - DepthBiasAndPcfKernel.y * slopeTerm;
 
     const int pcfRadius = clamp((int)DepthBiasAndPcfKernel.w, 1, 4);
-    return SampleShadowPcf(shadowUv, depthReference, pcfRadius);
+    return SampleShadowPcf(shadowUvAtlas, depthReference, pcfRadius);
 }
 
 float4 PSMain(PSInput input) : SV_TARGET
@@ -230,7 +269,25 @@ float4 PSMain(PSInput input) : SV_TARGET
     const float3 worldNormal = normalize(input.WorldNormal);
     const float3 viewDirection = normalize(CameraWorldPosition.xyz - input.WorldPosition);
 
+    const float4 viewPositionForCascade = mul(float4(input.WorldPosition, 1.0f), View);
+    const uint cascadeDebugIndex = SelectShadowCascadeIndex(viewPositionForCascade.z);
+
     const float directionalShadow = DirectionalShadowAttenuation(input.WorldPosition, worldNormal);
+
+    if (ShadowCascadeDebugMode != 0u && ShadowEnabled != 0u && ShadowMapCascadeCount > 0u)
+    {
+        const float3 diffuseAlbedo = DiffuseTexture.Sample(DiffuseSampler, input.TexCoord).rgb;
+        const float3 baseSampleDebug = diffuseAlbedo * input.Color.rgb * BaseColor.rgb;
+        const float3 cascadeColors[4] =
+        {
+            float3(0.85f, 0.25f, 0.2f),
+            float3(0.25f, 0.75f, 0.3f),
+            float3(0.25f, 0.35f, 0.9f),
+            float3(0.9f, 0.85f, 0.2f)
+        };
+        const float3 debugRgb = cascadeColors[cascadeDebugIndex];
+        return float4(debugRgb * directionalShadow * baseSampleDebug, BaseColor.a * input.Color.a);
+    }
 
     float3 diffuseAccumulation = float3(0.0f, 0.0f, 0.0f);
     float3 specularAccumulation = float3(0.0f, 0.0f, 0.0f);
@@ -262,7 +319,8 @@ float4 PSMain(PSInput input) : SV_TARGET
         specularAccumulation += specularContribution * shadowFactor;
     }
 
-    const float3 baseSample = input.Color.rgb * BaseColor.rgb;
+    const float3 diffuseAlbedo = DiffuseTexture.Sample(DiffuseSampler, input.TexCoord).rgb;
+    const float3 baseSample = diffuseAlbedo * input.Color.rgb * BaseColor.rgb;
     const float ambientScale = EmissiveAndAmbient.w;
     const float3 ambientTerm = baseSample * ambientScale;
     const float3 emissiveTerm = EmissiveAndAmbient.xyz;

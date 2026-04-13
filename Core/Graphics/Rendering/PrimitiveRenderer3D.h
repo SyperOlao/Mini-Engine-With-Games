@@ -5,6 +5,7 @@
 
 #include <SimpleMath.h>
 #include <d3d11.h>
+#include <directxtk/CommonStates.h>
 #include <directxtk/GeometricPrimitive.h>
 #include <memory>
 #include <wrl/client.h>
@@ -119,6 +120,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_objectConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_materialConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_lightsConstantBuffer;
+
+    std::unique_ptr<DirectX::CommonStates> m_commonStates{};
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_litDefaultDiffuseTexture;
 };
 
 #endif

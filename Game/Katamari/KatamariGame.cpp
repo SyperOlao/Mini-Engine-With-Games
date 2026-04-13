@@ -77,19 +77,20 @@ void KatamariGame::Initialize(AppContext &context)
 
     PickupArchetypes = KatamariPickupCatalog::BuildDefaultPickupArchetypes();
 
-    SceneInstance.SetForwardLightingEnabled(false);
-    SceneInstance.SetDirectionalShadowMappingEnabled(false);
+    SceneInstance.SetForwardLightingEnabled(true);
+    SceneInstance.SetDirectionalShadowMappingEnabled(true);
     SceneInstance.SetActiveCamera(&FollowCameraInstance);
 
     KatamariLighting = SceneLighting3DCreateDefaultOutdoor();
     if (!KatamariLighting.DirectionalLights.empty())
     {
-        KatamariLighting.DirectionalLights[0].Direction = Vector3(-0.18f, -1.0f, -0.32f);
-        KatamariLighting.DirectionalLights[0].Intensity = 0.28f;
-        KatamariLighting.DirectionalLights[0].LightColor = DirectX::SimpleMath::Color(0.52f, 0.63f, 0.92f, 1.0f);
+        KatamariLighting.DirectionalLights[0].Direction = Vector3(-0.22f, -1.0f, -0.28f);
+        KatamariLighting.DirectionalLights[0].Intensity = 0.55f;
+        KatamariLighting.DirectionalLights[0].LightColor = DirectX::SimpleMath::Color(0.58f, 0.68f, 0.95f, 1.0f);
     }
     SceneInstance.GetSceneLightingDescriptor() = KatamariLighting;
 
+    FollowCameraInstance.SetNearPlaneAndFarPlane(0.28f, 260.0f);
     FollowCameraInstance.SetOffsetFromTarget(Vector3(0.0f, 9.0f, -26.0f));
     FollowCameraInstance.SetPositionLagSeconds(0.14f);
     FollowCameraInstance.SetOrientationLagSeconds(0.2f);
@@ -102,6 +103,7 @@ void KatamariGame::Initialize(AppContext &context)
     {
         GroundModel = assetCache->LoadModel("Game/Katamari/Assets/Environment/ground.obj");
         MoonModel = assetCache->LoadModel("Game/Katamari/Assets/Environment/moon_sphere.obj");
+        PlayerBallMeshModel = assetCache->LoadModel("Game/Katamari/Assets/Environment/moon_sphere.obj");
     }
 
     GroundModelVerticalOffset = 0.0f;
@@ -123,7 +125,8 @@ void KatamariGame::Initialize(AppContext &context)
         context,
         WorldContext,
         GameConfig,
-        PickupArchetypes
+        PickupArchetypes,
+        PlayerBallMeshModel
     );
     WorldContext.FollowCameraForMovement = &FollowCameraInstance;
     WorldContext.Config = &GameConfig;
@@ -136,11 +139,11 @@ void KatamariGame::RegisterSceneSystems(AppContext &context)
     SceneInstance.ClearSystems();
     SceneInstance.AddSystem(std::make_unique<KatamariBallControllerSystem>(&WorldContext));
     SceneInstance.AddSystem(std::make_unique<VelocityIntegrationSystem>());
+    SceneInstance.AddSystem(std::make_unique<KatamariBallVisualRadiusSystem>(&WorldContext));
     SceneInstance.AddSystem(std::make_unique<TransformSystem>());
     SceneInstance.AddSystem(std::make_unique<CollisionSystem>());
     SceneInstance.AddSystem(std::make_unique<KatamariSphereWorldResolveSystem>(&WorldContext));
     SceneInstance.AddSystem(std::make_unique<KatamariAbsorptionSystem>(&WorldContext));
-    SceneInstance.AddSystem(std::make_unique<KatamariBallVisualRadiusSystem>(&WorldContext));
     SceneInstance.AddSystem(std::make_unique<RenderSystem>());
     SceneInstance.InitializeSystems(context);
 }
@@ -171,7 +174,8 @@ void KatamariGame::ResetLevel(AppContext &context)
         context,
         WorldContext,
         GameConfig,
-        PickupArchetypes
+        PickupArchetypes,
+        PlayerBallMeshModel
     );
     WorldContext.FollowCameraForMovement = &FollowCameraInstance;
     WorldContext.Config = &GameConfig;
@@ -188,6 +192,18 @@ void KatamariGame::UpdateDebugInput(AppContext &context)
     if (keyboard.WasVirtualKeyPressed(VK_F3))
     {
         WorldContext.DebugDrawCollision = !WorldContext.DebugDrawCollision;
+    }
+
+    if (keyboard.WasVirtualKeyPressed(VK_F4))
+    {
+        SceneInstance.SetShadowCascadeDebugVisualizationEnabled(
+            !SceneInstance.GetShadowCascadeDebugVisualizationEnabled()
+        );
+    }
+
+    if (keyboard.WasVirtualKeyPressed(VK_F5))
+    {
+        SceneInstance.SetDirectionalShadowMappingEnabled(!SceneInstance.GetDirectionalShadowMappingEnabled());
     }
 }
 
@@ -300,8 +316,19 @@ void KatamariGame::Render(AppContext &context)
             Matrix::CreateScale(playfieldSpan * 0.52f, playfieldSpan * 0.52f, playfieldSpan * 0.52f) *
             Matrix::CreateTranslation(moonPosition);
         RenderMaterialParameters moonMaterial{};
-        moonMaterial.BaseColor = DirectX::SimpleMath::Color(1.0f, 1.0f, 1.0f, 1.0f);
-        modelRenderer.DrawModel(*MoonModel, moonWorld, viewMatrix, projectionMatrix, moonMaterial);
+        moonMaterial.BaseColor = DirectX::SimpleMath::Color(0.96f, 0.96f, 0.98f, 1.0f);
+        moonMaterial.AmbientFactor = 0.12f;
+        moonMaterial.SpecularPower = 64.0f;
+        moonMaterial.SpecularColor = DirectX::SimpleMath::Color(0.75f, 0.75f, 0.8f, 1.0f);
+        modelRenderer.DrawModelLit(
+            *MoonModel,
+            moonWorld,
+            viewMatrix,
+            projectionMatrix,
+            cameraWorldPosition,
+            KatamariLighting,
+            moonMaterial
+        );
 
         const Matrix moonGlowWorld = Matrix::CreateScale(playfieldSpan * 0.66f, playfieldSpan * 0.66f, playfieldSpan * 0.66f) *
             Matrix::CreateTranslation(moonPosition);
@@ -318,7 +345,15 @@ void KatamariGame::Render(AppContext &context)
         groundMaterial.AmbientFactor = 0.16f;
         groundMaterial.SpecularPower = 92.0f;
         groundMaterial.SpecularColor = DirectX::SimpleMath::Color(0.72f, 0.72f, 0.72f, 1.0f);
-        modelRenderer.DrawModel(*GroundModel, groundWorld, viewMatrix, projectionMatrix, groundMaterial);
+        modelRenderer.DrawModelLit(
+            *GroundModel,
+            groundWorld,
+            viewMatrix,
+            projectionMatrix,
+            cameraWorldPosition,
+            KatamariLighting,
+            groundMaterial
+        );
     }
     else
     {
@@ -337,37 +372,6 @@ void KatamariGame::Render(AppContext &context)
             cameraWorldPosition,
             KatamariLighting,
             floorMaterial
-        );
-    }
-
-    if (TransformComponent const *const ballTransform = SceneInstance.TryGetTransformComponent(WorldContext.BallEntityId); ballTransform != nullptr)
-    {
-        // Contact shadow emulation disabled.
-        // const Matrix contactShadowWorld =
-        //     Matrix::CreateScale(WorldContext.BallRadius * 1.12f, 0.02f, WorldContext.BallRadius * 1.12f) *
-        //     Matrix::CreateTranslation(ballTransform->Local.Position.x, 0.01f, ballTransform->Local.Position.z);
-        // primitives.DrawSphere(
-        //     contactShadowWorld,
-        //     viewMatrix,
-        //     projectionMatrix,
-        //     DirectX::SimpleMath::Color(0.02f, 0.03f, 0.03f, 0.45f)
-        // );
-
-        const Matrix ballWorld =
-            Matrix::CreateScale(WorldContext.BallVisualRadius, WorldContext.BallVisualRadius, WorldContext.BallVisualRadius) *
-            Matrix::CreateTranslation(ballTransform->Local.Position);
-        RenderMaterialParameters ballMaterial{};
-        ballMaterial.BaseColor = DirectX::SimpleMath::Color(0.95f, 0.35f, 0.2f, 1.0f);
-        ballMaterial.AmbientFactor = 0.2f;
-        ballMaterial.SpecularPower = 96.0f;
-        ballMaterial.SpecularColor = DirectX::SimpleMath::Color(1.0f, 0.9f, 0.8f, 1.0f);
-        primitives.DrawSphereLit(
-            ballWorld,
-            viewMatrix,
-            projectionMatrix,
-            cameraWorldPosition,
-            KatamariLighting,
-            ballMaterial
         );
     }
 

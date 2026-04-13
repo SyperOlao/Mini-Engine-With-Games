@@ -63,6 +63,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_forwardPhongObjectConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_forwardPhongMaterialConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_forwardPhongLightsConstantBuffer;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_forwardPhongDefaultWhiteDiffuseTexture;
 
     Microsoft::WRL::ComPtr<ID3D11VertexShader> m_shadowDepthVertexShader;
     Microsoft::WRL::ComPtr<ID3D11InputLayout> m_shadowDepthInputLayout;

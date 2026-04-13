@@ -140,7 +140,7 @@ void KatamariAbsorptionSystem::Update(Scene &scene, AppContext &, float)
 
         GameplayWorld->BallVolume += pickupRecord.AbsorbVolumeContribution;
         GameplayWorld->BallRadius = RadiusFromSphereVolume(GameplayWorld->BallVolume);
-        ballCollider->Radius = GameplayWorld->BallRadius;
+        ballCollider->Radius = GameplayWorld->BallMeshReferenceRadius;
 
         scene.RemoveSphereColliderComponent(pickupEntityId);
         scene.RemoveVelocityComponent(pickupEntityId);

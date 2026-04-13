@@ -10,12 +10,14 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <vector>
 
 bool ModelAssetTryLoadAssimp(
     ID3D11Device *device,
     DirectX::IEffectFactory &effectFactory,
     const std::filesystem::path &resolvedFilePath,
-    std::unique_ptr<DirectX::Model> &outModel
+    std::unique_ptr<DirectX::Model> &outModel,
+    std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> &outMeshPartDiffuseTextures
 );
 
 namespace
@@ -38,6 +40,7 @@ bool ModelAsset::LoadFromFile(
 {
     m_model.reset();
     m_resolvedSourcePath.clear();
+    m_meshPartDiffuseTextures.clear();
 
     const std::wstring extensionLower = ToLowerInvariant(resolvedFilePath.extension().wstring());
     if (extensionLower == L".cmo")
@@ -53,7 +56,13 @@ bool ModelAsset::LoadFromFile(
     {
         try
         {
-            if (!ModelAssetTryLoadAssimp(graphics.GetDevice(), effectFactory, resolvedFilePath, m_model))
+            if (!ModelAssetTryLoadAssimp(
+                graphics.GetDevice(),
+                effectFactory,
+                resolvedFilePath,
+                m_model,
+                m_meshPartDiffuseTextures
+            ))
             {
                 return false;
             }
@@ -82,6 +91,7 @@ bool ModelAsset::LoadFromSdkMesh(
 {
     m_model.reset();
     m_resolvedSourcePath.clear();
+    m_meshPartDiffuseTextures.clear();
 
     m_model = DirectX::Model::CreateFromSDKMESH(graphics.GetDevice(), resolvedFilePath.c_str(), effectFactory);
     if (m_model == nullptr)
@@ -101,6 +111,7 @@ bool ModelAsset::LoadFromCmo(
 {
     m_model.reset();
     m_resolvedSourcePath.clear();
+    m_meshPartDiffuseTextures.clear();
 
     m_model = DirectX::Model::CreateFromCMO(graphics.GetDevice(), resolvedFilePath.c_str(), effectFactory);
     if (m_model == nullptr)
@@ -143,4 +154,14 @@ DirectX::BoundingSphere ModelAsset::GetMergedBoundingSphere() const noexcept
     }
 
     return merged;
+}
+
+ID3D11ShaderResourceView *ModelAsset::TryGetDiffuseTextureForMeshPart(const std::size_t flatMeshPartIndex) const noexcept
+{
+    if (flatMeshPartIndex >= m_meshPartDiffuseTextures.size())
+    {
+        return nullptr;
+    }
+
+    return m_meshPartDiffuseTextures[flatMeshPartIndex].Get();
 }

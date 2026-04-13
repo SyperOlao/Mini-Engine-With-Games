@@ -7,6 +7,8 @@
 
 #include <cmath>
 
+using DirectX::SimpleMath::Vector3;
+
 KatamariBallVisualRadiusSystem::KatamariBallVisualRadiusSystem(KatamariWorldContext *const gameplayWorld) noexcept
     : GameplayWorld(gameplayWorld)
 {
@@ -16,7 +18,7 @@ void KatamariBallVisualRadiusSystem::Initialize(Scene &, AppContext &)
 {
 }
 
-void KatamariBallVisualRadiusSystem::Update(Scene &, AppContext &, const float deltaTime)
+void KatamariBallVisualRadiusSystem::Update(Scene &scene, AppContext &, const float deltaTime)
 {
     if (GameplayWorld == nullptr || GameplayWorld->Config == nullptr)
     {
@@ -44,4 +46,11 @@ void KatamariBallVisualRadiusSystem::Update(Scene &, AppContext &, const float d
     }
 
     GameplayWorld->BallVisualRadius = CurrentVisualRadius;
+
+    TransformComponent *const ballTransform = scene.TryGetTransformComponent(GameplayWorld->BallEntityId);
+    if (ballTransform != nullptr && GameplayWorld->BallMeshReferenceRadius > 1.0e-5f)
+    {
+        const float uniformScale = CurrentVisualRadius / GameplayWorld->BallMeshReferenceRadius;
+        ballTransform->Local.Scale = Vector3(uniformScale, uniformScale, uniformScale);
+    }
 }

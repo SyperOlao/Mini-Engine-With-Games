@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <cstring>
 #include <stdexcept>
 
@@ -63,6 +64,48 @@ namespace
         D3d11Helpers::ThrowIfFailed(
             device->CreateBuffer(&description, nullptr, buffer.GetAddressOf()),
             "PrimitiveRenderer3D failed to create dynamic constant buffer."
+        );
+    }
+
+    static void CreateLitDefaultWhiteDiffuseTexture(
+        ID3D11Device *const device,
+        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> &outShaderResourceView
+    )
+    {
+        const std::uint32_t rgbaPixel = 0xffffffffu;
+        D3D11_SUBRESOURCE_DATA initialData{};
+        initialData.pSysMem = &rgbaPixel;
+        initialData.SysMemPitch = sizeof(std::uint32_t);
+
+        D3D11_TEXTURE2D_DESC textureDescription{};
+        textureDescription.Width = 1u;
+        textureDescription.Height = 1u;
+        textureDescription.MipLevels = 1u;
+        textureDescription.ArraySize = 1u;
+        textureDescription.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        textureDescription.SampleDesc.Count = 1u;
+        textureDescription.Usage = D3D11_USAGE_IMMUTABLE;
+        textureDescription.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> texture2D{};
+        D3d11Helpers::ThrowIfFailed(
+            device->CreateTexture2D(&textureDescription, &initialData, texture2D.GetAddressOf()),
+            "PrimitiveRenderer3D failed to create lit default white diffuse texture."
+        );
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDescription{};
+        shaderResourceViewDescription.Format = textureDescription.Format;
+        shaderResourceViewDescription.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        shaderResourceViewDescription.Texture2D.MipLevels = 1u;
+        shaderResourceViewDescription.Texture2D.MostDetailedMip = 0u;
+
+        D3d11Helpers::ThrowIfFailed(
+            device->CreateShaderResourceView(
+                texture2D.Get(),
+                &shaderResourceViewDescription,
+                outShaderResourceView.GetAddressOf()
+            ),
+            "PrimitiveRenderer3D failed to create lit default white diffuse shader resource view."
         );
     }
 }
@@ -552,6 +595,9 @@ void PrimitiveRenderer3D::CreateLitResources()
     CreateDynamicConstantBuffer(device, static_cast<UINT>(sizeof(ObjectGpuConstants)), m_objectConstantBuffer);
     CreateDynamicConstantBuffer(device, static_cast<UINT>(sizeof(MaterialGpuConstants)), m_materialConstantBuffer);
     CreateDynamicConstantBuffer(device, static_cast<UINT>(sizeof(LightsGpuConstants)), m_lightsConstantBuffer);
+
+    m_commonStates = std::make_unique<DirectX::CommonStates>(device);
+    CreateLitDefaultWhiteDiffuseTexture(device, m_litDefaultDiffuseTexture);
 }
 
 void PrimitiveRenderer3D::BindTargets() const
@@ -658,6 +704,12 @@ void PrimitiveRenderer3D::DrawLitMesh(
     context->PSSetShader(m_litPixelShader.Get(), nullptr, 0);
     context->PSSetConstantBuffers(0, 4, constantBuffers);
     m_shadowBindingHost->BindForwardPhongShadowRegisters(context);
+
+    ID3D11SamplerState *const diffuseSamplerStates[] = {m_commonStates->LinearWrap()};
+    context->PSSetSamplers(1, 1, diffuseSamplerStates);
+
+    ID3D11ShaderResourceView *const diffuseShaderResourceViews[] = {m_litDefaultDiffuseTexture.Get()};
+    context->PSSetShaderResources(1, 1, diffuseShaderResourceViews);
 
     context->DrawIndexed(indexCount, 0, 0);
 

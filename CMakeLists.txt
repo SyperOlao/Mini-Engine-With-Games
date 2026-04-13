@@ -112,6 +112,8 @@ add_executable(PingPong
         Core/Graphics/Rendering/Shadows/ShadowShaderConstants3D.h
         Core/Graphics/Rendering/Shadows/ShadowProjection.h
         Core/Graphics/Rendering/Shadows/ShadowProjection.cpp
+        Core/Graphics/Rendering/Shadows/CascadedShadowMapMath.h
+        Core/Graphics/Rendering/Shadows/CascadedShadowMapMath.cpp
         Core/Graphics/Rendering/Shadows/DepthRenderTarget2D.h
         Core/Graphics/Rendering/Shadows/DepthRenderTarget2D.cpp
         Core/Graphics/Rendering/Shadows/ShadowComparisonSamplerState.h
@@ -304,6 +306,14 @@ endif()
 file(COPY
         ${CMAKE_SOURCE_DIR}/Core/Shaders
         DESTINATION ${CMAKE_BINARY_DIR}/Core
+)
+
+add_custom_command(
+        TARGET PingPong POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/Core/Shaders"
+        "${CMAKE_BINARY_DIR}/Core/Shaders"
+        COMMENT "Sync Core/Shaders (runtime compile uses build tree copy)"
 )
 
 set(CORE_SHADER_SOURCES

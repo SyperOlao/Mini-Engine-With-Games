@@ -14,12 +14,15 @@
 
 #include <d3d11.h>
 
+#include <directxtk/WICTextureLoader.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
+#include <wrl/client.h>
 
 namespace
 {
@@ -182,10 +185,12 @@ bool ModelAssetTryLoadAssimp(
     ID3D11Device *device,
     DirectX::IEffectFactory &effectFactory,
     const std::filesystem::path &resolvedFilePath,
-    std::unique_ptr<DirectX::Model> &outModel
+    std::unique_ptr<DirectX::Model> &outModel,
+    std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> &outMeshPartDiffuseTextures
 )
 {
     outModel.reset();
+    outMeshPartDiffuseTextures.clear();
 
     if (device == nullptr)
     {
@@ -295,6 +300,21 @@ bool ModelAssetTryLoadAssimp(
         {
             continue;
         }
+
+        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> diffuseTextureView{};
+        if (!resolvedTexturePathWide.empty())
+        {
+            Microsoft::WRL::ComPtr<ID3D11Resource> textureResource{};
+            DirectX::CreateWICTextureFromFile(
+                device,
+                nullptr,
+                resolvedTexturePathWide.c_str(),
+                textureResource.GetAddressOf(),
+                diffuseTextureView.GetAddressOf()
+            );
+        }
+
+        outMeshPartDiffuseTextures.push_back(diffuseTextureView);
 
         auto meshPart = std::make_unique<DirectX::ModelMeshPart>();
         meshPart->indexCount = static_cast<std::uint32_t>(indices.size());

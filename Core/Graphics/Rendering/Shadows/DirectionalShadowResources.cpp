@@ -16,7 +16,7 @@ void DirectionalShadowResources::Initialize(GraphicsDevice &graphicsDevice)
 
     m_comparisonSampler.Create(device);
     m_shadowPassRasterizer.Create(device, D3D11_CULL_BACK, 75000, 2.5f, 0.0f);
-    m_shadowMap.Create(device, m_shadowMapResolution, m_shadowMapResolution);
+    m_shadowMap.Create(device, m_shadowAtlasSizePixels, m_shadowAtlasSizePixels);
     CreateConstantBuffers(device);
 }
 
@@ -37,7 +37,7 @@ void DirectionalShadowResources::Resize(GraphicsDevice &graphicsDevice)
         return;
     }
 
-    m_shadowMap.Resize(device, m_shadowMapResolution, m_shadowMapResolution);
+    m_shadowMap.Resize(device, m_shadowAtlasSizePixels, m_shadowAtlasSizePixels);
 }
 
 void DirectionalShadowResources::UploadShadowCascadeConstants(
@@ -131,6 +131,35 @@ float DirectionalShadowResources::GetNearPlaneDistance() const noexcept
 float DirectionalShadowResources::GetFarPlaneDistance() const noexcept
 {
     return m_farPlaneDistance;
+}
+
+std::uint32_t DirectionalShadowResources::GetCascadeCount() const noexcept
+{
+    return m_cascadeCount;
+}
+
+std::uint32_t DirectionalShadowResources::GetShadowAtlasSizePixels() const noexcept
+{
+    return m_shadowAtlasSizePixels;
+}
+
+std::uint32_t DirectionalShadowResources::GetCascadeTileSizePixels() const noexcept
+{
+    if (m_cascadeCount == 0u)
+    {
+        return m_shadowAtlasSizePixels;
+    }
+    return m_shadowAtlasSizePixels / 2u;
+}
+
+float DirectionalShadowResources::GetCascadeSplitLambda() const noexcept
+{
+    return m_cascadeSplitLambda;
+}
+
+float DirectionalShadowResources::GetEffectiveShadowFarClamp() const noexcept
+{
+    return m_effectiveShadowFarClamp;
 }
 
 void DirectionalShadowResources::CreateConstantBuffers(ID3D11Device *const device)

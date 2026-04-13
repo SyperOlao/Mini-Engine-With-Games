@@ -24,7 +24,7 @@ struct alignas(16) ShadowSamplingGpuConstants final
     std::uint32_t ShadowEnabled{0u};
     std::uint32_t ShadowedDirectionalLightGpuIndex{0u};
     std::uint32_t CascadeCount{0u};
-    std::uint32_t PaddingUint{};
+    std::uint32_t ShadowCascadeDebugMode{0u};
 };
 
 struct alignas(16) ShadowPassLightConstantsGpu final

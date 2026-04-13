@@ -50,6 +50,7 @@ private:
     std::shared_ptr<ModelAsset> GroundModel{};
     float GroundModelVerticalOffset{0.0f};
     std::shared_ptr<ModelAsset> MoonModel{};
+    std::shared_ptr<ModelAsset> PlayerBallMeshModel{};
     SceneLightingDescriptor3D KatamariLighting{};
 };
 

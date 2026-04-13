@@ -3,8 +3,12 @@
 
 #include <DirectXCollision.h>
 
+#include <d3d11.h>
+
 #include <filesystem>
 #include <memory>
+#include <vector>
+#include <wrl/client.h>
 #include <directxtk/Model.h>
 
 namespace DirectX
@@ -46,9 +50,12 @@ public:
 
     [[nodiscard]] DirectX::BoundingSphere GetMergedBoundingSphere() const noexcept;
 
+    [[nodiscard]] ID3D11ShaderResourceView *TryGetDiffuseTextureForMeshPart(std::size_t flatMeshPartIndex) const noexcept;
+
 private:
     std::unique_ptr<DirectX::Model> m_model{};
     std::filesystem::path m_resolvedSourcePath{};
+    std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> m_meshPartDiffuseTextures{};
 };
 
 #endif

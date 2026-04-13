@@ -169,6 +169,16 @@ bool Scene::GetDirectionalShadowMappingEnabled() const noexcept
     return m_directionalShadowMappingEnabled;
 }
 
+void Scene::SetShadowCascadeDebugVisualizationEnabled(const bool enabled)
+{
+    m_shadowCascadeDebugVisualizationEnabled = enabled;
+}
+
+bool Scene::GetShadowCascadeDebugVisualizationEnabled() const noexcept
+{
+    return m_shadowCascadeDebugVisualizationEnabled;
+}
+
 SceneLightingDescriptor3D &Scene::GetSceneLightingDescriptor() noexcept
 {
     return m_sceneLighting;

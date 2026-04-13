@@ -18,8 +18,13 @@
 #include "Core/Graphics/Rendering/Pipeline/Passes/MainGeometryBindRenderPass.h"
 #include "Core/Graphics/Rendering/Pipeline/Passes/ShadowDepthRenderPass.h"
 #include "Core/Graphics/Rendering/Pipeline/Passes/UserInterfaceRenderPass.h"
-#include "Core/Graphics/Rendering/Shadows/ShadowProjection.h"
+#include "Core/Graphics/Rendering/Shadows/CascadedShadowMapMath.h"
 
+#include <DirectXMath.h>
+
+#include <algorithm>
+#include <array>
+#include <cmath>
 #include <memory>
 #include <utility>
 
@@ -113,40 +118,82 @@ void RenderContext::PrepareDirectionalShadowPass(Scene &scene, Camera &camera)
     DirectX::SimpleMath::Vector3 lightAxis = shadowDirectional->Direction;
     lightAxis.Normalize();
 
-    const DirectX::SimpleMath::Matrix viewMatrix = camera.GetViewMatrix();
-    const DirectX::SimpleMath::Vector3 focusPoint = CameraWorldPositionFromViewMatrix(viewMatrix);
+    const int framebufferWidth = m_graphics->GetWidth();
+    const int framebufferHeight = m_graphics->GetHeight();
+    if (framebufferWidth <= 0 || framebufferHeight <= 0)
+    {
+        InvalidateDirectionalShadowPass();
+        return;
+    }
 
-    const DirectX::SimpleMath::Matrix lightViewProjection = ShadowProjection::BuildDirectionalLightViewProjection(
-        lightAxis,
-        focusPoint,
-        DirectX::SimpleMath::Vector3::UnitY,
-        m_directionalShadowResources.GetLightEyeDistanceFromFocus(),
-        m_directionalShadowResources.GetOrthographicWidth(),
-        m_directionalShadowResources.GetOrthographicHeight(),
-        m_directionalShadowResources.GetNearPlaneDistance(),
-        m_directionalShadowResources.GetFarPlaneDistance()
+    const float aspectRatio =
+        static_cast<float>(framebufferWidth) / static_cast<float>(framebufferHeight);
+
+    const DirectX::SimpleMath::Matrix viewMatrix = camera.GetViewMatrix();
+
+    const float effectiveFar = (std::min)(
+        camera.GetFarPlane(),
+        m_directionalShadowResources.GetEffectiveShadowFarClamp()
+    );
+    const float effectiveNear = camera.GetNearPlane();
+
+    const std::uint32_t cascadeCount = m_directionalShadowResources.GetCascadeCount();
+    const CascadedShadowSplitCpu splitCpu = ComputePracticalCascadeSplits(
+        effectiveNear,
+        effectiveFar,
+        cascadeCount,
+        m_directionalShadowResources.GetCascadeSplitLambda()
     );
 
-    ShadowCascadeConstantsGpu cascadeCpu{};
-    cascadeCpu.LightViewProjection[0] = lightViewProjection.Transpose();
-    cascadeCpu.CascadeSplits.x = m_directionalShadowResources.GetFarPlaneDistance();
-    cascadeCpu.CascadeCount = 1u;
+    const float verticalFieldOfViewRadians = DirectX::XMConvertToRadians(camera.GetVerticalFieldOfViewDegrees());
+    const std::uint32_t cascadeTilePixels = m_directionalShadowResources.GetCascadeTileSizePixels();
 
-    const float inverseWidth = 1.0f / static_cast<float>(m_directionalShadowResources.GetShadowMap().GetWidth());
-    const float inverseHeight = 1.0f / static_cast<float>(m_directionalShadowResources.GetShadowMap().GetHeight());
+    std::array<DirectX::SimpleMath::Matrix, kMaximumShadowCascades> cascadeLightViewProjections{};
+    for (std::uint32_t cascadeIndex = 0u; cascadeIndex < cascadeCount; ++cascadeIndex)
+    {
+        const float sliceNearZ = splitCpu.ViewSpaceSplitBoundaries[cascadeIndex];
+        const float sliceFarZ = splitCpu.ViewSpaceSplitBoundaries[cascadeIndex + 1u];
+        cascadeLightViewProjections[cascadeIndex] = BuildDirectionalCascadeLightViewProjection(
+            lightAxis,
+            viewMatrix,
+            sliceNearZ,
+            sliceFarZ,
+            verticalFieldOfViewRadians,
+            aspectRatio,
+            cascadeTilePixels,
+            2.0f
+        );
+    }
+
+    ShadowCascadeConstantsGpu cascadeCpu{};
+    for (std::uint32_t cascadeIndex = 0u; cascadeIndex < cascadeCount; ++cascadeIndex)
+    {
+        cascadeCpu.LightViewProjection[cascadeIndex] = cascadeLightViewProjections[cascadeIndex].Transpose();
+    }
+    cascadeCpu.CascadeSplits = DirectX::XMFLOAT4(
+        splitCpu.ViewSpaceSplitBoundaries[1],
+        splitCpu.ViewSpaceSplitBoundaries[2],
+        splitCpu.ViewSpaceSplitBoundaries[3],
+        splitCpu.ViewSpaceSplitBoundaries[4]
+    );
+    cascadeCpu.CascadeCount = cascadeCount;
+
+    const float inverseAtlasWidth =
+        1.0f / static_cast<float>(m_directionalShadowResources.GetShadowAtlasSizePixels());
 
     ShadowSamplingGpuConstants samplingCpu{};
-    samplingCpu.DepthBiasAndPcfKernel = DirectX::XMFLOAT4(0.00035f, 2.5f, 0.025f, 2.0f);
-    samplingCpu.InvShadowMapTexelSize = DirectX::XMFLOAT2(inverseWidth, inverseHeight);
+    samplingCpu.DepthBiasAndPcfKernel = DirectX::XMFLOAT4(0.00028f, 2.2f, 0.018f, 2.0f);
+    samplingCpu.InvShadowMapTexelSize = DirectX::XMFLOAT2(inverseAtlasWidth, inverseAtlasWidth);
     samplingCpu.ShadowEnabled = 1u;
     samplingCpu.ShadowedDirectionalLightGpuIndex = shadowPackedDirectionalIndex;
-    samplingCpu.CascadeCount = 1u;
+    samplingCpu.CascadeCount = cascadeCount;
+    samplingCpu.ShadowCascadeDebugMode = scene.GetShadowCascadeDebugVisualizationEnabled() ? 1u : 0u;
 
     m_directionalShadowResources.UploadShadowCascadeConstants(deviceContext, cascadeCpu);
     m_directionalShadowResources.UploadShadowSamplingConstants(deviceContext, samplingCpu);
 
-    ID3D11ShaderResourceView *const nullShaderResourceViews[1] = {nullptr};
-    deviceContext->PSSetShaderResources(0, 1, nullShaderResourceViews);
+    ID3D11ShaderResourceView *const nullShaderResourceViews[2] = {nullptr, nullptr};
+    deviceContext->PSSetShaderResources(0, 2, nullShaderResourceViews);
 
     m_frameRenderer.EnterPass(RenderPassKind::ShadowCapture);
 
@@ -162,25 +209,33 @@ void RenderContext::PrepareDirectionalShadowPass(Scene &scene, Camera &camera)
 
     ID3D11RasterizerState *const shadowRasterizerState = m_directionalShadowResources.GetShadowPassRasterizerState();
 
-    scene.ForEachEntityWithTransformAndModel([&](Entity &entity) {
-        ModelComponent *const model = entity.TryGetModelComponent();
-        TransformComponent *const transform = entity.TryGetTransformComponent();
-        if (model == nullptr || transform == nullptr)
-        {
-            return;
-        }
-        if (!model->Visible || !model->CastsShadow || model->Asset == nullptr)
-        {
-            return;
-        }
+    for (std::uint32_t cascadeIndex = 0u; cascadeIndex < cascadeCount; ++cascadeIndex)
+    {
+        const float tilePixelsFloat = static_cast<float>(cascadeTilePixels);
+        const float topLeftX = static_cast<float>(cascadeIndex % 2u) * tilePixelsFloat;
+        const float topLeftY = static_cast<float>(cascadeIndex / 2u) * tilePixelsFloat;
+        m_graphics->SetViewportPixels(tilePixelsFloat, tilePixelsFloat, topLeftX, topLeftY);
 
-        m_modelRenderer.DrawModelShadowDepth(
-            shadowRasterizerState,
-            *model->Asset,
-            transform->WorldMatrix,
-            lightViewProjection
-        );
-    });
+        scene.ForEachEntityWithTransformAndModel([&](Entity &entity) {
+            ModelComponent *const model = entity.TryGetModelComponent();
+            TransformComponent *const transform = entity.TryGetTransformComponent();
+            if (model == nullptr || transform == nullptr)
+            {
+                return;
+            }
+            if (!model->Visible || !model->CastsShadow || model->Asset == nullptr)
+            {
+                return;
+            }
+
+            m_modelRenderer.DrawModelShadowDepth(
+                shadowRasterizerState,
+                *model->Asset,
+                transform->WorldMatrix,
+                cascadeLightViewProjections[cascadeIndex]
+            );
+        });
+    }
 
     deviceContext->RSSetState(nullptr);
     m_graphics->BindMainRenderTargets();
@@ -204,6 +259,7 @@ void RenderContext::InvalidateDirectionalShadowPass()
     ShadowSamplingGpuConstants samplingCpu{};
     samplingCpu.ShadowEnabled = 0u;
     samplingCpu.CascadeCount = 0u;
+    samplingCpu.ShadowCascadeDebugMode = 0u;
     m_directionalShadowResources.UploadShadowSamplingConstants(deviceContext, samplingCpu);
 
     ShadowCascadeConstantsGpu cascadeCpu{};
@@ -245,8 +301,8 @@ void RenderContext::UnbindForwardPhongShadowShaderResource(ID3D11DeviceContext *
         return;
     }
 
-    ID3D11ShaderResourceView *const nullShaderResourceViews[1] = {nullptr};
-    deviceContext->PSSetShaderResources(0, 1, nullShaderResourceViews);
+    ID3D11ShaderResourceView *const nullShaderResourceViews[2] = {nullptr, nullptr};
+    deviceContext->PSSetShaderResources(0, 2, nullShaderResourceViews);
 }
 
 void RenderContext::ResizeDeferredResources()

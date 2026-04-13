@@ -52,6 +52,16 @@ public:
 
     [[nodiscard]] float GetFarPlaneDistance() const noexcept;
 
+    [[nodiscard]] std::uint32_t GetCascadeCount() const noexcept;
+
+    [[nodiscard]] std::uint32_t GetShadowAtlasSizePixels() const noexcept;
+
+    [[nodiscard]] std::uint32_t GetCascadeTileSizePixels() const noexcept;
+
+    [[nodiscard]] float GetCascadeSplitLambda() const noexcept;
+
+    [[nodiscard]] float GetEffectiveShadowFarClamp() const noexcept;
+
 private:
     void CreateConstantBuffers(ID3D11Device *device);
 
@@ -61,7 +71,10 @@ private:
     ShadowDepthPassRasterizerState m_shadowPassRasterizer{};
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_shadowCascadeConstantBuffer{};
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_shadowSamplingConstantBuffer{};
-    std::uint32_t m_shadowMapResolution{2048u};
+    std::uint32_t m_shadowAtlasSizePixels{2048u};
+    std::uint32_t m_cascadeCount{4u};
+    float m_cascadeSplitLambda{0.72f};
+    float m_effectiveShadowFarClamp{185.0f};
     float m_orthographicWidth{140.0f};
     float m_orthographicHeight{140.0f};
     float m_lightEyeDistanceFromFocus{90.0f};

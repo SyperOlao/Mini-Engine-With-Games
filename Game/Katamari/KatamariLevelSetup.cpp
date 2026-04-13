@@ -4,6 +4,7 @@
 #include "Core/Gameplay/Entity.h"
 #include "Core/Gameplay/GameplayComponents.h"
 #include "Core/Gameplay/Scene.h"
+#include "Core/Graphics/ModelAsset.h"
 #include "Core/Physics/Collision3D/AxisAlignedBox3D.h"
 #include "Game/Katamari/Data/KatamariPickupCatalog.h"
 #include "Game/Katamari/Data/PickupArchetype.h"
@@ -87,7 +88,11 @@ void KatamariLevelSetup::CreateStaticWorldCollision(Scene &scene, KatamariGameCo
     scene.SetCollisionCellSize(config.CollisionCellSize);
 }
 
-void KatamariLevelSetup::CreatePlayerBall(Scene &scene, KatamariWorldContext &world)
+void KatamariLevelSetup::CreatePlayerBall(
+    Scene &scene,
+    KatamariWorldContext &world,
+    std::shared_ptr<ModelAsset> const &ballMeshModel
+)
 {
     if (world.Config == nullptr)
     {
@@ -100,13 +105,35 @@ void KatamariLevelSetup::CreatePlayerBall(Scene &scene, KatamariWorldContext &wo
 
     TransformComponent transform{};
     transform.Local.Position = Vector3(0.0f, config.InitialBallRadius, 0.0f);
+
+    world.BallMeshReferenceRadius = 1.0f;
+    if (ballMeshModel != nullptr && ballMeshModel->IsLoaded())
+    {
+        world.BallMeshReferenceRadius = (std::max)(ballMeshModel->GetMergedBoundingSphere().Radius, 1.0e-4f);
+        const float initialUniformScale = config.InitialBallRadius / world.BallMeshReferenceRadius;
+        transform.Local.Scale = Vector3(initialUniformScale, initialUniformScale, initialUniformScale);
+        ModelComponent modelComponent{};
+        modelComponent.Asset = ballMeshModel;
+        modelComponent.Visible = true;
+        modelComponent.Tint = DirectX::SimpleMath::Color(0.95f, 0.35f, 0.2f, 1.0f);
+        modelComponent.CastsShadow = true;
+        ball.AddModelComponent(modelComponent);
+    }
+
     ball.AddTransformComponent(transform);
 
     VelocityComponent velocity{};
     ball.AddVelocityComponent(velocity);
 
     SphereColliderComponent sphere{};
-    sphere.Radius = config.InitialBallRadius;
+    if (ballMeshModel != nullptr && ballMeshModel->IsLoaded())
+    {
+        sphere.Radius = world.BallMeshReferenceRadius;
+    }
+    else
+    {
+        sphere.Radius = config.InitialBallRadius;
+    }
     sphere.CollisionLayer = KatamariCollisionLayer::PlayerBall;
     sphere.CollidesWithMask = (1u << KatamariCollisionLayer::WorldStatic) | (1u << KatamariCollisionLayer::Pickup);
     sphere.IsTrigger = false;
@@ -127,12 +154,13 @@ void KatamariLevelSetup::SpawnPlayerBallAndPickups(
     AppContext &context,
     KatamariWorldContext &world,
     KatamariGameConfig const &config,
-    std::vector<PickupArchetype> const &archetypes
+    std::vector<PickupArchetype> const &archetypes,
+    std::shared_ptr<ModelAsset> const &ballMeshModel
 )
 {
     world.Config = &config;
     world.Random.seed(config.RandomSeed);
-    CreatePlayerBall(scene, world);
+    CreatePlayerBall(scene, world, ballMeshModel);
 
     KatamariSpawner spawner{};
     spawner.SpawnPickups(scene, context, world, archetypes);

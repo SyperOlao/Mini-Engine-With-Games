@@ -10,19 +10,78 @@
 #include "Core/Graphics/Rendering/RenderContext.h"
 #include "Core/Graphics/Rendering/Shadows/ShadowShaderConstants3D.h"
 #include "Core/Graphics/ShaderCompiler.h"
+#include "Core/Assets/AssetPathResolver.h"
 
 #include <directxtk/Effects.h>
 #include <directxtk/Model.h>
 #include <directxtk/VertexTypes.h>
 
+#include <cstdint>
+#include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <stdexcept>
+#include <string>
 
 using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector3;
 
 namespace
 {
+    constexpr D3D11_INPUT_ELEMENT_DESC kForwardPhongModelInputElements[] =
+    {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
+    };
+
+    void CreateForwardPhongDefaultWhiteDiffuseTexture(
+        ID3D11Device *const device,
+        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> &outShaderResourceView
+    )
+    {
+        if (device == nullptr)
+        {
+            throw std::invalid_argument("CreateForwardPhongDefaultWhiteDiffuseTexture requires a device.");
+        }
+
+        const std::uint32_t rgbaPixel = 0xffffffffu;
+        D3D11_SUBRESOURCE_DATA initialData{};
+        initialData.pSysMem = &rgbaPixel;
+        initialData.SysMemPitch = sizeof(std::uint32_t);
+
+        D3D11_TEXTURE2D_DESC textureDescription{};
+        textureDescription.Width = 1u;
+        textureDescription.Height = 1u;
+        textureDescription.MipLevels = 1u;
+        textureDescription.ArraySize = 1u;
+        textureDescription.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        textureDescription.SampleDesc.Count = 1u;
+        textureDescription.Usage = D3D11_USAGE_IMMUTABLE;
+        textureDescription.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> texture2D{};
+        D3d11Helpers::ThrowIfFailed(
+            device->CreateTexture2D(&textureDescription, &initialData, texture2D.GetAddressOf()),
+            "ModelRenderer failed to create default white diffuse texture."
+        );
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDescription{};
+        shaderResourceViewDescription.Format = textureDescription.Format;
+        shaderResourceViewDescription.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        shaderResourceViewDescription.Texture2D.MipLevels = 1u;
+        shaderResourceViewDescription.Texture2D.MostDetailedMip = 0u;
+
+        D3d11Helpers::ThrowIfFailed(
+            device->CreateShaderResourceView(
+                texture2D.Get(),
+                &shaderResourceViewDescription,
+                outShaderResourceView.GetAddressOf()
+            ),
+            "ModelRenderer failed to create default white diffuse shader resource view."
+        );
+    }
+
     void CreateDynamicConstantBuffer(
         ID3D11Device *device,
         const UINT byteWidth,
@@ -243,38 +302,31 @@ void ModelRenderer::CreateForwardPhongResources(GraphicsDevice &graphics)
         "ModelRenderer failed to create forward Phong pixel shader."
     );
 
-    constexpr D3D11_INPUT_ELEMENT_DESC modelInputElements[] =
-    {
-        {
-            "POSITION",
-            0,
-            DXGI_FORMAT_R32G32B32_FLOAT,
-            0,
-            0,
-            D3D11_INPUT_PER_VERTEX_DATA,
-            0
-        },
-        {
-            "NORMAL",
-            0,
-            DXGI_FORMAT_R32G32B32_FLOAT,
-            0,
-            12,
-            D3D11_INPUT_PER_VERTEX_DATA,
-            0
-        }
-    };
-
-    D3d11Helpers::ThrowIfFailed(
-        device->CreateInputLayout(
-            modelInputElements,
-            2u,
-            modelVertexShaderBlob->GetBufferPointer(),
-            modelVertexShaderBlob->GetBufferSize(),
-            m_forwardPhongModelInputLayout.GetAddressOf()
-        ),
-        "ModelRenderer failed to create forward Phong model input layout."
+    const HRESULT forwardPhongInputLayoutResult = device->CreateInputLayout(
+        kForwardPhongModelInputElements,
+        static_cast<UINT>(std::size(kForwardPhongModelInputElements)),
+        modelVertexShaderBlob->GetBufferPointer(),
+        modelVertexShaderBlob->GetBufferSize(),
+        m_forwardPhongModelInputLayout.GetAddressOf()
     );
+    if (FAILED(forwardPhongInputLayoutResult))
+    {
+        const std::filesystem::path resolvedShaderPath =
+            AssetPathResolver::Resolve(std::filesystem::path("Core/Shaders/ForwardPhong3D.hlsl"));
+        char hexBuffer[24]{};
+        std::snprintf(
+            hexBuffer,
+            sizeof(hexBuffer),
+            "0x%08lX",
+            static_cast<unsigned long>(static_cast<unsigned int>(forwardPhongInputLayoutResult))
+        );
+        throw std::runtime_error(
+            std::string("ModelRenderer failed to create forward Phong model input layout. HRESULT: ")
+            + hexBuffer + ". Compiled shader file: " + resolvedShaderPath.string()
+        );
+    }
+
+    CreateForwardPhongDefaultWhiteDiffuseTexture(device, m_forwardPhongDefaultWhiteDiffuseTexture);
 
     CreateDynamicConstantBuffer(device, static_cast<UINT>(sizeof(CameraGpuConstants)), m_forwardPhongCameraConstantBuffer);
     CreateDynamicConstantBuffer(device, static_cast<UINT>(sizeof(ObjectGpuConstants)), m_forwardPhongObjectConstantBuffer);
@@ -518,6 +570,9 @@ void ModelRenderer::DrawModelLit(
     deviceContext->PSSetConstantBuffers(0, 4, constantBuffers);
     m_shadowBindingHost->BindForwardPhongShadowRegisters(deviceContext);
 
+    ID3D11SamplerState *const diffuseSamplerStates[] = {m_commonStates->LinearWrap()};
+    deviceContext->PSSetSamplers(1, 1, diffuseSamplerStates);
+
     deviceContext->IASetInputLayout(m_forwardPhongModelInputLayout.Get());
 
     ID3D11RasterizerState *const rasterizerState = material.Wireframe
@@ -529,6 +584,8 @@ void ModelRenderer::DrawModelLit(
     deviceContext->OMSetDepthStencilState(m_commonStates->DepthDefault(), 0u);
 
     constexpr UINT expectedStride = sizeof(DirectX::VertexPositionNormalTexture);
+
+    std::size_t flatMeshPartIndex = 0u;
 
     for (const std::shared_ptr<DirectX::ModelMesh> &meshShared : drawableModel->meshes)
     {
@@ -545,10 +602,20 @@ void ModelRenderer::DrawModelLit(
             }
 
             const DirectX::ModelMeshPart &meshPart = *partUnique;
+
+            ID3D11ShaderResourceView *diffuseShaderResourceView = model.TryGetDiffuseTextureForMeshPart(flatMeshPartIndex);
+            ++flatMeshPartIndex;
+            if (diffuseShaderResourceView == nullptr)
+            {
+                diffuseShaderResourceView = m_forwardPhongDefaultWhiteDiffuseTexture.Get();
+            }
+
             if (meshPart.vertexStride != expectedStride)
             {
                 continue;
             }
+
+            deviceContext->PSSetShaderResources(1, 1, &diffuseShaderResourceView);
 
             const UINT stride = meshPart.vertexStride;
             const UINT bufferOffset = 0u;

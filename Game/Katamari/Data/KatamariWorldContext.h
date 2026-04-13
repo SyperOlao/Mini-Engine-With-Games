@@ -25,6 +25,7 @@ struct KatamariWorldContext final
     float BallVolume{0.0f};
     float BallRadius{1.0f};
     float BallVisualRadius{1.0f};
+    float BallMeshReferenceRadius{1.0f};
     int CollectedCount{0};
     int TotalPickups{0};
     FollowCamera *FollowCameraForMovement{nullptr};

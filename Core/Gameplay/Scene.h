@@ -68,6 +68,10 @@ public:
 
     [[nodiscard]] bool GetDirectionalShadowMappingEnabled() const noexcept;
 
+    void SetShadowCascadeDebugVisualizationEnabled(bool enabled);
+
+    [[nodiscard]] bool GetShadowCascadeDebugVisualizationEnabled() const noexcept;
+
     [[nodiscard]] SceneLightingDescriptor3D &GetSceneLightingDescriptor() noexcept;
 
     [[nodiscard]] const SceneLightingDescriptor3D &GetSceneLightingDescriptor() const noexcept;
@@ -184,6 +188,7 @@ private:
     std::vector<CollisionPair> m_collisionFrameResults{};
     bool m_forwardLightingEnabled{false};
     bool m_directionalShadowMappingEnabled{true};
+    bool m_shadowCascadeDebugVisualizationEnabled{false};
     SceneLightingDescriptor3D m_sceneLighting{};
 };
 
