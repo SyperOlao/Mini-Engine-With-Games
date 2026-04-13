@@ -70,7 +70,6 @@ void RenderContext::PrepareDirectionalShadowPass(Scene &scene, Camera &camera)
     {
         return;
     }
-    m_directionalShadowPassCompletedThisFrame = true;
 
     ID3D11DeviceContext *const deviceContext = m_graphics->GetImmediateContext();
     if (deviceContext == nullptr)
@@ -178,11 +177,13 @@ void RenderContext::PrepareDirectionalShadowPass(Scene &scene, Camera &camera)
     );
     cascadeCpu.CascadeCount = cascadeCount;
 
+    m_directionalShadowPassCompletedThisFrame = true;
+
     const float inverseAtlasWidth =
         1.0f / static_cast<float>(m_directionalShadowResources.GetShadowAtlasSizePixels());
 
     ShadowSamplingGpuConstants samplingCpu{};
-    samplingCpu.DepthBiasAndPcfKernel = DirectX::XMFLOAT4(0.00028f, 2.2f, 0.018f, 2.0f);
+    samplingCpu.DepthBiasAndPcfKernel = DirectX::XMFLOAT4(0.0011f, 2.75f, 0.016f, 2.0f);
     samplingCpu.InvShadowMapTexelSize = DirectX::XMFLOAT2(inverseAtlasWidth, inverseAtlasWidth);
     samplingCpu.ShadowEnabled = 1u;
     samplingCpu.ShadowedDirectionalLightGpuIndex = shadowPackedDirectionalIndex;
@@ -479,6 +480,15 @@ bool RenderContext::ShouldBindMainRenderTargetsForDraw() const noexcept
     return GetActiveRenderPassKind() != RenderPassKind::DeferredGeometry;
 }
 
+void RenderContext::SetFrameGameplaySceneAndCamera(
+    Scene *const gameplayScene,
+    Camera *const activeCamera
+) noexcept
+{
+    m_frameGameplaySceneForPipeline = gameplayScene;
+    m_frameActiveCameraForPipeline = activeCamera;
+}
+
 void RenderContext::ExecuteFramePipeline(
     Camera *const activeCamera,
     Scene *const gameplayScene,
@@ -486,11 +496,16 @@ void RenderContext::ExecuteFramePipeline(
     const float frameDeltaTimeSeconds
 )
 {
+    Camera *const effectiveCamera =
+        activeCamera != nullptr ? activeCamera : m_frameActiveCameraForPipeline;
+    Scene *const effectiveScene =
+        gameplayScene != nullptr ? gameplayScene : m_frameGameplaySceneForPipeline;
+
     FramePassRenderContext framePassRenderContext(
         *this,
         m_frameRenderResources,
-        activeCamera,
-        gameplayScene,
+        effectiveCamera,
+        effectiveScene,
         std::move(gameRenderCallback),
         static_cast<float>(m_frameRenderResources.GetBackbufferWidth()),
         static_cast<float>(m_frameRenderResources.GetBackbufferHeight()),

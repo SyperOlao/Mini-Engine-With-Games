@@ -111,6 +111,8 @@ public:
         float frameDeltaTimeSeconds
     );
 
+    void SetFrameGameplaySceneAndCamera(Scene *gameplayScene, Camera *activeCamera) noexcept;
+
 private:
     GraphicsDevice *m_graphics{nullptr};
     ShapeRenderer2D m_shapeRenderer2D;
@@ -125,6 +127,8 @@ private:
     DirectionalShadowResources m_directionalShadowResources{};
     RenderMode m_renderMode{RenderMode::Forward};
     bool m_directionalShadowPassCompletedThisFrame{false};
+    Scene *m_frameGameplaySceneForPipeline{nullptr};
+    Camera *m_frameActiveCameraForPipeline{nullptr};
 };
 
 #endif

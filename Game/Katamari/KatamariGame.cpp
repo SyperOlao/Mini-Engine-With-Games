@@ -86,42 +86,42 @@ void KatamariGame::Initialize(AppContext &context)
     if (!KatamariLighting.DirectionalLights.empty())
     {
         KatamariLighting.DirectionalLights[0].Direction = Vector3(-0.22f, -1.0f, -0.28f);
-        KatamariLighting.DirectionalLights[0].Intensity = 1.05f;
+        KatamariLighting.DirectionalLights[0].Intensity = 0.58f;
         KatamariLighting.DirectionalLights[0].LightColor = DirectX::SimpleMath::Color(0.78f, 0.84f, 1.0f, 1.0f);
     }
 
     PointLight3D FillLightNorth{};
     FillLightNorth.Position = Vector3(0.0f, 32.0f, 58.0f);
     FillLightNorth.Range = 130.0f;
-    FillLightNorth.Intensity = 0.48f;
+    FillLightNorth.Intensity = 0.22f;
     FillLightNorth.LightColor = DirectX::SimpleMath::Color(1.0f, 0.94f, 0.82f, 1.0f);
     KatamariLighting.PointLights.push_back(FillLightNorth);
 
     PointLight3D FillLightSouth{};
     FillLightSouth.Position = Vector3(0.0f, 26.0f, -58.0f);
     FillLightSouth.Range = 130.0f;
-    FillLightSouth.Intensity = 0.4f;
+    FillLightSouth.Intensity = 0.2f;
     FillLightSouth.LightColor = DirectX::SimpleMath::Color(0.82f, 0.9f, 1.0f, 1.0f);
     KatamariLighting.PointLights.push_back(FillLightSouth);
 
     PointLight3D FillLightWest{};
     FillLightWest.Position = Vector3(-52.0f, 24.0f, 0.0f);
     FillLightWest.Range = 115.0f;
-    FillLightWest.Intensity = 0.38f;
+    FillLightWest.Intensity = 0.18f;
     FillLightWest.LightColor = DirectX::SimpleMath::Color(0.95f, 0.88f, 1.0f, 1.0f);
     KatamariLighting.PointLights.push_back(FillLightWest);
 
     PointLight3D FillLightEast{};
     FillLightEast.Position = Vector3(52.0f, 24.0f, 0.0f);
     FillLightEast.Range = 115.0f;
-    FillLightEast.Intensity = 0.38f;
+    FillLightEast.Intensity = 0.18f;
     FillLightEast.LightColor = DirectX::SimpleMath::Color(1.0f, 0.92f, 0.88f, 1.0f);
     KatamariLighting.PointLights.push_back(FillLightEast);
 
     PointLight3D FillLightOverhead{};
     FillLightOverhead.Position = Vector3(0.0f, 48.0f, 0.0f);
     FillLightOverhead.Range = 140.0f;
-    FillLightOverhead.Intensity = 0.35f;
+    FillLightOverhead.Intensity = 0.26f;
     FillLightOverhead.LightColor = DirectX::SimpleMath::Color(0.92f, 0.96f, 1.0f, 1.0f);
     KatamariLighting.PointLights.push_back(FillLightOverhead);
 
@@ -304,6 +304,11 @@ void KatamariGame::Update(AppContext &context, const float deltaTime)
             DirectX::SimpleMath::Color(0.8f, 0.8f, 0.2f, 1.0f)
         );
     }
+
+    if (context.Graphics.Render != nullptr)
+    {
+        context.Graphics.Render->SetFrameGameplaySceneAndCamera(&SceneInstance, &FollowCameraInstance);
+    }
 }
 
 void KatamariGame::Render(AppContext &context)
@@ -379,7 +384,7 @@ void KatamariGame::Render(AppContext &context)
             Matrix::CreateTranslation(0.0f, GroundModelVerticalOffset, 0.0f);
         RenderMaterialParameters groundMaterial{};
         groundMaterial.BaseColor = DirectX::SimpleMath::Color(0.62f, 0.7f, 0.88f, 1.0f);
-        groundMaterial.AmbientFactor = 0.16f;
+        groundMaterial.AmbientFactor = 0.09f;
         groundMaterial.SpecularPower = 92.0f;
         groundMaterial.SpecularColor = DirectX::SimpleMath::Color(0.72f, 0.72f, 0.72f, 1.0f);
         modelRenderer.DrawModelLit(

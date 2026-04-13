@@ -254,7 +254,7 @@ float DirectionalShadowAttenuation(float3 worldPosition, float3 worldNormal)
         return 1.0f;
     }
 
-    const float ndcZ = ndc.z;
+    const float ndcZ = saturate(ndc.z);
     const float slopeTerm = saturate(1.0f - dot(worldNormal, towardLight));
     const float depthReference = ndcZ
         - DepthBiasAndPcfKernel.x
@@ -272,7 +272,8 @@ float4 PSMain(PSInput input) : SV_TARGET
     const float4 viewPositionForCascade = mul(float4(input.WorldPosition, 1.0f), View);
     const uint cascadeDebugIndex = SelectShadowCascadeIndex(-viewPositionForCascade.z);
 
-    const float directionalShadow = DirectionalShadowAttenuation(input.WorldPosition, worldNormal);
+    const float DirectionalShadowSample = DirectionalShadowAttenuation(input.WorldPosition, worldNormal);
+    const float directionalShadow = DirectionalShadowSample;
 
     if (ShadowCascadeDebugMode != 0u && ShadowEnabled != 0u && ShadowMapCascadeCount > 0u)
     {
@@ -315,8 +316,15 @@ float4 PSMain(PSInput input) : SV_TARGET
             shadowFactor = directionalShadow;
         }
 
-        diffuseAccumulation += diffuseContribution * shadowFactor;
-        specularAccumulation += specularContribution * shadowFactor;
+        float fillLightOcclusion = 1.0f;
+        if (ShadowEnabled != 0u
+            && abs(Lights[lightIndex].Parameters.x - kPointKind) < 0.01f)
+        {
+            fillLightOcclusion = 0.38f + 0.62f * directionalShadow;
+        }
+
+        diffuseAccumulation += diffuseContribution * shadowFactor * fillLightOcclusion;
+        specularAccumulation += specularContribution * shadowFactor * fillLightOcclusion;
     }
 
     const float3 diffuseAlbedo = DiffuseTexture.Sample(DiffuseSampler, input.TexCoord).rgb;
@@ -324,8 +332,14 @@ float4 PSMain(PSInput input) : SV_TARGET
     const float ambientScale = EmissiveAndAmbient.w;
     const float3 ambientTerm = baseSample * ambientScale;
     const float3 emissiveTerm = EmissiveAndAmbient.xyz;
+    const float3 HemisphericFill = baseSample * saturate(worldNormal.y * 0.32f + 0.12f);
 
-    const float3 litColor = ambientTerm + emissiveTerm + diffuseAccumulation * baseSample + specularAccumulation;
+    const float3 litColor =
+        ambientTerm
+        + emissiveTerm
+        + diffuseAccumulation * baseSample
+        + specularAccumulation
+        + HemisphericFill * 0.1f;
 
     return float4(litColor, BaseColor.a * input.Color.a);
 }
