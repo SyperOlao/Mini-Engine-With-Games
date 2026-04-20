@@ -125,7 +125,7 @@ void KatamariBallRollSystem::Update(Scene &scene, AppContext &, const float delt
     }
 
     const Vector3 rollAxis = SpatialMath::SafeNormalizeVector3(
-        Vector3::UnitY.Cross(SmoothedRollDirection),
+        SmoothedRollDirection.Cross(Vector3::UnitY),
         Vector3::Zero
     );
     if (rollAxis.LengthSquared() <= 1.0e-8f)
