@@ -7,7 +7,6 @@
 #include "Game/Katamari/Data/KatamariWorldContext.h"
 
 #include <algorithm>
-#include <cmath>
 
 using DirectX::SimpleMath::Quaternion;
 using DirectX::SimpleMath::Vector3;
@@ -15,35 +14,6 @@ using DirectX::SimpleMath::Vector3;
 namespace
 {
 constexpr float MinimumHorizontalDistanceForRolling = 1.0e-4f;
-constexpr float MinimumHorizontalSpeedForRolling = 1.0e-3f;
-constexpr float RollDirectionSmoothingTimeSeconds = 0.075f;
-
-Vector3 SmoothRollDirection(
-    Vector3 const &currentDirection,
-    Vector3 const &targetDirection,
-    float const deltaTime
-)
-{
-    if (deltaTime <= 0.0f)
-    {
-        return targetDirection;
-    }
-
-    if (currentDirection.Dot(targetDirection) < -0.35f)
-    {
-        return targetDirection;
-    }
-
-    const float alpha = 1.0f - std::exp(-deltaTime / RollDirectionSmoothingTimeSeconds);
-    Vector3 blendedDirection = Vector3::Lerp(currentDirection, targetDirection, alpha);
-    if (blendedDirection.LengthSquared() <= 1.0e-8f)
-    {
-        return targetDirection;
-    }
-
-    blendedDirection.Normalize();
-    return blendedDirection;
-}
 }
 
 KatamariBallRollSystem::KatamariBallRollSystem(KatamariWorldContext *const gameplayWorld) noexcept
@@ -55,12 +25,10 @@ void KatamariBallRollSystem::Initialize(Scene &, AppContext &)
 {
     RollOrientation = Quaternion::Identity;
     PreviousBallPosition = Vector3::Zero;
-    SmoothedRollDirection = Vector3::UnitZ;
     HasPreviousBallPosition = false;
-    HasSmoothedRollDirection = false;
 }
 
-void KatamariBallRollSystem::Update(Scene &scene, AppContext &, const float deltaTime)
+void KatamariBallRollSystem::Update(Scene &scene, AppContext &, const float)
 {
     if (GameplayWorld == nullptr || GameplayWorld->Config == nullptr)
     {
@@ -69,8 +37,7 @@ void KatamariBallRollSystem::Update(Scene &scene, AppContext &, const float delt
 
     const EntityId ballId = GameplayWorld->BallEntityId;
     TransformComponent *const transform = scene.TryGetTransformComponent(ballId);
-    VelocityComponent const *const velocity = scene.TryGetVelocityComponent(ballId);
-    if (transform == nullptr || velocity == nullptr)
+    if (transform == nullptr)
     {
         return;
     }
@@ -83,7 +50,6 @@ void KatamariBallRollSystem::Update(Scene &scene, AppContext &, const float delt
     {
         PreviousBallPosition = currentBallPosition;
         HasPreviousBallPosition = true;
-        HasSmoothedRollDirection = false;
         transform->WorldMatrix = transform->Local.GetWorldMatrix();
         return;
     }
@@ -94,38 +60,16 @@ void KatamariBallRollSystem::Update(Scene &scene, AppContext &, const float delt
 
     const bool isGrounded = transform->Local.Position.y <= GameplayWorld->BallRadius + 0.02f;
     const float horizontalDistance = horizontalDisplacement.Length();
-
-    Vector3 horizontalVelocity = velocity->LinearVelocity;
-    horizontalVelocity.y = 0.0f;
-    const float horizontalSpeed = horizontalVelocity.Length();
-
-    if (!isGrounded ||
-        horizontalDistance < MinimumHorizontalDistanceForRolling ||
-        horizontalSpeed < MinimumHorizontalSpeedForRolling)
+    if (!isGrounded || horizontalDistance < MinimumHorizontalDistanceForRolling)
     {
-        HasSmoothedRollDirection = false;
         transform->WorldMatrix = transform->Local.GetWorldMatrix();
         return;
     }
 
-    Vector3 movementDirection = horizontalVelocity / horizontalSpeed;
-    if (movementDirection.Dot(horizontalDisplacement) < 0.0f)
-    {
-        movementDirection = -movementDirection;
-    }
-
-    if (!HasSmoothedRollDirection)
-    {
-        SmoothedRollDirection = movementDirection;
-        HasSmoothedRollDirection = true;
-    }
-    else
-    {
-        SmoothedRollDirection = SmoothRollDirection(SmoothedRollDirection, movementDirection, deltaTime);
-    }
+    const Vector3 movementDirection = horizontalDisplacement / horizontalDistance;
 
     const Vector3 rollAxis = SpatialMath::SafeNormalizeVector3(
-        SmoothedRollDirection.Cross(Vector3::UnitY),
+        Vector3::UnitY.Cross(movementDirection),
         Vector3::Zero
     );
     if (rollAxis.LengthSquared() <= 1.0e-8f)
@@ -136,8 +80,7 @@ void KatamariBallRollSystem::Update(Scene &scene, AppContext &, const float delt
 
     const float radius = (std::max)(GameplayWorld->BallRadius, 0.01f);
     const float visualScale = GameplayWorld->Config->BallVisualRollSpeedMultiplier;
-    const float travelDistance = horizontalSpeed * deltaTime;
-    const float angularDisplacement = (travelDistance / radius) * visualScale;
+    const float angularDisplacement = (horizontalDistance / radius) * visualScale;
     if (angularDisplacement <= 1.0e-6f)
     {
         transform->WorldMatrix = transform->Local.GetWorldMatrix();
