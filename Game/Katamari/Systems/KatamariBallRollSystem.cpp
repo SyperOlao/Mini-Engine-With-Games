@@ -8,6 +8,7 @@
 
 #include <algorithm>
 
+using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Quaternion;
 using DirectX::SimpleMath::Vector3;
 
@@ -87,8 +88,10 @@ void KatamariBallRollSystem::Update(Scene &scene, AppContext &, const float)
         return;
     }
 
-    const Quaternion deltaRotation = Quaternion::CreateFromAxisAngle(rollAxis, angularDisplacement);
-    RollOrientation = Quaternion::Concatenate(RollOrientation, deltaRotation);
+    // Roll from the resolved center displacement so the mesh follows the actual post-physics travel.
+    const Matrix currentRotation = Matrix::CreateFromQuaternion(RollOrientation);
+    const Matrix deltaRotation = Matrix::CreateFromAxisAngle(rollAxis, angularDisplacement);
+    RollOrientation = Quaternion::CreateFromRotationMatrix(currentRotation * deltaRotation);
     RollOrientation.Normalize();
 
     transform->Local.RotationQuaternion = RollOrientation;
