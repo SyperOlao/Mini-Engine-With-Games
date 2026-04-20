@@ -242,11 +242,19 @@ set "VCPKG_ROOT=C:\dev\vcpkg"
 set "PATH=%VCPKG_ROOT%;%PATH%"
 
 vcpkg version
+```
+for windows
+```bash
+set "VCPKG_ROOT=C:\dev\vcpkg"
+set "PATH=%VCPKG_ROOT%;%PATH%"
+```
 
+```bash
 vcpkg new --application
 vcpkg add port directxmath
 vcpkg add port directxtk
 ```
+
 Then add to Clion this settings
 ``-DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows``
 

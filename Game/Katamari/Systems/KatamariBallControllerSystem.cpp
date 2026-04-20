@@ -125,8 +125,8 @@ void KatamariBallControllerSystem::Update(Scene &scene, AppContext &context, con
         return;
     }
 
-    const float driveSpeed = (std::max)(horizontalVelocityFinal.Dot(wishDirection), 0.0f);
-    if (driveSpeed < MinimumHorizontalSpeedForRolling)
+    const float horizontalSpeed = horizontalVelocityFinal.Length();
+    if (horizontalSpeed < MinimumHorizontalSpeedForRolling)
     {
         SmoothedRollAngularSpeed = 0.0f;
         return;
@@ -134,8 +134,9 @@ void KatamariBallControllerSystem::Update(Scene &scene, AppContext &context, con
 
     const float radius = (std::max)(GameplayWorld->BallRadius, 0.01f);
     const float visualScale = config.BallVisualRollSpeedMultiplier;
+    const Vector3 movementDirection = horizontalVelocityFinal / horizontalSpeed;
     const Vector3 rollAxis = SpatialMath::SafeNormalizeVector3(
-        Vector3::UnitY.Cross(wishDirection),
+        movementDirection.Cross(Vector3::UnitY),
         Vector3::Zero
     );
     if (rollAxis.LengthSquared() <= 1.0e-8f)
@@ -144,7 +145,7 @@ void KatamariBallControllerSystem::Update(Scene &scene, AppContext &context, con
         return;
     }
 
-    const float targetAngularSpeed = (driveSpeed / radius) * visualScale;
+    const float targetAngularSpeed = (horizontalSpeed / radius) * visualScale;
     const float smoothingAlpha = 1.0f - std::exp(-deltaTime / RollSmoothingTimeConstantSeconds);
     SmoothedRollAngularSpeed += (targetAngularSpeed - SmoothedRollAngularSpeed) * smoothingAlpha;
 
