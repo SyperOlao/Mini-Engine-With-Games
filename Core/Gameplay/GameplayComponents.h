@@ -25,6 +25,9 @@ struct ModelComponent final
     DirectX::SimpleMath::Color Tint{1.0f, 1.0f, 1.0f, 1.0f};
     bool DebugDrawBounds{false};
     bool CastsShadow{true};
+    bool RestrictSpecularToDirectionalLight{false};
+    float ZenithSpecularHighlightWeight{0.0f};
+    float SpecularExponent{0.0f};
 };
 
 struct SphereColliderComponent final

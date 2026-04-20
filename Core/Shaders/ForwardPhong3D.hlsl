@@ -20,6 +20,7 @@ cbuffer MaterialConstants : register(b2)
     float4 BaseColor;
     float4 SpecularColorAndPower;
     float4 EmissiveAndAmbient;
+    float4 MaterialParameters;
 };
 
 struct LightGpu
@@ -180,6 +181,11 @@ void EvaluateLight(
     const float specularPower = max(SpecularColorAndPower.w, 1.0f);
     const float specularTerm = pow(saturate(dot(reflection, viewDirection)), specularPower);
     specularContribution = SpecularColorAndPower.rgb * lightColor * specularTerm * attenuation;
+
+    if (MaterialParameters.x > 0.5f && abs(kind - kDirectionalKind) >= 0.01f)
+    {
+        specularContribution = float3(0.0f, 0.0f, 0.0f);
+    }
 }
 
 float SampleShadowPcf(float2 shadowUvAtlas, float depthReference, int pcfRadius)
@@ -325,6 +331,18 @@ float4 PSMain(PSInput input) : SV_TARGET
 
         diffuseAccumulation += diffuseContribution * shadowFactor * fillLightOcclusion;
         specularAccumulation += specularContribution * shadowFactor * fillLightOcclusion;
+    }
+
+    if (MaterialParameters.y > 0.0f)
+    {
+        float zenithVisibility = 1.0f;
+        if (ShadowEnabled != 0u)
+        {
+            zenithVisibility = directionalShadow;
+        }
+        const float exponent = max(SpecularColorAndPower.w, 1.0f);
+        const float zenithLobe = pow(saturate(dot(worldNormal, float3(0.0f, 1.0f, 0.0f))), exponent);
+        specularAccumulation += SpecularColorAndPower.rgb * MaterialParameters.y * zenithLobe * zenithVisibility;
     }
 
     const float3 diffuseAlbedo = DiffuseTexture.Sample(DiffuseSampler, input.TexCoord).rgb;

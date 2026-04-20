@@ -12,6 +12,8 @@ public:
 
     void SetMovementDirectionXZ(const DirectX::SimpleMath::Vector3 &directionWorld) noexcept;
 
+    [[nodiscard]] DirectX::SimpleMath::Vector3 GetMovementDirectionXZ() const noexcept;
+
     void SetPositionLagSeconds(float seconds) noexcept;
 
     void SetOrientationLagSeconds(float seconds) noexcept;

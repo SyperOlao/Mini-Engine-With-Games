@@ -45,6 +45,7 @@ struct alignas(16) MaterialGpuConstants final
     DirectX::XMFLOAT4 BaseColor{};
     DirectX::XMFLOAT4 SpecularColorAndPower{};
     DirectX::XMFLOAT4 EmissiveAndAmbient{};
+    DirectX::XMFLOAT4 MaterialParameters{};
 };
 
 struct alignas(16) LightsGpuConstants final

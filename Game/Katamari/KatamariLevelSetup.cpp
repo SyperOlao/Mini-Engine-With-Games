@@ -117,6 +117,9 @@ void KatamariLevelSetup::CreatePlayerBall(
         modelComponent.Visible = true;
         modelComponent.Tint = DirectX::SimpleMath::Color(0.95f, 0.35f, 0.2f, 1.0f);
         modelComponent.CastsShadow = true;
+        modelComponent.RestrictSpecularToDirectionalLight = true;
+        modelComponent.ZenithSpecularHighlightWeight = 0.48f;
+        modelComponent.SpecularExponent = 96.0f;
         ball.AddModelComponent(modelComponent);
     }
 

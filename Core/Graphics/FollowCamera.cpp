@@ -21,6 +21,11 @@ void FollowCamera::SetMovementDirectionXZ(const Vector3 &directionWorld) noexcep
     m_movementDirectionXZ = directionWorld;
 }
 
+Vector3 FollowCamera::GetMovementDirectionXZ() const noexcept
+{
+    return m_movementDirectionXZ;
+}
+
 void FollowCamera::SetPositionLagSeconds(const float seconds) noexcept
 {
     m_positionLagSeconds = (std::max)(seconds, 1.0e-4f);

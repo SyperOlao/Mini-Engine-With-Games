@@ -7,10 +7,16 @@
 #include "Core/Math/SpatialMath.h"
 
 DirectX::SimpleMath::Matrix Transform3D::GetWorldMatrix() const noexcept {
-    return SpatialMath::ComposeWorldMatrixTrs(Scale, RotationEulerRad, Position);
+    return DirectX::SimpleMath::Matrix::CreateScale(Scale) * GetRotationMatrix() *
+           DirectX::SimpleMath::Matrix::CreateTranslation(Position);
 }
 
 DirectX::SimpleMath::Matrix Transform3D::GetRotationMatrix() const noexcept {
+    if (UseQuaternionRotation)
+    {
+        return DirectX::SimpleMath::Matrix::CreateFromQuaternion(RotationQuaternion);
+    }
+
     return SpatialMath::RotationMatrixFromEulerXyzRadians(RotationEulerRad);
 }
 

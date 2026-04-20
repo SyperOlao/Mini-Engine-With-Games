@@ -10,8 +10,14 @@
 #include "Game/Katamari/Data/KatamariWorldContext.h"
 
 #include <algorithm>
+#include <cmath>
 
+using DirectX::SimpleMath::Matrix;
+using DirectX::SimpleMath::Quaternion;
 using DirectX::SimpleMath::Vector3;
+
+static constexpr float MinimumHorizontalSpeedForRolling = 0.015f;
+static constexpr float RollSmoothingTimeConstantSeconds = 0.06f;
 
 KatamariBallControllerSystem::KatamariBallControllerSystem(KatamariWorldContext *const gameplayWorld) noexcept
     : GameplayWorld(gameplayWorld)
@@ -20,6 +26,8 @@ KatamariBallControllerSystem::KatamariBallControllerSystem(KatamariWorldContext 
 
 void KatamariBallControllerSystem::Initialize(Scene &, AppContext &)
 {
+    RollOrientation = Quaternion::Identity;
+    SmoothedRollAngularSpeed = 0.0f;
 }
 
 void KatamariBallControllerSystem::Update(Scene &scene, AppContext &context, const float deltaTime)
@@ -37,15 +45,17 @@ void KatamariBallControllerSystem::Update(Scene &scene, AppContext &context, con
         return;
     }
 
+    transform->Local.UseQuaternionRotation = true;
+    transform->Local.RotationQuaternion = RollOrientation;
+
     KatamariGameConfig const &config = *GameplayWorld->Config;
     FollowCamera *const followCamera = GameplayWorld->FollowCameraForMovement;
     Vector3 planarForward(0.0f, 0.0f, 1.0f);
     if (followCamera != nullptr)
     {
-        const Vector3 eyePosition = followCamera->GetPosition();
-        Vector3 towardBall = transform->Local.Position - eyePosition;
-        towardBall.y = 0.0f;
-        planarForward = SpatialMath::SafeNormalizeVector3(towardBall, Vector3(0.0f, 0.0f, 1.0f));
+        Vector3 cameraMovementDirection = followCamera->GetMovementDirectionXZ();
+        cameraMovementDirection.y = 0.0f;
+        planarForward = SpatialMath::SafeNormalizeVector3(cameraMovementDirection, Vector3(0.0f, 0.0f, 1.0f));
     }
 
     const Vector3 planarRight = SpatialMath::SafeNormalizeVector3(
@@ -63,25 +73,28 @@ void KatamariBallControllerSystem::Update(Scene &scene, AppContext &context, con
 
     velocity->LinearVelocity.y -= config.BallGravityAcceleration * deltaTime;
 
-    Vector3 wishDirection(0.0f, 0.0f, 0.0f);
+    float forwardInput = 0.0f;
+    float rightInput = 0.0f;
     if (keyboard.IsVirtualKeyDown('W'))
     {
-        wishDirection += planarForward;
+        forwardInput += 1.0f;
     }
     if (keyboard.IsVirtualKeyDown('S'))
     {
-        wishDirection -= planarForward;
+        forwardInput -= 1.0f;
     }
     if (keyboard.IsVirtualKeyDown('D'))
     {
-        wishDirection += planarRight;
+        rightInput += 1.0f;
     }
     if (keyboard.IsVirtualKeyDown('A'))
     {
-        wishDirection -= planarRight;
+        rightInput -= 1.0f;
     }
 
-    if (wishDirection.LengthSquared() > 1.0e-8f)
+    Vector3 wishDirection = planarForward * forwardInput + planarRight * rightInput;
+    const bool hasMovementInput = wishDirection.LengthSquared() > 1.0e-8f;
+    if (hasMovementInput)
     {
         wishDirection.Normalize();
         velocity->LinearVelocity += wishDirection * (config.BallMoveAcceleration * deltaTime);
@@ -100,10 +113,45 @@ void KatamariBallControllerSystem::Update(Scene &scene, AppContext &context, con
     const float dragFactor = 1.0f - (std::min)(config.BallHorizontalDrag * deltaTime, 0.95f);
     velocity->LinearVelocity.x *= dragFactor;
     velocity->LinearVelocity.z *= dragFactor;
-    const float safeBallRadius = (std::max)(GameplayWorld->BallRadius, 0.01f);
-    const float rollSpeedMultiplier = config.BallVisualRollSpeedMultiplier;
-    const float rollAroundXAxis = (velocity->LinearVelocity.z / safeBallRadius) * rollSpeedMultiplier;
-    const float rollAroundZAxis = (-velocity->LinearVelocity.x / safeBallRadius) * rollSpeedMultiplier;
-    transform->Local.RotationEulerRad.x += rollAroundXAxis * deltaTime;
-    transform->Local.RotationEulerRad.z += rollAroundZAxis * deltaTime;
+
+    const Vector3 horizontalVelocityFinal(
+        velocity->LinearVelocity.x,
+        0.0f,
+        velocity->LinearVelocity.z
+    );
+    if (!IsGrounded || !hasMovementInput)
+    {
+        SmoothedRollAngularSpeed = 0.0f;
+        return;
+    }
+
+    const float driveSpeed = (std::max)(horizontalVelocityFinal.Dot(wishDirection), 0.0f);
+    if (driveSpeed < MinimumHorizontalSpeedForRolling)
+    {
+        SmoothedRollAngularSpeed = 0.0f;
+        return;
+    }
+
+    const float radius = (std::max)(GameplayWorld->BallRadius, 0.01f);
+    const float visualScale = config.BallVisualRollSpeedMultiplier;
+    const Vector3 rollAxis = SpatialMath::SafeNormalizeVector3(
+        Vector3::UnitY.Cross(wishDirection),
+        Vector3::Zero
+    );
+    if (rollAxis.LengthSquared() <= 1.0e-8f)
+    {
+        SmoothedRollAngularSpeed = 0.0f;
+        return;
+    }
+
+    const float targetAngularSpeed = (driveSpeed / radius) * visualScale;
+    const float smoothingAlpha = 1.0f - std::exp(-deltaTime / RollSmoothingTimeConstantSeconds);
+    SmoothedRollAngularSpeed += (targetAngularSpeed - SmoothedRollAngularSpeed) * smoothingAlpha;
+
+    const Matrix currentRotation = Matrix::CreateFromQuaternion(RollOrientation);
+    const Matrix deltaRotation = Matrix::CreateFromAxisAngle(rollAxis, SmoothedRollAngularSpeed * deltaTime);
+    RollOrientation = Quaternion::CreateFromRotationMatrix(currentRotation * deltaRotation);
+    RollOrientation.Normalize();
+
+    transform->Local.RotationQuaternion = RollOrientation;
 }

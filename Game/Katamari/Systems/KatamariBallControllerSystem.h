@@ -3,6 +3,8 @@
 
 #include "Core/Gameplay/ISceneSystem.h"
 
+#include <SimpleMath.h>
+
 struct KatamariWorldContext;
 
 class KatamariBallControllerSystem final : public ISceneSystem
@@ -16,6 +18,8 @@ public:
 
 private:
     KatamariWorldContext *GameplayWorld{nullptr};
+    DirectX::SimpleMath::Quaternion RollOrientation{0.0f, 0.0f, 0.0f, 1.0f};
+    float SmoothedRollAngularSpeed{0.0f};
 };
 
 #endif

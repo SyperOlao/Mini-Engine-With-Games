@@ -12,6 +12,8 @@ struct RenderMaterialParameters final
     DirectX::SimpleMath::Color SpecularColor{1.0f, 1.0f, 1.0f, 1.0f};
     DirectX::SimpleMath::Color EmissiveColor{0.0f, 0.0f, 0.0f, 1.0f};
     bool ReceiveLighting{true};
+    bool RestrictSpecularToDirectionalLight{false};
+    float ZenithSpecularHighlightWeight{0.0f};
 };
 
 #endif
