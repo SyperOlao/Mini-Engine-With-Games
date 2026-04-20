@@ -27,6 +27,7 @@ struct ModelComponent final
     bool CastsShadow{true};
     bool RestrictSpecularToDirectionalLight{false};
     float ZenithSpecularHighlightWeight{0.0f};
+    float DirectionalSpecularStrength{1.0f};
     float SpecularExponent{0.0f};
 };
 

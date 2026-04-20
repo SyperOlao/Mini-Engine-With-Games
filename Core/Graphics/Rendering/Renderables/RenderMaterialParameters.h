@@ -14,6 +14,7 @@ struct RenderMaterialParameters final
     bool ReceiveLighting{true};
     bool RestrictSpecularToDirectionalLight{false};
     float ZenithSpecularHighlightWeight{0.0f};
+    float DirectionalSpecularStrength{1.0f};
 };
 
 #endif

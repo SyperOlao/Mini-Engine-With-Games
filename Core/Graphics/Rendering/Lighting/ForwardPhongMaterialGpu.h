@@ -28,7 +28,7 @@ inline void FillMaterialGpuConstantsFromRenderMaterial(
     destination.MaterialParameters = DirectX::XMFLOAT4(
         material.RestrictSpecularToDirectionalLight ? 1.0f : 0.0f,
         material.ZenithSpecularHighlightWeight,
-        0.0f,
+        material.DirectionalSpecularStrength,
         0.0f
     );
 }

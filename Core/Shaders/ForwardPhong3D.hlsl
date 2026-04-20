@@ -181,6 +181,10 @@ void EvaluateLight(
     const float specularPower = max(SpecularColorAndPower.w, 1.0f);
     const float specularTerm = pow(saturate(dot(reflection, viewDirection)), specularPower);
     specularContribution = SpecularColorAndPower.rgb * lightColor * specularTerm * attenuation;
+    if (abs(kind - kDirectionalKind) < 0.01f)
+    {
+        specularContribution *= saturate(MaterialParameters.z);
+    }
 
     if (MaterialParameters.x > 0.5f && abs(kind - kDirectionalKind) >= 0.01f)
     {

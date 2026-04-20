@@ -61,6 +61,7 @@ void RenderSystem::Render(Scene &scene, AppContext &context)
         material.BaseColor = model->Tint;
         material.RestrictSpecularToDirectionalLight = model->RestrictSpecularToDirectionalLight;
         material.ZenithSpecularHighlightWeight = model->ZenithSpecularHighlightWeight;
+        material.DirectionalSpecularStrength = model->DirectionalSpecularStrength;
         if (model->SpecularExponent > 0.0f)
         {
             material.SpecularPower = model->SpecularExponent;
