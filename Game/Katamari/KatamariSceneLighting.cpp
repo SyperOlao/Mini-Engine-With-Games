@@ -46,8 +46,32 @@ SceneLightingDescriptor3D CreateKatamariSceneLighting(const KatamariGameConfig &
             definition.Position.z
         );
         pointLight.Range = (std::max)(largestScale * 5.0f, 42.0f);
-        pointLight.Intensity = 0.4f;
+        pointLight.Intensity = 0.82f;
         pointLight.LightColor = definition.LightColor;
+        lighting.PointLights.push_back(pointLight);
+    }
+
+    const std::array<Vector3, 4> overheadPointLightPositions =
+    {{
+        Vector3(-halfExtent * 0.6f, 22.0f, -halfExtent * 0.6f),
+        Vector3(halfExtent * 0.6f, 22.0f, -halfExtent * 0.6f),
+        Vector3(-halfExtent * 0.6f, 22.0f, halfExtent * 0.6f),
+        Vector3(halfExtent * 0.6f, 22.0f, halfExtent * 0.6f)
+    }};
+    const std::array<Color, 4> overheadPointLightColors =
+    {{
+        Color(1.0f, 0.56f, 0.42f, 1.0f),
+        Color(0.5f, 0.95f, 1.0f, 1.0f),
+        Color(0.72f, 1.0f, 0.54f, 1.0f),
+        Color(0.95f, 0.56f, 1.0f, 1.0f)
+    }};
+    for (std::size_t lightIndex = 0; lightIndex < overheadPointLightPositions.size(); ++lightIndex)
+    {
+        PointLight3D pointLight{};
+        pointLight.Position = overheadPointLightPositions[lightIndex];
+        pointLight.Range = halfExtent * 1.8f;
+        pointLight.Intensity = 1.25f;
+        pointLight.LightColor = overheadPointLightColors[lightIndex];
         lighting.PointLights.push_back(pointLight);
     }
 

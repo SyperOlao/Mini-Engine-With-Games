@@ -36,20 +36,20 @@ Vector3 ResolveCameraPlanarForward(
         return Vector3(0.0f, 0.0f, 1.0f);
     }
 
-    Vector3 cameraToBallDirection = ballWorldPosition - followCamera->GetPosition();
-    cameraToBallDirection.y = 0.0f;
-    if (cameraToBallDirection.LengthSquared() > MinimumDirectionSquaredLength)
-    {
-        cameraToBallDirection.Normalize();
-        return cameraToBallDirection;
-    }
-
     Vector3 cameraForwardDirection = followCamera->GetMovementDirectionXZ();
     cameraForwardDirection.y = 0.0f;
     if (cameraForwardDirection.LengthSquared() > MinimumDirectionSquaredLength)
     {
         cameraForwardDirection.Normalize();
         return cameraForwardDirection;
+    }
+
+    Vector3 cameraToBallDirection = ballWorldPosition - followCamera->GetPosition();
+    cameraToBallDirection.y = 0.0f;
+    if (cameraToBallDirection.LengthSquared() > MinimumDirectionSquaredLength)
+    {
+        cameraToBallDirection.Normalize();
+        return cameraToBallDirection;
     }
 
     return Vector3(0.0f, 0.0f, 1.0f);
@@ -62,7 +62,7 @@ PlanarMovementBasis ResolvePlanarMovementBasis(
 {
     PlanarMovementBasis basis{};
     basis.Forward = ResolveCameraPlanarForward(followCamera, ballWorldPosition);
-    basis.Right = SpatialMath::RightFromForwardAndWorldUp(basis.Forward, Vector3::UnitY);
+    basis.Right = -SpatialMath::RightFromForwardAndWorldUp(basis.Forward, Vector3::UnitY);
     return basis;
 }
 

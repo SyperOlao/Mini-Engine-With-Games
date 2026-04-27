@@ -357,6 +357,13 @@ void KatamariGame::Render(AppContext &context)
         const Matrix starWorld = Matrix::CreateScale(0.45f, 0.45f, 0.45f) * Matrix::CreateTranslation(starPosition);
         primitives.DrawSphere(starWorld, viewMatrix, projectionMatrix, DirectX::SimpleMath::Color(0.62f, 0.72f, 0.95f, 1.0f));
     }
+    for (const PointLight3D &pointLight : KatamariLighting.PointLights)
+    {
+        const Matrix pointLightMarkerWorld =
+            Matrix::CreateScale(0.65f, 0.65f, 0.65f) *
+            Matrix::CreateTranslation(pointLight.Position);
+        primitives.DrawSphere(pointLightMarkerWorld, viewMatrix, projectionMatrix, pointLight.LightColor);
+    }
 
     if (MoonModel != nullptr && MoonModel->IsLoaded())
     {
@@ -394,7 +401,7 @@ void KatamariGame::Render(AppContext &context)
             Matrix::CreateTranslation(0.0f, GroundModelVerticalOffset, 0.0f);
         RenderMaterialParameters groundMaterial{};
         groundMaterial.BaseColor = DirectX::SimpleMath::Color(0.62f, 0.7f, 0.88f, 1.0f);
-        groundMaterial.AmbientFactor = 0.04f;
+        groundMaterial.AmbientFactor = 0.09f;
         groundMaterial.SpecularPower = 92.0f;
         groundMaterial.SpecularColor = DirectX::SimpleMath::Color(0.72f, 0.72f, 0.72f, 1.0f);
         modelRenderer.DrawModelLit(
