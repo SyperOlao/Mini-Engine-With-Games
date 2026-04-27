@@ -185,9 +185,9 @@ void RenderContext::PrepareDirectionalShadowPass(Scene &scene, Camera &camera)
     const float inverseAtlasWidth =
         1.0f / static_cast<float>(m_directionalShadowResources.GetShadowAtlasSizePixels());
 
-    constexpr float kConstantDepthBias = 0.0007f;
-    constexpr float kSlopeScaledDepthBias = 0.0022f;
-    constexpr float kNormalOffsetWorldUnits = 0.025f;
+    constexpr float kConstantDepthBias = 0.00018f;
+    constexpr float kSlopeScaledDepthBias = 0.00065f;
+    constexpr float kNormalOffsetWorldUnits = 0.012f;
     constexpr float kPcfRadiusTexels = 2.0f;
 
     ShadowSamplingGpuConstants samplingCpu{};

@@ -120,11 +120,11 @@ namespace
         mesh.Vertices.push_back(vertex);
 
         mesh.Indices.push_back(baseIndex + 0u);
+        mesh.Indices.push_back(baseIndex + 2u);
         mesh.Indices.push_back(baseIndex + 1u);
-        mesh.Indices.push_back(baseIndex + 2u);
         mesh.Indices.push_back(baseIndex + 0u);
-        mesh.Indices.push_back(baseIndex + 2u);
         mesh.Indices.push_back(baseIndex + 3u);
+        mesh.Indices.push_back(baseIndex + 2u);
     }
 
     void AppendTriangle(
@@ -150,8 +150,8 @@ namespace
         mesh.Vertices.push_back(vertex);
 
         mesh.Indices.push_back(baseIndex + 0u);
-        mesh.Indices.push_back(baseIndex + 1u);
         mesh.Indices.push_back(baseIndex + 2u);
+        mesh.Indices.push_back(baseIndex + 1u);
     }
 
     [[nodiscard]] Vector3 NormalFromTriangle(

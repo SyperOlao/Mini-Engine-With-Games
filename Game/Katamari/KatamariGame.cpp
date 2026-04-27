@@ -104,6 +104,8 @@ void KatamariGame::Initialize(AppContext &context)
         GroundModel = assetCache->LoadModel("Game/Katamari/Assets/Environment/ground.obj");
         MoonModel = assetCache->LoadModel("Game/Katamari/Assets/Environment/moon_sphere.obj");
         PlayerBallMeshModel = assetCache->LoadModel("Game/Katamari/Assets/Environment/moon_sphere.obj");
+        StaticCubeModel = assetCache->LoadModel("Game/Katamari/Assets/Environment/unit_cube.obj");
+        StaticTriangularPrismModel = assetCache->LoadModel("Game/Katamari/Assets/Environment/unit_triangular_prism.obj");
     }
 
     GroundModelVerticalOffset = 0.0f;
@@ -117,7 +119,13 @@ void KatamariGame::Initialize(AppContext &context)
     if (!StaticWorldCreated)
     {
         KatamariLevelSetup::CreateStaticWorldCollision(SceneInstance, GameConfig);
-        KatamariLevelSetup::CreateStaticObstacles(SceneInstance, WorldContext, GameConfig);
+        KatamariLevelSetup::CreateStaticObstacles(
+            SceneInstance,
+            WorldContext,
+            GameConfig,
+            StaticCubeModel,
+            StaticTriangularPrismModel
+        );
         StaticWorldCreated = true;
     }
 

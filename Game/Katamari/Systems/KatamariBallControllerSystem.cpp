@@ -19,7 +19,13 @@ constexpr float GroundedHeightEpsilon = 0.02f;
 constexpr float MinimumInputSquaredLength = 1.0e-6f;
 constexpr float MaximumDragPerFrame = 0.95f;
 
-Vector3 ResolveCameraPlanarForwardToBall(
+struct PlanarMovementBasis final
+{
+    Vector3 Forward{0.0f, 0.0f, 1.0f};
+    Vector3 Right{1.0f, 0.0f, 0.0f};
+};
+
+Vector3 ResolveCameraPlanarForward(
     FollowCamera *const followCamera,
     Vector3 const &ballWorldPosition
 ) noexcept
@@ -29,25 +35,28 @@ Vector3 ResolveCameraPlanarForwardToBall(
         return Vector3(0.0f, 0.0f, 1.0f);
     }
 
-    Vector3 cameraToBallDirection = ballWorldPosition - followCamera->GetPosition();
-    cameraToBallDirection.y = 0.0f;
-    if (cameraToBallDirection.LengthSquared() > 1.0e-6f)
+    Vector3 cameraForward = followCamera->GetMovementDirectionXZ();
+    cameraForward.y = 0.0f;
+    if (cameraForward.LengthSquared() > 1.0e-6f)
     {
-        cameraToBallDirection.Normalize();
-        return cameraToBallDirection;
+        cameraForward.Normalize();
+        return cameraForward;
     }
 
-    Vector3 fallbackForward = followCamera->GetMovementDirectionXZ();
-    fallbackForward.y = 0.0f;
-    return SpatialMath::SafeNormalizeVector3(fallbackForward, Vector3(0.0f, 0.0f, 1.0f));
+    Vector3 cameraToBallDirection = ballWorldPosition - followCamera->GetPosition();
+    cameraToBallDirection.y = 0.0f;
+    return SpatialMath::SafeNormalizeVector3(cameraToBallDirection, Vector3(0.0f, 0.0f, 1.0f));
 }
 
-Vector3 ResolveCameraPlanarRight(Vector3 const &cameraPlanarForward) noexcept
+PlanarMovementBasis ResolvePlanarMovementBasis(
+    FollowCamera *const followCamera,
+    Vector3 const &ballWorldPosition
+) noexcept
 {
-    return SpatialMath::SafeNormalizeVector3(
-        cameraPlanarForward.Cross(Vector3::UnitY),
-        Vector3::UnitX
-    );
+    PlanarMovementBasis basis{};
+    basis.Forward = ResolveCameraPlanarForward(followCamera, ballWorldPosition);
+    basis.Right = SpatialMath::RightFromForwardAndWorldUp(basis.Forward, Vector3::UnitY);
+    return basis;
 }
 
 float ResolveForwardAxisValue(Keyboard const &keyboard) noexcept
@@ -78,12 +87,12 @@ float ResolveRightAxisValue(Keyboard const &keyboard) noexcept
     return rightAxisValue;
 }
 
-Vector3 ResolveMovementInputDirection(Keyboard const &keyboard, Vector3 const &planarForward, Vector3 const &planarRight) noexcept
+Vector3 ResolveMovementInputDirection(Keyboard const &keyboard, PlanarMovementBasis const &basis) noexcept
 {
     const float forwardAxisValue = ResolveForwardAxisValue(keyboard);
     const float rightAxisValue = ResolveRightAxisValue(keyboard);
 
-    Vector3 movementInputDirection = planarForward * forwardAxisValue + planarRight * rightAxisValue;
+    Vector3 movementInputDirection = basis.Forward * forwardAxisValue + basis.Right * rightAxisValue;
     if (movementInputDirection.LengthSquared() > MinimumInputSquaredLength)
     {
         movementInputDirection.Normalize();
@@ -119,12 +128,11 @@ void KatamariBallControllerSystem::Update(Scene &scene, AppContext &context, con
     KatamariGameConfig const &config = *GameplayWorld->Config;
     Keyboard const &keyboard = context.Input.System->GetKeyboard();
 
-    const Vector3 planarForward = ResolveCameraPlanarForwardToBall(
+    const PlanarMovementBasis movementBasis = ResolvePlanarMovementBasis(
         GameplayWorld->FollowCameraForMovement,
         transform->Local.Position
     );
-    const Vector3 planarRight = ResolveCameraPlanarRight(planarForward);
-    const Vector3 inputDirection = ResolveMovementInputDirection(keyboard, planarForward, planarRight);
+    const Vector3 inputDirection = ResolveMovementInputDirection(keyboard, movementBasis);
 
     if (inputDirection.LengthSquared() > MinimumInputSquaredLength)
     {

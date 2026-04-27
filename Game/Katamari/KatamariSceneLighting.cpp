@@ -2,6 +2,9 @@
 
 #include "Core/Graphics/Rendering/Lighting/LightTypes3D.h"
 
+#include <array>
+#include <algorithm>
+
 using DirectX::SimpleMath::Color;
 using DirectX::SimpleMath::Vector3;
 
@@ -10,63 +13,52 @@ SceneLightingDescriptor3D CreateKatamariSceneLighting(const KatamariGameConfig &
     SceneLightingDescriptor3D lighting = SceneLighting3DCreateDefaultOutdoor();
     if (!lighting.DirectionalLights.empty())
     {
-        lighting.DirectionalLights[0].Direction = Vector3(-0.22f, -1.0f, -0.28f);
-        lighting.DirectionalLights[0].Intensity = 0.58f;
-        lighting.DirectionalLights[0].LightColor = Color(0.78f, 0.84f, 1.0f, 1.0f);
+        lighting.DirectionalLights[0].Direction = Vector3(-0.55f, -0.78f, -0.35f);
+        lighting.DirectionalLights[0].Intensity = 1.15f;
+        lighting.DirectionalLights[0].LightColor = Color(0.98f, 0.96f, 0.9f, 1.0f);
     }
 
-    PointLight3D fillLightNorth{};
-    fillLightNorth.Position = Vector3(0.0f, 32.0f, 58.0f);
-    fillLightNorth.Range = 130.0f;
-    fillLightNorth.Intensity = 0.22f;
-    fillLightNorth.LightColor = Color(1.0f, 0.94f, 0.82f, 1.0f);
-    lighting.PointLights.push_back(fillLightNorth);
-
-    PointLight3D fillLightSouth{};
-    fillLightSouth.Position = Vector3(0.0f, 26.0f, -58.0f);
-    fillLightSouth.Range = 130.0f;
-    fillLightSouth.Intensity = 0.2f;
-    fillLightSouth.LightColor = Color(0.82f, 0.9f, 1.0f, 1.0f);
-    lighting.PointLights.push_back(fillLightSouth);
-
-    PointLight3D fillLightOverhead{};
-    fillLightOverhead.Position = Vector3(0.0f, 48.0f, 0.0f);
-    fillLightOverhead.Range = 140.0f;
-    fillLightOverhead.Intensity = 0.26f;
-    fillLightOverhead.LightColor = Color(0.92f, 0.96f, 1.0f, 1.0f);
-    lighting.PointLights.push_back(fillLightOverhead);
-
     const float halfExtent = config.PlayfieldHalfExtent;
+    struct EmissiveObstacleLightDefinition final
+    {
+        Vector3 Position{};
+        Vector3 Scale{1.0f, 1.0f, 1.0f};
+        Color LightColor{1.0f, 1.0f, 1.0f, 1.0f};
+    };
 
-    PointLight3D neonClusterWest{};
-    neonClusterWest.Position = Vector3(-halfExtent * 0.55f, 10.0f, -halfExtent * 0.28f);
-    neonClusterWest.Range = 38.0f;
-    neonClusterWest.Intensity = 0.85f;
-    neonClusterWest.LightColor = Color(0.1f, 0.95f, 0.95f, 1.0f);
-    lighting.PointLights.push_back(neonClusterWest);
+    const std::array<EmissiveObstacleLightDefinition, 6> obstacleLights =
+    {{
+        {Vector3(-halfExtent * 0.55f, 0.0f, -halfExtent * 0.28f), Vector3(8.0f, 8.0f, 8.0f), Color(0.1f, 0.95f, 0.95f, 1.0f)},
+        {Vector3(-halfExtent * 0.24f, 0.0f, halfExtent * 0.48f), Vector3(10.0f, 12.0f, 6.0f), Color(1.0f, 0.28f, 0.72f, 1.0f)},
+        {Vector3(halfExtent * 0.18f, 0.0f, -halfExtent * 0.5f), Vector3(7.0f, 11.0f, 7.0f), Color(0.55f, 1.0f, 0.2f, 1.0f)},
+        {Vector3(halfExtent * 0.56f, 0.0f, halfExtent * 0.14f), Vector3(12.0f, 9.0f, 8.0f), Color(1.0f, 0.72f, 0.16f, 1.0f)},
+        {Vector3(-halfExtent * 0.08f, 0.0f, -halfExtent * 0.08f), Vector3(6.0f, 14.0f, 6.0f), Color(0.45f, 0.56f, 1.0f, 1.0f)},
+        {Vector3(halfExtent * 0.36f, 0.0f, halfExtent * 0.55f), Vector3(8.0f, 10.0f, 10.0f), Color(0.96f, 0.2f, 1.0f, 1.0f)}
+    }};
 
-    PointLight3D neonClusterNorth{};
-    neonClusterNorth.Position = Vector3(-halfExtent * 0.24f, 12.0f, halfExtent * 0.48f);
-    neonClusterNorth.Range = 42.0f;
-    neonClusterNorth.Intensity = 0.75f;
-    neonClusterNorth.LightColor = Color(1.0f, 0.28f, 0.72f, 1.0f);
-    lighting.PointLights.push_back(neonClusterNorth);
-
-    PointLight3D neonClusterEast{};
-    neonClusterEast.Position = Vector3(halfExtent * 0.56f, 10.0f, halfExtent * 0.14f);
-    neonClusterEast.Range = 44.0f;
-    neonClusterEast.Intensity = 0.7f;
-    neonClusterEast.LightColor = Color(1.0f, 0.72f, 0.16f, 1.0f);
-    lighting.PointLights.push_back(neonClusterEast);
+    for (const EmissiveObstacleLightDefinition &definition : obstacleLights)
+    {
+        const float largestScale = (std::max)(definition.Scale.x, (std::max)(definition.Scale.y, definition.Scale.z));
+        PointLight3D pointLight{};
+        pointLight.Position = Vector3(
+            definition.Position.x,
+            definition.Scale.y * 0.62f + 1.5f,
+            definition.Position.z
+        );
+        pointLight.Range = (std::max)(largestScale * 5.0f, 42.0f);
+        pointLight.Intensity = 0.82f;
+        pointLight.LightColor = definition.LightColor;
+        lighting.PointLights.push_back(pointLight);
+    }
 
     SpotLight3D stageSpot{};
-    stageSpot.Position = Vector3(0.0f, 58.0f, -42.0f);
+    stageSpot.Position = Vector3(0.0f, 62.0f, -46.0f);
     stageSpot.Direction = Vector3(0.0f, -0.82f, 0.58f);
     stageSpot.Range = 135.0f;
-    stageSpot.InnerConeAngleRadians = 0.38f;
-    stageSpot.OuterConeAngleRadians = 0.72f;
-    stageSpot.Intensity = 0.42f;
-    stageSpot.LightColor = Color(1.0f, 0.91f, 0.78f, 1.0f);
+    stageSpot.InnerConeAngleRadians = 0.42f;
+    stageSpot.OuterConeAngleRadians = 0.78f;
+    stageSpot.Intensity = 0.62f;
+    stageSpot.LightColor = Color(1.0f, 0.94f, 0.82f, 1.0f);
     lighting.SpotLights.push_back(stageSpot);
 
     return lighting;

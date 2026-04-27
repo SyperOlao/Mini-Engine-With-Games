@@ -47,8 +47,9 @@ cbuffer ShadowSamplingConstants : register(b5)
 Texture2D AlbedoAmbientTexture : register(t0);
 Texture2D NormalReceiveLightingTexture : register(t1);
 Texture2D SpecularPowerTexture : register(t2);
-Texture2D SceneDepthTexture : register(t3);
-Texture2D ShadowMapDepth : register(t4);
+Texture2D EmissiveTexture : register(t3);
+Texture2D SceneDepthTexture : register(t4);
+Texture2D ShadowMapDepth : register(t5);
 
 SamplerState GBufferSampler : register(s0);
 SamplerComparisonState ShadowMapSampler : register(s1);
@@ -217,6 +218,7 @@ float4 PSMain(VSOutput input) : SV_TARGET
     const float4 albedoAmbient = AlbedoAmbientTexture.Sample(GBufferSampler, input.Uv);
     const float4 normalReceive = NormalReceiveLightingTexture.Sample(GBufferSampler, input.Uv);
     const float4 specularPowerPacked = SpecularPowerTexture.Sample(GBufferSampler, input.Uv);
+    const float3 emissive = EmissiveTexture.Sample(GBufferSampler, input.Uv).rgb;
 
     const float3 albedo = albedoAmbient.rgb;
     const float ambientFactor = albedoAmbient.a;
@@ -232,7 +234,7 @@ float4 PSMain(VSOutput input) : SV_TARGET
 
     if (receiveLighting < 0.5f)
     {
-        return float4(albedo, 1.0f);
+        return float4(saturate(albedo + emissive), 1.0f);
     }
 
     const float directionalShadow = DirectionalShadowAttenuation(worldPosition, worldNormal, viewDepthPositive);
@@ -247,7 +249,7 @@ float4 PSMain(VSOutput input) : SV_TARGET
             float3(0.25f, 0.35f, 0.9f),
             float3(0.9f, 0.85f, 0.2f)
         };
-        return float4(albedo * cascadeColors[cascadeDebugIndex] * directionalShadow, 1.0f);
+        return float4(saturate(albedo * cascadeColors[cascadeDebugIndex] * directionalShadow + emissive), 1.0f);
     }
 
     float3 diffuseAccumulation = float3(0.0f, 0.0f, 0.0f);
@@ -282,6 +284,6 @@ float4 PSMain(VSOutput input) : SV_TARGET
     }
 
     const float3 ambientTerm = albedo * ambientFactor;
-    const float3 litColor = ambientTerm + diffuseAccumulation * albedo + specularAccumulation;
+    const float3 litColor = ambientTerm + emissive + diffuseAccumulation * albedo + specularAccumulation;
     return float4(litColor, 1.0f);
 }

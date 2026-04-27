@@ -21,7 +21,9 @@ void CreateStaticWorldCollision(Scene &scene, KatamariGameConfig const &config);
 void CreateStaticObstacles(
     Scene &scene,
     KatamariWorldContext &world,
-    KatamariGameConfig const &config
+    KatamariGameConfig const &config,
+    std::shared_ptr<ModelAsset> const &cubeModel,
+    std::shared_ptr<ModelAsset> const &triangularPrismModel
 );
 
 void CreatePlayerBall(

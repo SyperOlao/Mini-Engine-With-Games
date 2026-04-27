@@ -62,6 +62,12 @@ void KatamariStaticObstacleRenderSystem::Render(Scene &scene, AppContext &contex
 
     for (const KatamariStaticObstacleRecord &obstacle : World->StaticObstacles)
     {
+        const ModelComponent *const model = scene.TryGetModelComponent(obstacle.Entity);
+        if (model != nullptr && model->Visible && model->Asset != nullptr)
+        {
+            continue;
+        }
+
         const TransformComponent *const transform = scene.TryGetTransformComponent(obstacle.Entity);
         if (transform == nullptr)
         {

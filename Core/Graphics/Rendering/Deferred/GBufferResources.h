@@ -37,6 +37,10 @@ public:
 
     [[nodiscard]] const ColorRenderTarget2D &GetMaterialTarget() const noexcept;
 
+    [[nodiscard]] ColorRenderTarget2D &GetEmissiveTarget() noexcept;
+
+    [[nodiscard]] const ColorRenderTarget2D &GetEmissiveTarget() const noexcept;
+
     [[nodiscard]] DepthRenderTarget2D &GetSceneDepthTarget() noexcept;
 
     [[nodiscard]] const DepthRenderTarget2D &GetSceneDepthTarget() const noexcept;
@@ -48,6 +52,7 @@ public:
         const Color &albedoOcclusionClear,
         const Color &normalClear,
         const Color &materialClear,
+        const Color &emissiveClear,
         float depthClearValue
     ) const;
 
@@ -55,6 +60,7 @@ private:
     ColorRenderTarget2D m_albedoOcclusion{};
     ColorRenderTarget2D m_normal{};
     ColorRenderTarget2D m_material{};
+    ColorRenderTarget2D m_emissive{};
     DepthRenderTarget2D m_sceneDepth{};
 };
 

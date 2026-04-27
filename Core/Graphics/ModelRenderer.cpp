@@ -117,6 +117,22 @@ namespace
         std::memcpy(mapped.pData, data, byteCount);
         deviceContext->Unmap(constantBuffer, 0);
     }
+
+    ID3D11RasterizerState *ResolveRasterizerForMesh(
+        DirectX::CommonStates &commonStates,
+        const DirectX::ModelMesh &mesh,
+        const RenderMaterialParameters &material
+    ) noexcept
+    {
+        if (material.Wireframe)
+        {
+            return commonStates.Wireframe();
+        }
+
+        return mesh.ccw
+            ? commonStates.CullClockwise()
+            : commonStates.CullCounterClockwise();
+    }
 }
 
 static void ApplyTintToEffect(
@@ -655,11 +671,6 @@ void ModelRenderer::DrawModelDeferredGeometry(
 
     deviceContext->IASetInputLayout(m_deferredGeometryModelInputLayout.Get());
 
-    ID3D11RasterizerState *const rasterizerState = material.Wireframe
-        ? m_commonStates->Wireframe()
-        : m_commonStates->CullCounterClockwise();
-    deviceContext->RSSetState(rasterizerState);
-
     deviceContext->OMSetBlendState(m_commonStates->Opaque(), nullptr, 0xFFFFFFFFu);
     deviceContext->OMSetDepthStencilState(m_commonStates->DepthDefault(), 0u);
 
@@ -673,6 +684,8 @@ void ModelRenderer::DrawModelDeferredGeometry(
         {
             continue;
         }
+
+        deviceContext->RSSetState(ResolveRasterizerForMesh(*m_commonStates, *meshShared, material));
 
         for (const std::unique_ptr<DirectX::ModelMeshPart> &partUnique : meshShared->meshParts)
         {
@@ -828,11 +841,6 @@ void ModelRenderer::DrawModelLit(
 
     deviceContext->IASetInputLayout(m_forwardPhongModelInputLayout.Get());
 
-    ID3D11RasterizerState *const rasterizerState = material.Wireframe
-        ? m_commonStates->Wireframe()
-        : m_commonStates->CullCounterClockwise();
-    deviceContext->RSSetState(rasterizerState);
-
     deviceContext->OMSetBlendState(m_commonStates->Opaque(), nullptr, 0xFFFFFFFFu);
     deviceContext->OMSetDepthStencilState(m_commonStates->DepthDefault(), 0u);
 
@@ -846,6 +854,8 @@ void ModelRenderer::DrawModelLit(
         {
             continue;
         }
+
+        deviceContext->RSSetState(ResolveRasterizerForMesh(*m_commonStates, *meshShared, material));
 
         for (const std::unique_ptr<DirectX::ModelMeshPart> &partUnique : meshShared->meshParts)
         {

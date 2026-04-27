@@ -32,6 +32,7 @@ void DeferredGeometryRenderPass::Execute(FramePassRenderContext &framePassRender
         Color(0.0f, 0.0f, 0.0f, 1.0f),
         Color(0.5f, 0.5f, 1.0f, 1.0f),
         Color(0.0f, 0.0f, 0.0f, 1.0f),
+        Color(0.0f, 0.0f, 0.0f, 1.0f),
         1.0f
     );
 }

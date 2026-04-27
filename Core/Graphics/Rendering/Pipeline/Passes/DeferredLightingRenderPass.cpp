@@ -196,10 +196,11 @@ void DeferredLightingRenderPass::Execute(FramePassRenderContext &framePassRender
         gBuffer.GetAlbedoOcclusionTarget().GetShaderResourceView(),
         gBuffer.GetNormalTarget().GetShaderResourceView(),
         gBuffer.GetMaterialTarget().GetShaderResourceView(),
+        gBuffer.GetEmissiveTarget().GetShaderResourceView(),
         gBuffer.GetSceneDepthTarget().GetShaderResourceView()
     };
-    deviceContext->PSSetShaderResources(0, 4, shaderResourceViews);
-    framePassRenderContext.GetRenderContext().BindDirectionalShadowRegisters(deviceContext, 4u, 1u);
+    deviceContext->PSSetShaderResources(0, 5, shaderResourceViews);
+    framePassRenderContext.GetRenderContext().BindDirectionalShadowRegisters(deviceContext, 5u, 1u);
 
     ID3D11SamplerState *const samplers[] = {SamplerState.Get()};
     deviceContext->PSSetSamplers(0, 1, samplers);
@@ -209,7 +210,7 @@ void DeferredLightingRenderPass::Execute(FramePassRenderContext &framePassRender
     deviceContext->PSSetShader(PixelShader.Get(), nullptr, 0);
     deviceContext->Draw(3, 0);
 
-    ID3D11ShaderResourceView *const nullShaderResourceViews[5] = {};
-    deviceContext->PSSetShaderResources(0, 5, nullShaderResourceViews);
-    framePassRenderContext.GetRenderContext().UnbindDirectionalShadowShaderResource(deviceContext, 4u);
+    ID3D11ShaderResourceView *const nullShaderResourceViews[6] = {};
+    deviceContext->PSSetShaderResources(0, 6, nullShaderResourceViews);
+    framePassRenderContext.GetRenderContext().UnbindDirectionalShadowShaderResource(deviceContext, 5u);
 }

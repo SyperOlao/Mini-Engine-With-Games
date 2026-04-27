@@ -6,7 +6,11 @@
 
 bool GBufferResources::IsCreated() const noexcept
 {
-    return m_albedoOcclusion.IsCreated() && m_sceneDepth.IsCreated();
+    return m_albedoOcclusion.IsCreated()
+        && m_normal.IsCreated()
+        && m_material.IsCreated()
+        && m_emissive.IsCreated()
+        && m_sceneDepth.IsCreated();
 }
 
 std::uint32_t GBufferResources::GetWidth() const noexcept
@@ -36,12 +40,14 @@ void GBufferResources::Create(ID3D11Device *const device, const std::uint32_t wi
     m_albedoOcclusion.Create(device, width, height, kGBufferAlbedoOcclusionFormat);
     m_normal.Create(device, width, height, kGBufferNormalFormat);
     m_material.Create(device, width, height, kGBufferMaterialFormat);
+    m_emissive.Create(device, width, height, kGBufferEmissiveFormat);
     m_sceneDepth.Create(device, width, height);
 }
 
 void GBufferResources::Destroy() noexcept
 {
     m_sceneDepth.Destroy();
+    m_emissive.Destroy();
     m_material.Destroy();
     m_normal.Destroy();
     m_albedoOcclusion.Destroy();
@@ -68,6 +74,7 @@ void GBufferResources::Resize(ID3D11Device *const device, const std::uint32_t wi
     m_albedoOcclusion.Resize(device, width, height);
     m_normal.Resize(device, width, height);
     m_material.Resize(device, width, height);
+    m_emissive.Resize(device, width, height);
     m_sceneDepth.Resize(device, width, height);
 }
 
@@ -101,6 +108,16 @@ const ColorRenderTarget2D &GBufferResources::GetMaterialTarget() const noexcept
     return m_material;
 }
 
+ColorRenderTarget2D &GBufferResources::GetEmissiveTarget() noexcept
+{
+    return m_emissive;
+}
+
+const ColorRenderTarget2D &GBufferResources::GetEmissiveTarget() const noexcept
+{
+    return m_emissive;
+}
+
 DepthRenderTarget2D &GBufferResources::GetSceneDepthTarget() noexcept
 {
     return m_sceneDepth;
@@ -121,7 +138,8 @@ void GBufferResources::BindGeometryPassTargets(GraphicsDevice &graphics) const
     ID3D11RenderTargetView *const renderTargets[kGBufferColorSurfaceCount] = {
         m_albedoOcclusion.GetRenderTargetView(),
         m_normal.GetRenderTargetView(),
-        m_material.GetRenderTargetView()
+        m_material.GetRenderTargetView(),
+        m_emissive.GetRenderTargetView()
     };
 
     graphics.BindRenderTargetsAndDepth(renderTargets, kGBufferColorSurfaceCount, m_sceneDepth.GetDepthStencilView());
@@ -132,6 +150,7 @@ void GBufferResources::ClearGeometryPassTargets(
     const Color &albedoOcclusionClear,
     const Color &normalClear,
     const Color &materialClear,
+    const Color &emissiveClear,
     const float depthClearValue
 ) const
 {
@@ -143,5 +162,6 @@ void GBufferResources::ClearGeometryPassTargets(
     m_albedoOcclusion.Clear(graphics, albedoOcclusionClear);
     m_normal.Clear(graphics, normalClear);
     m_material.Clear(graphics, materialClear);
+    m_emissive.Clear(graphics, emissiveClear);
     graphics.ClearDepthStencilView(m_sceneDepth.GetDepthStencilView(), depthClearValue, 0u);
 }

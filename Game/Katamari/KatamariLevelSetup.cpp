@@ -12,6 +12,7 @@
 #include "Game/Katamari/Systems/KatamariSpawner.h"
 
 #include <array>
+#include <memory>
 
 using DirectX::SimpleMath::Vector3;
 
@@ -93,7 +94,9 @@ void KatamariLevelSetup::CreateStaticWorldCollision(Scene &scene, KatamariGameCo
 void KatamariLevelSetup::CreateStaticObstacles(
     Scene &scene,
     KatamariWorldContext &world,
-    KatamariGameConfig const &config
+    KatamariGameConfig const &config,
+    std::shared_ptr<ModelAsset> const &cubeModel,
+    std::shared_ptr<ModelAsset> const &triangularPrismModel
 )
 {
     struct ObstacleDefinition final
@@ -176,6 +179,19 @@ void KatamariLevelSetup::CreateStaticObstacles(
         transform.Local.Scale = definition.Scale;
         obstacle.AddTransformComponent(transform);
 
+        std::shared_ptr<ModelAsset> const &visualModel =
+            definition.Shape == KatamariObstacleShape::TriangularPrism
+                ? triangularPrismModel
+                : cubeModel;
+        if (visualModel != nullptr && visualModel->IsLoaded())
+        {
+            ModelComponent modelComponent{};
+            modelComponent.Asset = visualModel;
+            modelComponent.Visible = true;
+            modelComponent.CastsShadow = true;
+            obstacle.AddModelComponent(modelComponent);
+        }
+
         BoxColliderComponent box{};
         box.LocalCenter = Vector3::Zero;
         box.HalfExtents = Vector3(0.5f, 0.5f, 0.5f);
@@ -195,10 +211,15 @@ void KatamariLevelSetup::CreateStaticObstacles(
         record.Shape = definition.Shape;
         record.Material.BaseColor = definition.BaseColor;
         record.Material.ReceiveLighting = true;
-        record.Material.AmbientFactor = 0.14f;
-        record.Material.EmissiveColor = DirectX::SimpleMath::Color(0.0f, 0.0f, 0.0f, 1.0f);
-        record.Material.SpecularColor = DirectX::SimpleMath::Color(0.0f, 0.0f, 0.0f, 1.0f);
-        record.Material.SpecularPower = 1.0f;
+        record.Material.AmbientFactor = 0.08f;
+        record.Material.EmissiveColor = definition.EmissiveColor;
+        record.Material.SpecularColor = DirectX::SimpleMath::Color(0.45f, 0.45f, 0.5f, 1.0f);
+        record.Material.SpecularPower = 38.0f;
+
+        MaterialComponent materialComponent{};
+        materialComponent.Parameters = record.Material;
+        obstacle.AddMaterialComponent(materialComponent);
+
         world.StaticObstacles.push_back(record);
     }
 }
@@ -236,8 +257,8 @@ void KatamariLevelSetup::CreatePlayerBall(
         MaterialComponent materialComponent{};
         materialComponent.Parameters.BaseColor = DirectX::SimpleMath::Color(0.95f, 0.35f, 0.2f, 1.0f);
         materialComponent.Parameters.AmbientFactor = 0.1f;
-        materialComponent.Parameters.SpecularColor = DirectX::SimpleMath::Color(0.9f, 0.82f, 0.72f, 1.0f);
-        materialComponent.Parameters.SpecularPower = 84.0f;
+        materialComponent.Parameters.SpecularColor = DirectX::SimpleMath::Color(1.0f, 0.96f, 0.88f, 1.0f);
+        materialComponent.Parameters.SpecularPower = 22.0f;
         ball.AddMaterialComponent(materialComponent);
     }
 

@@ -327,6 +327,16 @@ add_custom_command(
         COMMENT "Sync Core/Shaders (runtime compile uses build tree copy)"
 )
 
+if(EXISTS "${CMAKE_SOURCE_DIR}/Game/Katamari/Assets")
+    add_custom_command(
+            TARGET PingPong POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/Game/Katamari/Assets"
+            "${CMAKE_BINARY_DIR}/Game/Katamari/Assets"
+            COMMENT "Sync Katamari assets"
+    )
+endif()
+
 set(CORE_SHADER_SOURCES
         Core/Shaders/Basic3D.hlsl
         Core/Shaders/BasicPS.hlsl

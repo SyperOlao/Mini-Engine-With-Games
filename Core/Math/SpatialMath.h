@@ -171,7 +171,7 @@ inline DirectX::SimpleMath::Vector3 SpatialMath::RightFromForwardAndWorldUp(
     const DirectX::SimpleMath::Vector3 &forward,
     const DirectX::SimpleMath::Vector3 &worldUp
 ) noexcept {
-    DirectX::SimpleMath::Vector3 right = forward.Cross(worldUp);
+    DirectX::SimpleMath::Vector3 right = worldUp.Cross(forward);
     return SafeNormalizeVector3(right, DirectX::SimpleMath::Vector3::UnitX);
 }
 
