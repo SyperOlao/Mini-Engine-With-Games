@@ -1,4 +1,4 @@
-#define MAX_SCENE_LIGHTS 8
+#define MAX_SCENE_LIGHTS 16
 #define MAX_SHADOW_CASCADES 4
 
 cbuffer DeferredScreenConstants : register(b0)

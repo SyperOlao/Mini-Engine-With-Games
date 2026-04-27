@@ -8,7 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 
-constexpr std::uint32_t kMaximumSceneLights = 8u;
+constexpr std::uint32_t kMaximumSceneLights = 16u;
 
 enum class LightKindGpu : std::uint32_t
 {
