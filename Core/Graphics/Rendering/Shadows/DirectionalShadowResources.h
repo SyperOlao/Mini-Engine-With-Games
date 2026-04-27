@@ -20,6 +20,13 @@ public:
 
     void Resize(GraphicsDevice &graphicsDevice);
 
+    void SetShadowSamplingParameters(
+        float constantDepthBias,
+        float slopeScaledDepthBias,
+        float normalOffsetWorldUnits,
+        float pcfRadiusTexels
+    ) noexcept;
+
     void UploadShadowCascadeConstants(
         ID3D11DeviceContext *deviceContext,
         const ShadowCascadeConstantsGpu &constants
@@ -62,6 +69,14 @@ public:
 
     [[nodiscard]] float GetEffectiveShadowFarClamp() const noexcept;
 
+    [[nodiscard]] float GetConstantDepthBias() const noexcept;
+
+    [[nodiscard]] float GetSlopeScaledDepthBias() const noexcept;
+
+    [[nodiscard]] float GetNormalOffsetWorldUnits() const noexcept;
+
+    [[nodiscard]] float GetPcfRadiusTexels() const noexcept;
+
 private:
     void CreateConstantBuffers(ID3D11Device *device);
 
@@ -73,8 +88,12 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_shadowSamplingConstantBuffer{};
     std::uint32_t m_shadowAtlasSizePixels{2048u};
     std::uint32_t m_cascadeCount{4u};
-    float m_cascadeSplitLambda{0.72f};
-    float m_effectiveShadowFarClamp{185.0f};
+    float m_cascadeSplitLambda{0.65f};
+    float m_effectiveShadowFarClamp{165.0f};
+    float m_constantDepthBias{0.0008f};
+    float m_slopeScaledDepthBias{0.0015f};
+    float m_normalOffsetWorldUnits{0.03f};
+    float m_pcfRadiusTexels{2.0f};
     float m_orthographicWidth{140.0f};
     float m_orthographicHeight{140.0f};
     float m_lightEyeDistanceFromFocus{90.0f};

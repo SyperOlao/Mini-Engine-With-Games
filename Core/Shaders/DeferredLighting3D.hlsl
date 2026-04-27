@@ -133,7 +133,7 @@ void EvaluateLight(
 
     if (abs(kind - kDirectionalKind) < 0.01f)
     {
-        lightVector = normalize(light.Direction.xyz);
+        lightVector = normalize(-light.Direction.xyz);
     }
     else if (abs(kind - kPointKind) < 0.01f)
     {
@@ -184,8 +184,8 @@ float DirectionalShadowAttenuation(float3 worldPosition, float3 worldNormal, flo
         return 1.0f;
     }
 
-    const float3 towardLight = normalize(Lights[ShadowedDirectionalLightGpuIndex].Direction.xyz);
-    const float3 biasedWorldPosition = worldPosition + worldNormal * DepthBiasAndPcfKernel.z;
+    const float3 towardLight = normalize(-Lights[ShadowedDirectionalLightGpuIndex].Direction.xyz);
+    const float3 biasedWorldPosition = worldPosition + towardLight * DepthBiasAndPcfKernel.z;
     const uint cascadeIndexPrimary = SelectShadowCascadeIndex(viewDepthPositive);
 
     const float4 lightClipPrimary = mul(float4(biasedWorldPosition, 1.0f), LightViewProjection[cascadeIndexPrimary]);
@@ -200,7 +200,7 @@ float DirectionalShadowAttenuation(float3 worldPosition, float3 worldNormal, flo
         return 1.0f;
     }
 
-    const int pcfRadius = clamp((int)DepthBiasAndPcfKernel.w, 1, 4);
+    const int pcfRadius = clamp((int)DepthBiasAndPcfKernel.w, 0, 4);
     const float depthReferencePrimary = ComputeShadowDepthReference(saturate(ndcPrimary.z), worldNormal, towardLight);
     const float shadowPrimary = SampleShadowPcfClampedToCascade(
         shadowUvLocalPrimary,
@@ -315,15 +315,13 @@ float4 PSMain(VSOutput input) : SV_TARGET
         specularAccumulation += specularContribution * shadowFactor;
     }
 
-    const float shadowVisibilityForDirectLighting =
-        ShadowEnabled != 0u ? lerp(0.32f, 1.0f, directionalShadow) : 1.0f;
     const float shadowVisibilityForAmbient =
-        ShadowEnabled != 0u ? lerp(0.75f, 1.0f, directionalShadow) : 1.0f;
+        ShadowEnabled != 0u ? lerp(0.45f, 1.0f, directionalShadow) : 1.0f;
     const float3 ambientTerm = albedo * ambientFactor * shadowVisibilityForAmbient;
     const float3 litColor =
         ambientTerm
         + emissive
-        + diffuseAccumulation * albedo * shadowVisibilityForDirectLighting
-        + specularAccumulation * shadowVisibilityForDirectLighting;
+        + diffuseAccumulation * albedo
+        + specularAccumulation;
     return float4(litColor, 1.0f);
 }

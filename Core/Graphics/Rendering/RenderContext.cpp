@@ -185,17 +185,12 @@ void RenderContext::PrepareDirectionalShadowPass(Scene &scene, Camera &camera)
     const float inverseAtlasWidth =
         1.0f / static_cast<float>(m_directionalShadowResources.GetShadowAtlasSizePixels());
 
-    constexpr float kConstantDepthBias = 0.0f;
-    constexpr float kSlopeScaledDepthBias = 0.0f;
-    constexpr float kNormalOffsetWorldUnits = 0.0f;
-    constexpr float kPcfRadiusTexels = 2.0f;
-
     ShadowSamplingGpuConstants samplingCpu{};
     samplingCpu.DepthBiasAndPcfKernel = DirectX::XMFLOAT4(
-        kConstantDepthBias,
-        kSlopeScaledDepthBias,
-        kNormalOffsetWorldUnits,
-        kPcfRadiusTexels
+        m_directionalShadowResources.GetConstantDepthBias(),
+        m_directionalShadowResources.GetSlopeScaledDepthBias(),
+        m_directionalShadowResources.GetNormalOffsetWorldUnits(),
+        m_directionalShadowResources.GetPcfRadiusTexels()
     );
     samplingCpu.InvShadowMapTexelSize = DirectX::XMFLOAT2(inverseAtlasWidth, inverseAtlasWidth);
     samplingCpu.ShadowEnabled = 1u;
@@ -347,6 +342,21 @@ void RenderContext::ResizeDeferredResources()
     m_directionalShadowResources.Resize(*m_graphics);
     m_frameRenderResources.OnBackbufferResize(m_graphics->GetWidth(), m_graphics->GetHeight());
     m_frameRenderPipeline.Resize(m_graphics->GetWidth(), m_graphics->GetHeight());
+}
+
+void RenderContext::SetDirectionalShadowSamplingParameters(
+    const float constantDepthBias,
+    const float slopeScaledDepthBias,
+    const float normalOffsetWorldUnits,
+    const float pcfRadiusTexels
+) noexcept
+{
+    m_directionalShadowResources.SetShadowSamplingParameters(
+        constantDepthBias,
+        slopeScaledDepthBias,
+        normalOffsetWorldUnits,
+        pcfRadiusTexels
+    );
 }
 
 ShapeRenderer2D &RenderContext::GetShapeRenderer2D() noexcept

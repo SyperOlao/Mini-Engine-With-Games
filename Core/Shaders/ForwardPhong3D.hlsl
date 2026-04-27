@@ -147,7 +147,7 @@ void EvaluateLight(
 
     if (abs(kind - kDirectionalKind) < 0.01f)
     {
-        lightVector = normalize(light.Direction.xyz);
+        lightVector = normalize(-light.Direction.xyz);
     }
     else if (abs(kind - kPointKind) < 0.01f)
     {
@@ -199,8 +199,8 @@ float DirectionalShadowAttenuation(float3 worldPosition, float3 worldNormal)
         return 1.0f;
     }
 
-    const float3 towardLight = normalize(Lights[ShadowedDirectionalLightGpuIndex].Direction.xyz);
-    const float3 biasedWorldPosition = worldPosition + worldNormal * DepthBiasAndPcfKernel.z;
+    const float3 towardLight = normalize(-Lights[ShadowedDirectionalLightGpuIndex].Direction.xyz);
+    const float3 biasedWorldPosition = worldPosition + towardLight * DepthBiasAndPcfKernel.z;
 
     const float4 viewPosition = mul(float4(worldPosition, 1.0f), View);
     const float viewDepthPositive = -viewPosition.z;
@@ -218,7 +218,7 @@ float DirectionalShadowAttenuation(float3 worldPosition, float3 worldNormal)
         return 1.0f;
     }
 
-    const int pcfRadius = clamp((int)DepthBiasAndPcfKernel.w, 1, 4);
+    const int pcfRadius = clamp((int)DepthBiasAndPcfKernel.w, 0, 4);
     const float depthReferencePrimary = ComputeShadowDepthReference(saturate(ndcPrimary.z), worldNormal, towardLight);
     const float shadowPrimary = SampleShadowPcfClampedToCascade(
         shadowUvLocalPrimary,
@@ -320,10 +320,8 @@ float4 PSMain(PSInput input) : SV_TARGET
         specularAccumulation += specularContribution * shadowFactor;
     }
 
-    const float shadowVisibilityForDirectLighting =
-        ShadowEnabled != 0u ? lerp(0.32f, 1.0f, directionalShadow) : 1.0f;
     const float shadowVisibilityForAmbient =
-        ShadowEnabled != 0u ? lerp(0.75f, 1.0f, directionalShadow) : 1.0f;
+        ShadowEnabled != 0u ? lerp(0.45f, 1.0f, directionalShadow) : 1.0f;
     const float ambientScale = EmissiveAndAmbient.w;
     const float3 ambientTerm = baseSample * ambientScale * shadowVisibilityForAmbient;
     const float3 emissiveTerm = EmissiveAndAmbient.xyz;
@@ -331,8 +329,8 @@ float4 PSMain(PSInput input) : SV_TARGET
     const float3 litColor =
         ambientTerm
         + emissiveTerm
-        + diffuseAccumulation * baseSample * shadowVisibilityForDirectLighting
-        + specularAccumulation * shadowVisibilityForDirectLighting;
+        + diffuseAccumulation * baseSample
+        + specularAccumulation;
 
     return float4(litColor, alpha);
 }
