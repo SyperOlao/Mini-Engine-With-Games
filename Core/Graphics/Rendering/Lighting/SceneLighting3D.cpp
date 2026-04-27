@@ -98,6 +98,11 @@ void FillLightsGpuConstants(
             break;
         }
 
+        if (!pointLight.Enabled)
+        {
+            continue;
+        }
+
         LightGpu &lightGpu = lightsGpuConstants.Lights[writeIndex];
         StoreVector3(pointLight.Position, lightGpu.Position);
         StoreVector3(Vector3(0.0f, 0.0f, 0.0f), lightGpu.Direction);
@@ -121,6 +126,11 @@ void FillLightsGpuConstants(
         if (writeIndex >= kMaximumSceneLights)
         {
             break;
+        }
+
+        if (!spotLight.Enabled)
+        {
+            continue;
         }
 
         Vector3 axis = spotLight.Direction;

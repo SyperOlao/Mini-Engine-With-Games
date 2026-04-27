@@ -7,6 +7,7 @@
 struct ID3D11VertexShader;
 struct ID3D11PixelShader;
 struct ID3D11SamplerState;
+struct ID3D11Buffer;
 
 class DeferredLightingRenderPass final : public IRenderPass
 {
@@ -20,6 +21,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11VertexShader> VertexShader{};
     Microsoft::WRL::ComPtr<ID3D11PixelShader> PixelShader{};
     Microsoft::WRL::ComPtr<ID3D11SamplerState> SamplerState{};
+    Microsoft::WRL::ComPtr<ID3D11Buffer> ScreenConstantBuffer{};
+    Microsoft::WRL::ComPtr<ID3D11Buffer> LightsConstantBuffer{};
 };
 
 #endif

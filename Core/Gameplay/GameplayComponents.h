@@ -3,6 +3,7 @@
 
 #include "Core/Gameplay/EntityId.h"
 #include "Core/Math/Transform3D.h"
+#include "Core/Graphics/Rendering/Renderables/RenderMaterialParameters.h"
 
 #include <SimpleMath.h>
 
@@ -22,13 +23,13 @@ struct ModelComponent final
 {
     std::shared_ptr<ModelAsset> Asset{};
     bool Visible{true};
-    DirectX::SimpleMath::Color Tint{1.0f, 1.0f, 1.0f, 1.0f};
     bool DebugDrawBounds{false};
     bool CastsShadow{true};
-    bool RestrictSpecularToDirectionalLight{false};
-    float ZenithSpecularHighlightWeight{0.0f};
-    float DirectionalSpecularStrength{1.0f};
-    float SpecularExponent{0.0f};
+};
+
+struct MaterialComponent final
+{
+    RenderMaterialParameters Parameters{};
 };
 
 struct SphereColliderComponent final

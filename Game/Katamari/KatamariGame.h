@@ -41,7 +41,7 @@ private:
     KatamariWorldContext WorldContext{};
     std::vector<PickupArchetype> PickupArchetypes{};
     bool Initialized{false};
-    bool ForwardRenderPipelineBuilt{false};
+    bool RenderPipelineConfigured{false};
     bool StaticWorldCreated{false};
     float LastDeltaTime{0.0f};
     float FpsAccumulator{0.0f};

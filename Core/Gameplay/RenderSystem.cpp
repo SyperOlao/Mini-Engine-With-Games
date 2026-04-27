@@ -58,13 +58,10 @@ void RenderSystem::Render(Scene &scene, AppContext &context)
         }
 
         RenderMaterialParameters material{};
-        material.BaseColor = model->Tint;
-        material.RestrictSpecularToDirectionalLight = model->RestrictSpecularToDirectionalLight;
-        material.ZenithSpecularHighlightWeight = model->ZenithSpecularHighlightWeight;
-        material.DirectionalSpecularStrength = model->DirectionalSpecularStrength;
-        if (model->SpecularExponent > 0.0f)
+        const MaterialComponent *const materialComponent = entity.TryGetMaterialComponent();
+        if (materialComponent != nullptr)
         {
-            material.SpecularPower = model->SpecularExponent;
+            material = materialComponent->Parameters;
         }
 
         if (scene.GetForwardLightingEnabled() && material.ReceiveLighting)

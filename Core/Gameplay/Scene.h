@@ -112,6 +112,14 @@ public:
 
     bool RemoveModelComponent(EntityId entityId);
 
+    [[nodiscard]] MaterialComponent *TryGetMaterialComponent(EntityId entityId);
+
+    [[nodiscard]] const MaterialComponent *TryGetMaterialComponent(EntityId entityId) const;
+
+    bool AddMaterialComponent(EntityId entityId, const MaterialComponent &component);
+
+    bool RemoveMaterialComponent(EntityId entityId);
+
     [[nodiscard]] SphereColliderComponent *TryGetSphereColliderComponent(EntityId entityId);
 
     [[nodiscard]] const SphereColliderComponent *TryGetSphereColliderComponent(EntityId entityId) const;
@@ -165,6 +173,7 @@ private:
         bool Active{false};
         std::optional<TransformComponent> Transform{};
         std::optional<ModelComponent> Model{};
+        std::optional<MaterialComponent> Material{};
         std::optional<SphereColliderComponent> SphereCollider{};
         std::optional<BoxColliderComponent> BoxCollider{};
         std::optional<TagComponent> Tag{};

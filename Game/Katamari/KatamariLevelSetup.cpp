@@ -11,6 +11,8 @@
 #include "Game/Katamari/KatamariTypes.h"
 #include "Game/Katamari/Systems/KatamariSpawner.h"
 
+#include <array>
+
 using DirectX::SimpleMath::Vector3;
 
 float KatamariLevelSetup::SphereVolumeFromRadius(const float radius) noexcept
@@ -88,6 +90,119 @@ void KatamariLevelSetup::CreateStaticWorldCollision(Scene &scene, KatamariGameCo
     scene.SetCollisionCellSize(config.CollisionCellSize);
 }
 
+void KatamariLevelSetup::CreateStaticObstacles(
+    Scene &scene,
+    KatamariWorldContext &world,
+    KatamariGameConfig const &config
+)
+{
+    struct ObstacleDefinition final
+    {
+        KatamariObstacleShape Shape{KatamariObstacleShape::Cube};
+        Vector3 Position{};
+        Vector3 Scale{1.0f, 1.0f, 1.0f};
+        float YawRadians{0.0f};
+        DirectX::SimpleMath::Color BaseColor{1.0f, 1.0f, 1.0f, 1.0f};
+        DirectX::SimpleMath::Color EmissiveColor{0.0f, 0.0f, 0.0f, 1.0f};
+    };
+
+    const float halfExtent = config.PlayfieldHalfExtent;
+    const std::array<ObstacleDefinition, 6> obstacles =
+    {{
+        {
+            KatamariObstacleShape::Cube,
+            Vector3(-halfExtent * 0.55f, 0.0f, -halfExtent * 0.28f),
+            Vector3(8.0f, 8.0f, 8.0f),
+            0.32f,
+            DirectX::SimpleMath::Color(0.1f, 0.95f, 0.95f, 1.0f),
+            DirectX::SimpleMath::Color(0.18f, 0.9f, 0.85f, 1.0f)
+        },
+        {
+            KatamariObstacleShape::TriangularPrism,
+            Vector3(-halfExtent * 0.24f, 0.0f, halfExtent * 0.48f),
+            Vector3(10.0f, 12.0f, 6.0f),
+            -0.55f,
+            DirectX::SimpleMath::Color(1.0f, 0.28f, 0.72f, 1.0f),
+            DirectX::SimpleMath::Color(0.95f, 0.12f, 0.62f, 1.0f)
+        },
+        {
+            KatamariObstacleShape::Cube,
+            Vector3(halfExtent * 0.18f, 0.0f, -halfExtent * 0.5f),
+            Vector3(7.0f, 11.0f, 7.0f),
+            -0.7f,
+            DirectX::SimpleMath::Color(0.55f, 1.0f, 0.2f, 1.0f),
+            DirectX::SimpleMath::Color(0.32f, 0.95f, 0.16f, 1.0f)
+        },
+        {
+            KatamariObstacleShape::TriangularPrism,
+            Vector3(halfExtent * 0.56f, 0.0f, halfExtent * 0.14f),
+            Vector3(12.0f, 9.0f, 8.0f),
+            0.92f,
+            DirectX::SimpleMath::Color(1.0f, 0.78f, 0.18f, 1.0f),
+            DirectX::SimpleMath::Color(1.0f, 0.56f, 0.08f, 1.0f)
+        },
+        {
+            KatamariObstacleShape::Cube,
+            Vector3(-halfExtent * 0.08f, 0.0f, -halfExtent * 0.08f),
+            Vector3(6.0f, 14.0f, 6.0f),
+            0.0f,
+            DirectX::SimpleMath::Color(0.48f, 0.58f, 1.0f, 1.0f),
+            DirectX::SimpleMath::Color(0.28f, 0.36f, 1.0f, 1.0f)
+        },
+        {
+            KatamariObstacleShape::TriangularPrism,
+            Vector3(halfExtent * 0.36f, 0.0f, halfExtent * 0.55f),
+            Vector3(8.0f, 10.0f, 10.0f),
+            -1.12f,
+            DirectX::SimpleMath::Color(0.96f, 0.2f, 1.0f, 1.0f),
+            DirectX::SimpleMath::Color(0.68f, 0.14f, 1.0f, 1.0f)
+        }
+    }};
+
+    world.StaticObstacles.clear();
+    world.StaticObstacles.reserve(obstacles.size());
+
+    for (const ObstacleDefinition &definition : obstacles)
+    {
+        Entity obstacle = scene.CreateEntity();
+
+        TransformComponent transform{};
+        transform.Local.Position = Vector3(
+            definition.Position.x,
+            definition.Scale.y * 0.5f,
+            definition.Position.z
+        );
+        transform.Local.RotationEulerRad = Vector3(0.0f, definition.YawRadians, 0.0f);
+        transform.Local.Scale = definition.Scale;
+        obstacle.AddTransformComponent(transform);
+
+        BoxColliderComponent box{};
+        box.LocalCenter = Vector3::Zero;
+        box.HalfExtents = Vector3(0.5f, 0.5f, 0.5f);
+        box.CollisionLayer = KatamariCollisionLayer::WorldStatic;
+        box.CollidesWithMask = 1u << KatamariCollisionLayer::PlayerBall;
+        box.IsTrigger = false;
+        box.IsStatic = true;
+        obstacle.AddBoxColliderComponent(box);
+
+        TagComponent tag{};
+        tag.TagId = KatamariTagId::StaticObstacle;
+        tag.TagText = "StaticObstacle";
+        obstacle.AddTagComponent(tag);
+
+        KatamariStaticObstacleRecord record{};
+        record.Entity = obstacle.GetId();
+        record.Shape = definition.Shape;
+        record.Material.BaseColor = definition.BaseColor;
+        record.Material.ReceiveLighting = false;
+        record.Material.AmbientFactor = 1.0f;
+        record.Material.EmissiveColor = definition.EmissiveColor;
+        record.Material.SpecularColor = DirectX::SimpleMath::Color(0.0f, 0.0f, 0.0f, 1.0f);
+        record.Material.SpecularPower = 1.0f;
+        world.StaticObstacles.push_back(record);
+    }
+}
+
 void KatamariLevelSetup::CreatePlayerBall(
     Scene &scene,
     KatamariWorldContext &world,
@@ -115,13 +230,15 @@ void KatamariLevelSetup::CreatePlayerBall(
         ModelComponent modelComponent{};
         modelComponent.Asset = ballMeshModel;
         modelComponent.Visible = true;
-        modelComponent.Tint = DirectX::SimpleMath::Color(0.95f, 0.35f, 0.2f, 1.0f);
         modelComponent.CastsShadow = true;
-        modelComponent.RestrictSpecularToDirectionalLight = true;
-        modelComponent.ZenithSpecularHighlightWeight = 1.45f;
-        modelComponent.DirectionalSpecularStrength = 0.0f;
-        modelComponent.SpecularExponent = 84.0f;
         ball.AddModelComponent(modelComponent);
+
+        MaterialComponent materialComponent{};
+        materialComponent.Parameters.BaseColor = DirectX::SimpleMath::Color(0.95f, 0.35f, 0.2f, 1.0f);
+        materialComponent.Parameters.AmbientFactor = 0.1f;
+        materialComponent.Parameters.SpecularColor = DirectX::SimpleMath::Color(0.9f, 0.82f, 0.72f, 1.0f);
+        materialComponent.Parameters.SpecularPower = 84.0f;
+        ball.AddMaterialComponent(materialComponent);
     }
 
     ball.AddTransformComponent(transform);

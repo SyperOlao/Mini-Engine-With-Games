@@ -193,8 +193,8 @@ void RenderContext::PrepareDirectionalShadowPass(Scene &scene, Camera &camera)
     m_directionalShadowResources.UploadShadowCascadeConstants(deviceContext, cascadeCpu);
     m_directionalShadowResources.UploadShadowSamplingConstants(deviceContext, samplingCpu);
 
-    ID3D11ShaderResourceView *const nullShaderResourceViews[2] = {nullptr, nullptr};
-    deviceContext->PSSetShaderResources(0, 2, nullShaderResourceViews);
+    ID3D11ShaderResourceView *const nullShaderResourceViews[8] = {};
+    deviceContext->PSSetShaderResources(0, 8, nullShaderResourceViews);
 
     m_frameRenderer.EnterPass(RenderPassKind::ShadowCapture);
 
@@ -270,6 +270,15 @@ void RenderContext::InvalidateDirectionalShadowPass()
 
 void RenderContext::BindForwardPhongShadowRegisters(ID3D11DeviceContext *const deviceContext) const
 {
+    BindDirectionalShadowRegisters(deviceContext, 0u, 0u);
+}
+
+void RenderContext::BindDirectionalShadowRegisters(
+    ID3D11DeviceContext *const deviceContext,
+    const UINT shadowMapShaderResourceSlot,
+    const UINT comparisonSamplerSlot
+) const
+{
     if (deviceContext == nullptr)
     {
         return;
@@ -286,24 +295,32 @@ void RenderContext::BindForwardPhongShadowRegisters(ID3D11DeviceContext *const d
     {
         m_directionalShadowResources.GetShadowMap().GetShaderResourceView()
     };
-    deviceContext->PSSetShaderResources(0, 1, shadowMapShaderResourceViews);
+    deviceContext->PSSetShaderResources(shadowMapShaderResourceSlot, 1, shadowMapShaderResourceViews);
 
     ID3D11SamplerState *const shadowSamplers[] =
     {
         m_directionalShadowResources.GetShadowComparisonSampler()
     };
-    deviceContext->PSSetSamplers(0, 1, shadowSamplers);
+    deviceContext->PSSetSamplers(comparisonSamplerSlot, 1, shadowSamplers);
 }
 
 void RenderContext::UnbindForwardPhongShadowShaderResource(ID3D11DeviceContext *const deviceContext) const
+{
+    UnbindDirectionalShadowShaderResource(deviceContext, 0u);
+}
+
+void RenderContext::UnbindDirectionalShadowShaderResource(
+    ID3D11DeviceContext *const deviceContext,
+    const UINT shadowMapShaderResourceSlot
+) const
 {
     if (deviceContext == nullptr)
     {
         return;
     }
 
-    ID3D11ShaderResourceView *const nullShaderResourceViews[2] = {nullptr, nullptr};
-    deviceContext->PSSetShaderResources(0, 2, nullShaderResourceViews);
+    ID3D11ShaderResourceView *const nullShaderResourceViews[] = {nullptr};
+    deviceContext->PSSetShaderResources(shadowMapShaderResourceSlot, 1, nullShaderResourceViews);
 }
 
 void RenderContext::ResizeDeferredResources()
@@ -478,6 +495,16 @@ bool RenderContext::ShouldBindMainRenderTargetsForDraw() const noexcept
     }
 
     return GetActiveRenderPassKind() != RenderPassKind::DeferredGeometry;
+}
+
+void RenderContext::SetGameRenderCallbackForUserInterfacePassEnabled(const bool enabled) noexcept
+{
+    m_executeGameRenderCallbackDuringUserInterfacePass = enabled;
+}
+
+bool RenderContext::ShouldExecuteGameRenderCallbackDuringUserInterfacePass() const noexcept
+{
+    return m_executeGameRenderCallbackDuringUserInterfacePass;
 }
 
 void RenderContext::SetFrameGameplaySceneAndCamera(

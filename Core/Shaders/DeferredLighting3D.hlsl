@@ -1,5 +1,57 @@
-Texture2D AlbedoTexture : register(t0);
-SamplerState AlbedoSampler : register(s0);
+#define MAX_SCENE_LIGHTS 8
+#define MAX_SHADOW_CASCADES 4
+
+cbuffer DeferredScreenConstants : register(b0)
+{
+    matrix InverseProjection;
+    matrix InverseView;
+    float4 CameraWorldPosition;
+    float4 ScreenInverseWidthHeightAndFrameIndex;
+};
+
+struct LightGpu
+{
+    float4 Position;
+    float4 Direction;
+    float4 Color;
+    float4 Parameters;
+    float4 Extension;
+};
+
+cbuffer LightsConstants : register(b3)
+{
+    uint TotalLightCount;
+    uint3 _pad0;
+    LightGpu Lights[MAX_SCENE_LIGHTS];
+};
+
+cbuffer ShadowCascadeConstants : register(b4)
+{
+    matrix LightViewProjection[MAX_SHADOW_CASCADES];
+    float4 CascadeSplits;
+    uint CascadeCount;
+    uint3 _ShadowCascadePadding;
+};
+
+cbuffer ShadowSamplingConstants : register(b5)
+{
+    float4 DepthBiasAndPcfKernel;
+    float2 InvShadowMapTexelSize;
+    float2 _ShadowSamplingPad0;
+    uint ShadowEnabled;
+    uint ShadowedDirectionalLightGpuIndex;
+    uint ShadowMapCascadeCount;
+    uint ShadowCascadeDebugMode;
+};
+
+Texture2D AlbedoAmbientTexture : register(t0);
+Texture2D NormalReceiveLightingTexture : register(t1);
+Texture2D SpecularPowerTexture : register(t2);
+Texture2D SceneDepthTexture : register(t3);
+Texture2D ShadowMapDepth : register(t4);
+
+SamplerState GBufferSampler : register(s0);
+SamplerComparisonState ShadowMapSampler : register(s1);
 
 struct VSOutput
 {
@@ -28,7 +80,251 @@ VSOutput VSMain(uint vertexId : SV_VertexID)
     return output;
 }
 
+static const float kDirectionalKind = 0.0f;
+static const float kPointKind = 1.0f;
+static const float kSpotKind = 2.0f;
+
+float3 DecodeNormal(float4 encodedNormal)
+{
+    return normalize(encodedNormal.rgb * 2.0f - 1.0f);
+}
+
+float3 ReconstructViewPosition(float2 uv, float deviceDepth)
+{
+    const float4 clipPosition = float4(
+        uv.x * 2.0f - 1.0f,
+        (1.0f - uv.y) * 2.0f - 1.0f,
+        deviceDepth,
+        1.0f
+    );
+    float4 viewPosition = mul(clipPosition, InverseProjection);
+    viewPosition.xyz /= max(abs(viewPosition.w), 1.0e-5f);
+    return viewPosition.xyz;
+}
+
+float3 ReconstructWorldPosition(float3 viewPosition)
+{
+    const float4 worldPosition = mul(float4(viewPosition, 1.0f), InverseView);
+    return worldPosition.xyz / max(abs(worldPosition.w), 1.0e-5f);
+}
+
+void EvaluateLight(
+    LightGpu light,
+    float3 worldPosition,
+    float3 worldNormal,
+    float3 viewDirection,
+    float3 specularColor,
+    float specularPower,
+    out float3 diffuseContribution,
+    out float3 specularContribution
+)
+{
+    diffuseContribution = float3(0.0f, 0.0f, 0.0f);
+    specularContribution = float3(0.0f, 0.0f, 0.0f);
+
+    const float3 lightColor = light.Color.rgb;
+    float3 lightVector = float3(0.0f, 0.0f, 0.0f);
+    float attenuation = 1.0f;
+
+    const float kind = light.Parameters.x;
+
+    if (abs(kind - kDirectionalKind) < 0.01f)
+    {
+        lightVector = normalize(light.Direction.xyz);
+    }
+    else if (abs(kind - kPointKind) < 0.01f)
+    {
+        const float3 toLight = light.Position.xyz - worldPosition;
+        const float distanceToLight = length(toLight);
+        lightVector = toLight / max(distanceToLight, 0.0001f);
+        const float range = light.Parameters.y;
+        attenuation = saturate(1.0f - distanceToLight / max(range, 0.0001f));
+        attenuation *= attenuation;
+    }
+    else if (abs(kind - kSpotKind) < 0.01f)
+    {
+        const float3 toLight = light.Position.xyz - worldPosition;
+        const float distanceToLight = length(toLight);
+        lightVector = toLight / max(distanceToLight, 0.0001f);
+        const float range = light.Parameters.y;
+        attenuation = saturate(1.0f - distanceToLight / max(range, 0.0001f));
+        attenuation *= attenuation;
+
+        const float3 axis = normalize(light.Direction.xyz);
+        const float3 fromLightToPoint = normalize(worldPosition - light.Position.xyz);
+        const float cosAngle = dot(axis, fromLightToPoint);
+        const float cosInner = light.Parameters.z;
+        const float cosOuter = light.Parameters.w;
+        const float spotFactor = saturate((cosAngle - cosOuter) / max(cosInner - cosOuter, 0.0001f));
+        attenuation *= spotFactor;
+    }
+
+    const float normalDotLight = saturate(dot(worldNormal, lightVector));
+    diffuseContribution = lightColor * normalDotLight * attenuation;
+
+    if (normalDotLight > 0.0f)
+    {
+        const float3 reflection = reflect(-lightVector, worldNormal);
+        const float specularTerm = pow(saturate(dot(reflection, viewDirection)), max(specularPower, 1.0f));
+        specularContribution = specularColor * lightColor * specularTerm * attenuation;
+    }
+}
+
+float SampleShadowPcf(float2 shadowUvAtlas, float depthReference, int pcfRadius)
+{
+    float accumulated = 0.0f;
+    int sampleCount = 0;
+    for (int offsetV = -pcfRadius; offsetV <= pcfRadius; ++offsetV)
+    {
+        for (int offsetU = -pcfRadius; offsetU <= pcfRadius; ++offsetU)
+        {
+            const float2 sampleUv = shadowUvAtlas + float2(offsetU, offsetV) * InvShadowMapTexelSize;
+            accumulated += ShadowMapDepth.SampleCmpLevelZero(ShadowMapSampler, sampleUv, depthReference);
+            sampleCount++;
+        }
+    }
+    return accumulated / max(sampleCount, 1);
+}
+
+uint SelectShadowCascadeIndex(float viewDepthPositive)
+{
+    if (ShadowMapCascadeCount <= 1u)
+    {
+        return 0u;
+    }
+    if (viewDepthPositive <= CascadeSplits.x)
+    {
+        return 0u;
+    }
+    if (ShadowMapCascadeCount >= 2u && viewDepthPositive <= CascadeSplits.y)
+    {
+        return 1u;
+    }
+    if (ShadowMapCascadeCount >= 3u && viewDepthPositive <= CascadeSplits.z)
+    {
+        return 2u;
+    }
+    if (ShadowMapCascadeCount >= 4u)
+    {
+        return 3u;
+    }
+    return ShadowMapCascadeCount - 1u;
+}
+
+float DirectionalShadowAttenuation(float3 worldPosition, float3 worldNormal, float viewDepthPositive)
+{
+    if (ShadowEnabled == 0u || ShadowMapCascadeCount == 0u)
+    {
+        return 1.0f;
+    }
+    if (ShadowedDirectionalLightGpuIndex >= TotalLightCount)
+    {
+        return 1.0f;
+    }
+
+    const float3 towardLight = normalize(Lights[ShadowedDirectionalLightGpuIndex].Direction.xyz);
+    const float3 biasedWorldPosition = worldPosition + worldNormal * DepthBiasAndPcfKernel.z;
+    const uint cascadeIndex = SelectShadowCascadeIndex(viewDepthPositive);
+
+    const float4 lightClip = mul(float4(biasedWorldPosition, 1.0f), LightViewProjection[cascadeIndex]);
+    const float invW = 1.0f / max(abs(lightClip.w), 1.0e-5f);
+    const float3 ndc = lightClip.xyz * invW;
+    const float2 shadowUvLocal = float2(ndc.x * 0.5f + 0.5f, -ndc.y * 0.5f + 0.5f);
+
+    if (shadowUvLocal.x < 0.0f || shadowUvLocal.x > 1.0f || shadowUvLocal.y < 0.0f || shadowUvLocal.y > 1.0f)
+    {
+        return 1.0f;
+    }
+
+    const float2 atlasOrigin = float2(cascadeIndex & 1u, cascadeIndex / 2u) * 0.5f;
+    const float2 shadowUvAtlas = shadowUvLocal * 0.5f + atlasOrigin;
+
+    const float ndcZ = saturate(ndc.z);
+    const float slopeTerm = saturate(1.0f - dot(worldNormal, towardLight));
+    const float depthReference = ndcZ
+        - DepthBiasAndPcfKernel.x
+        - DepthBiasAndPcfKernel.y * slopeTerm;
+
+    const int pcfRadius = clamp((int)DepthBiasAndPcfKernel.w, 1, 4);
+    return SampleShadowPcf(shadowUvAtlas, depthReference, pcfRadius);
+}
+
 float4 PSMain(VSOutput input) : SV_TARGET
 {
-    return AlbedoTexture.Sample(AlbedoSampler, input.Uv);
+    const float sceneDepth = SceneDepthTexture.Sample(GBufferSampler, input.Uv).r;
+    if (sceneDepth >= 0.999999f)
+    {
+        return float4(0.0f, 0.0f, 0.0f, 1.0f);
+    }
+
+    const float4 albedoAmbient = AlbedoAmbientTexture.Sample(GBufferSampler, input.Uv);
+    const float4 normalReceive = NormalReceiveLightingTexture.Sample(GBufferSampler, input.Uv);
+    const float4 specularPowerPacked = SpecularPowerTexture.Sample(GBufferSampler, input.Uv);
+
+    const float3 albedo = albedoAmbient.rgb;
+    const float ambientFactor = albedoAmbient.a;
+    const float3 worldNormal = DecodeNormal(normalReceive);
+    const float receiveLighting = normalReceive.a;
+    const float3 specularColor = specularPowerPacked.rgb;
+    const float specularPower = max(specularPowerPacked.a * 256.0f, 1.0f);
+
+    const float3 viewPosition = ReconstructViewPosition(input.Uv, sceneDepth);
+    const float3 worldPosition = ReconstructWorldPosition(viewPosition);
+    const float3 viewDirection = normalize(CameraWorldPosition.xyz - worldPosition);
+    const float viewDepthPositive = max(-viewPosition.z, 0.0f);
+
+    if (receiveLighting < 0.5f)
+    {
+        return float4(albedo, 1.0f);
+    }
+
+    const float directionalShadow = DirectionalShadowAttenuation(worldPosition, worldNormal, viewDepthPositive);
+
+    if (ShadowCascadeDebugMode != 0u && ShadowEnabled != 0u && ShadowMapCascadeCount > 0u)
+    {
+        const uint cascadeDebugIndex = SelectShadowCascadeIndex(viewDepthPositive);
+        const float3 cascadeColors[4] =
+        {
+            float3(0.85f, 0.25f, 0.2f),
+            float3(0.25f, 0.75f, 0.3f),
+            float3(0.25f, 0.35f, 0.9f),
+            float3(0.9f, 0.85f, 0.2f)
+        };
+        return float4(albedo * cascadeColors[cascadeDebugIndex] * directionalShadow, 1.0f);
+    }
+
+    float3 diffuseAccumulation = float3(0.0f, 0.0f, 0.0f);
+    float3 specularAccumulation = float3(0.0f, 0.0f, 0.0f);
+
+    const uint lightCount = min(TotalLightCount, MAX_SCENE_LIGHTS);
+    for (uint lightIndex = 0u; lightIndex < lightCount; ++lightIndex)
+    {
+        float3 diffuseContribution = float3(0.0f, 0.0f, 0.0f);
+        float3 specularContribution = float3(0.0f, 0.0f, 0.0f);
+        EvaluateLight(
+            Lights[lightIndex],
+            worldPosition,
+            worldNormal,
+            viewDirection,
+            specularColor,
+            specularPower,
+            diffuseContribution,
+            specularContribution
+        );
+
+        float shadowFactor = 1.0f;
+        if (ShadowEnabled != 0u
+            && lightIndex == ShadowedDirectionalLightGpuIndex
+            && abs(Lights[lightIndex].Parameters.x - kDirectionalKind) < 0.01f)
+        {
+            shadowFactor = directionalShadow;
+        }
+
+        diffuseAccumulation += diffuseContribution * shadowFactor;
+        specularAccumulation += specularContribution * shadowFactor;
+    }
+
+    const float3 ambientTerm = albedo * ambientFactor;
+    const float3 litColor = ambientTerm + diffuseAccumulation * albedo + specularAccumulation;
+    return float4(litColor, 1.0f);
 }

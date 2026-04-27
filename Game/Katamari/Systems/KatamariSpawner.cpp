@@ -111,12 +111,18 @@ void KatamariSpawner::SpawnPickups(
         );
         pickup.AddTransformComponent(transform);
 
-        ModelComponent modelComponent{};
-        modelComponent.Asset = std::move(model);
-        modelComponent.Visible = true;
-        pickup.AddModelComponent(modelComponent);
-
-        SphereColliderComponent sphere{};
+        ModelComponent modelComponent{};
+        modelComponent.Asset = std::move(model);
+        modelComponent.Visible = true;
+        pickup.AddModelComponent(modelComponent);
+
+        MaterialComponent materialComponent{};
+        materialComponent.Parameters.AmbientFactor = 0.09f;
+        materialComponent.Parameters.SpecularColor = DirectX::SimpleMath::Color(0.55f, 0.55f, 0.55f, 1.0f);
+        materialComponent.Parameters.SpecularPower = 42.0f;
+        pickup.AddMaterialComponent(materialComponent);
+
+        SphereColliderComponent sphere{};
         sphere.LocalCenter = archetype.CollisionCenterOffsetLocal;
         sphere.Radius = localColliderRadius;
         sphere.CollisionLayer = KatamariCollisionLayer::Pickup;
@@ -154,11 +160,11 @@ Vector3 KatamariSpawner::SampleSpawnPosition(KatamariWorldContext &world) const
     return Vector3(axisDistribution(world.Random), 0.0f, axisDistribution(world.Random));
 }
 
-bool KatamariSpawner::IsSpawnPositionTooClose(
-    Scene const &scene,
-    KatamariWorldContext const &world,
-    Vector3 const &candidate,
-    float minimumSeparation
+bool KatamariSpawner::IsSpawnPositionTooClose(
+    Scene const &scene,
+    KatamariWorldContext const &world,
+    Vector3 const &candidate,
+    float minimumSeparation
 ) const
 {
     for (auto const &entry : world.Pickups)
@@ -176,7 +182,6 @@ bool KatamariSpawner::IsSpawnPositionTooClose(
             return true;
         }
     }
-
-    return false;
-}
-
+
+    return false;
+}

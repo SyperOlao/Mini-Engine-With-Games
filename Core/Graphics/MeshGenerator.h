@@ -17,6 +17,8 @@ public:
 
     [[nodiscard]] static MeshLitData CreateBoxMeshLit(float width, float height, float depth);
 
+    [[nodiscard]] static MeshLitData CreateTriangularPrismMeshLit(float width, float height, float depth);
+
     [[nodiscard]] static MeshLitData CreateSphereMeshLit(float radius, int slices, int stacks);
 };
 

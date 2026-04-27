@@ -17,6 +17,7 @@ struct PointLight3D final
     float Range{10.0f};
     DirectX::SimpleMath::Color LightColor{1.0f, 1.0f, 1.0f, 1.0f};
     float Intensity{1.0f};
+    bool Enabled{true};
 };
 
 struct SpotLight3D final
@@ -28,6 +29,7 @@ struct SpotLight3D final
     float OuterConeAngleRadians{0.55f};
     DirectX::SimpleMath::Color LightColor{1.0f, 1.0f, 1.0f, 1.0f};
     float Intensity{1.0f};
+    bool Enabled{true};
 };
 
 #endif

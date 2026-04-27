@@ -7,14 +7,11 @@ struct RenderMaterialParameters final
 {
     DirectX::SimpleMath::Color BaseColor{1.0f, 1.0f, 1.0f, 1.0f};
     bool Wireframe{false};
+    bool ReceiveLighting{true};
     float AmbientFactor{0.08f};
     float SpecularPower{48.0f};
     DirectX::SimpleMath::Color SpecularColor{1.0f, 1.0f, 1.0f, 1.0f};
     DirectX::SimpleMath::Color EmissiveColor{0.0f, 0.0f, 0.0f, 1.0f};
-    bool ReceiveLighting{true};
-    bool RestrictSpecularToDirectionalLight{false};
-    float ZenithSpecularHighlightWeight{0.0f};
-    float DirectionalSpecularStrength{1.0f};
 };
 
 #endif

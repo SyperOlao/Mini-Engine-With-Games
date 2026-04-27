@@ -256,6 +256,8 @@ add_executable(PingPong
         Game/Katamari/Systems/KatamariBallVisualRadiusSystem.h
         Game/Katamari/Systems/KatamariCameraController.cpp
         Game/Katamari/Systems/KatamariCameraController.h
+        Game/Katamari/Systems/KatamariStaticObstacleRenderSystem.cpp
+        Game/Katamari/Systems/KatamariStaticObstacleRenderSystem.h
         Game/Katamari/Systems/KatamariSphereWorldResolveSystem.cpp
         Game/Katamari/Systems/KatamariSphereWorldResolveSystem.h
         Game/Katamari/Data/PickupArchetype.h

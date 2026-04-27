@@ -177,18 +177,12 @@ void EvaluateLight(
     const float normalDotLight = saturate(dot(worldNormal, lightVector));
     diffuseContribution = lightColor * normalDotLight * attenuation;
 
-    const float3 reflection = reflect(-lightVector, worldNormal);
-    const float specularPower = max(SpecularColorAndPower.w, 1.0f);
-    const float specularTerm = pow(saturate(dot(reflection, viewDirection)), specularPower);
-    specularContribution = SpecularColorAndPower.rgb * lightColor * specularTerm * attenuation;
-    if (abs(kind - kDirectionalKind) < 0.01f)
+    if (normalDotLight > 0.0f)
     {
-        specularContribution *= saturate(MaterialParameters.z);
-    }
-
-    if (MaterialParameters.x > 0.5f && abs(kind - kDirectionalKind) >= 0.01f)
-    {
-        specularContribution = float3(0.0f, 0.0f, 0.0f);
+        const float3 reflection = reflect(-lightVector, worldNormal);
+        const float specularPower = max(SpecularColorAndPower.w, 1.0f);
+        const float specularTerm = pow(saturate(dot(reflection, viewDirection)), specularPower);
+        specularContribution = SpecularColorAndPower.rgb * lightColor * specularTerm * attenuation;
     }
 }
 
@@ -278,6 +272,14 @@ float4 PSMain(PSInput input) : SV_TARGET
 {
     const float3 worldNormal = normalize(input.WorldNormal);
     const float3 viewDirection = normalize(CameraWorldPosition.xyz - input.WorldPosition);
+    const float3 diffuseAlbedo = DiffuseTexture.Sample(DiffuseSampler, input.TexCoord).rgb;
+    const float3 baseSample = diffuseAlbedo * input.Color.rgb * BaseColor.rgb;
+    const float alpha = BaseColor.a * input.Color.a;
+
+    if (MaterialParameters.x < 0.5f)
+    {
+        return float4(baseSample + EmissiveAndAmbient.xyz, alpha);
+    }
 
     const float4 viewPositionForCascade = mul(float4(input.WorldPosition, 1.0f), View);
     const uint cascadeDebugIndex = SelectShadowCascadeIndex(-viewPositionForCascade.z);
@@ -287,7 +289,6 @@ float4 PSMain(PSInput input) : SV_TARGET
 
     if (ShadowCascadeDebugMode != 0u && ShadowEnabled != 0u && ShadowMapCascadeCount > 0u)
     {
-        const float3 diffuseAlbedo = DiffuseTexture.Sample(DiffuseSampler, input.TexCoord).rgb;
         const float3 baseSampleDebug = diffuseAlbedo * input.Color.rgb * BaseColor.rgb;
         const float3 cascadeColors[4] =
         {
@@ -326,42 +327,19 @@ float4 PSMain(PSInput input) : SV_TARGET
             shadowFactor = directionalShadow;
         }
 
-        float fillLightOcclusion = 1.0f;
-        if (ShadowEnabled != 0u
-            && abs(Lights[lightIndex].Parameters.x - kPointKind) < 0.01f)
-        {
-            fillLightOcclusion = 0.38f + 0.62f * directionalShadow;
-        }
-
-        diffuseAccumulation += diffuseContribution * shadowFactor * fillLightOcclusion;
-        specularAccumulation += specularContribution * shadowFactor * fillLightOcclusion;
+        diffuseAccumulation += diffuseContribution * shadowFactor;
+        specularAccumulation += specularContribution * shadowFactor;
     }
 
-    if (MaterialParameters.y > 0.0f)
-    {
-        float zenithVisibility = 1.0f;
-        if (ShadowEnabled != 0u)
-        {
-            zenithVisibility = directionalShadow;
-        }
-        const float exponent = max(SpecularColorAndPower.w, 1.0f);
-        const float zenithLobe = pow(saturate(dot(worldNormal, float3(0.0f, 1.0f, 0.0f))), exponent);
-        specularAccumulation += SpecularColorAndPower.rgb * MaterialParameters.y * zenithLobe * zenithVisibility;
-    }
-
-    const float3 diffuseAlbedo = DiffuseTexture.Sample(DiffuseSampler, input.TexCoord).rgb;
-    const float3 baseSample = diffuseAlbedo * input.Color.rgb * BaseColor.rgb;
     const float ambientScale = EmissiveAndAmbient.w;
     const float3 ambientTerm = baseSample * ambientScale;
     const float3 emissiveTerm = EmissiveAndAmbient.xyz;
-    const float3 HemisphericFill = baseSample * saturate(worldNormal.y * 0.32f + 0.12f);
 
     const float3 litColor =
         ambientTerm
         + emissiveTerm
         + diffuseAccumulation * baseSample
-        + specularAccumulation
-        + HemisphericFill * 0.1f;
+        + specularAccumulation;
 
-    return float4(litColor, BaseColor.a * input.Color.a);
+    return float4(litColor, alpha);
 }

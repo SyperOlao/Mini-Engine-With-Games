@@ -126,6 +126,44 @@ namespace
         mesh.Indices.push_back(baseIndex + 2u);
         mesh.Indices.push_back(baseIndex + 3u);
     }
+
+    void AppendTriangle(
+        const Vector3 &vertexA,
+        const Vector3 &vertexB,
+        const Vector3 &vertexC,
+        const Vector3 &normal,
+        const Color &color,
+        MeshLitData &mesh
+    )
+    {
+        const std::uint32_t baseIndex = static_cast<std::uint32_t>(mesh.Vertices.size());
+
+        MeshVertexLit3D vertex{};
+        vertex.Normal = normal;
+        vertex.Color = color;
+
+        vertex.Position = vertexA;
+        mesh.Vertices.push_back(vertex);
+        vertex.Position = vertexB;
+        mesh.Vertices.push_back(vertex);
+        vertex.Position = vertexC;
+        mesh.Vertices.push_back(vertex);
+
+        mesh.Indices.push_back(baseIndex + 0u);
+        mesh.Indices.push_back(baseIndex + 1u);
+        mesh.Indices.push_back(baseIndex + 2u);
+    }
+
+    [[nodiscard]] Vector3 NormalFromTriangle(
+        const Vector3 &vertexA,
+        const Vector3 &vertexB,
+        const Vector3 &vertexC
+    )
+    {
+        Vector3 normal = (vertexB - vertexA).Cross(vertexC - vertexA);
+        normal.Normalize();
+        return normal;
+    }
 }
 
 MeshLitData MeshGenerator::CreateBoxMeshLit(const float width, const float height, const float depth)
@@ -193,6 +231,76 @@ MeshLitData MeshGenerator::CreateBoxMeshLit(const float width, const float heigh
         Vector3(+halfWidth, -halfHeight, -halfDepth),
         Vector3(+halfWidth, -halfHeight, +halfDepth),
         Vector3(-halfWidth, -halfHeight, +halfDepth),
+        Vector3(0.0f, -1.0f, 0.0f),
+        whiteColor,
+        mesh
+    );
+
+    return mesh;
+}
+
+MeshLitData MeshGenerator::CreateTriangularPrismMeshLit(
+    const float width,
+    const float height,
+    const float depth
+)
+{
+    MeshLitData mesh{};
+
+    const float halfWidth = width * 0.5f;
+    const float halfHeight = height * 0.5f;
+    const float halfDepth = depth * 0.5f;
+
+    constexpr Color whiteColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+    const Vector3 frontLeftBottom(-halfWidth, -halfHeight, +halfDepth);
+    const Vector3 frontRightBottom(+halfWidth, -halfHeight, +halfDepth);
+    const Vector3 frontTop(0.0f, +halfHeight, +halfDepth);
+
+    const Vector3 backLeftBottom(-halfWidth, -halfHeight, -halfDepth);
+    const Vector3 backRightBottom(+halfWidth, -halfHeight, -halfDepth);
+    const Vector3 backTop(0.0f, +halfHeight, -halfDepth);
+
+    AppendTriangle(
+        frontLeftBottom,
+        frontRightBottom,
+        frontTop,
+        Vector3(0.0f, 0.0f, 1.0f),
+        whiteColor,
+        mesh
+    );
+    AppendTriangle(
+        backRightBottom,
+        backLeftBottom,
+        backTop,
+        Vector3(0.0f, 0.0f, -1.0f),
+        whiteColor,
+        mesh
+    );
+
+    AppendQuad(
+        backLeftBottom,
+        frontLeftBottom,
+        frontTop,
+        backTop,
+        NormalFromTriangle(backLeftBottom, frontLeftBottom, frontTop),
+        whiteColor,
+        mesh
+    );
+    AppendQuad(
+        frontRightBottom,
+        backRightBottom,
+        backTop,
+        frontTop,
+        NormalFromTriangle(frontRightBottom, backRightBottom, backTop),
+        whiteColor,
+        mesh
+    );
+    AppendQuad(
+        backLeftBottom,
+        backRightBottom,
+        frontRightBottom,
+        frontLeftBottom,
         Vector3(0.0f, -1.0f, 0.0f),
         whiteColor,
         mesh

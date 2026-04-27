@@ -58,6 +58,15 @@ public:
         const RenderMaterialParameters &material
     ) const;
 
+    void DrawTriangularPrismLit(
+        const DirectX::SimpleMath::Matrix &world,
+        const DirectX::SimpleMath::Matrix &view,
+        const DirectX::SimpleMath::Matrix &projection,
+        const DirectX::SimpleMath::Vector3 &cameraWorldPosition,
+        const SceneLightingDescriptor3D &lighting,
+        const RenderMaterialParameters &material
+    ) const;
+
     void DrawOrbit(
         const std::vector<DirectX::SimpleMath::Vector3> &points,
         const DirectX::SimpleMath::Matrix &view,
@@ -80,6 +89,17 @@ private:
     void CreateLitResources();
 
     void BindTargets() const;
+
+    void DrawDeferredGeometryMesh(
+        ID3D11Buffer *vertexBuffer,
+        ID3D11Buffer *indexBuffer,
+        UINT indexCount,
+        const DirectX::SimpleMath::Matrix &world,
+        const DirectX::SimpleMath::Matrix &view,
+        const DirectX::SimpleMath::Matrix &projection,
+        const DirectX::SimpleMath::Vector3 &cameraWorldPosition,
+        const RenderMaterialParameters &material
+    ) const;
 
     void DrawLitMesh(
         ID3D11Buffer *vertexBuffer,
@@ -112,14 +132,21 @@ private:
     Microsoft::WRL::ComPtr<ID3D11InputLayout> m_litInputLayout;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_litBoxVertexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_litBoxIndexBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> m_litTriangularPrismVertexBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> m_litTriangularPrismIndexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_litSphereVertexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_litSphereIndexBuffer;
     UINT m_litBoxIndexCount{0u};
+    UINT m_litTriangularPrismIndexCount{0u};
     UINT m_litSphereIndexCount{0u};
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_cameraConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_objectConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_materialConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_lightsConstantBuffer;
+
+    Microsoft::WRL::ComPtr<ID3D11VertexShader> m_deferredGeometryVertexShader;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader> m_deferredGeometryPixelShader;
+    Microsoft::WRL::ComPtr<ID3D11InputLayout> m_deferredGeometryInputLayout;
 
     std::unique_ptr<DirectX::CommonStates> m_commonStates{};
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_litDefaultDiffuseTexture;

@@ -18,6 +18,12 @@ namespace KatamariLevelSetup
 
 void CreateStaticWorldCollision(Scene &scene, KatamariGameConfig const &config);
 
+void CreateStaticObstacles(
+    Scene &scene,
+    KatamariWorldContext &world,
+    KatamariGameConfig const &config
+);
+
 void CreatePlayerBall(
     Scene &scene,
     KatamariWorldContext &world,

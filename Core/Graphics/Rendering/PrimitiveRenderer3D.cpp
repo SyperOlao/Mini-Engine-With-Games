@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
@@ -108,6 +109,23 @@ namespace
             "PrimitiveRenderer3D failed to create lit default white diffuse shader resource view."
         );
     }
+
+    static void UploadConstantBuffer(
+        ID3D11DeviceContext *const context,
+        ID3D11Buffer *const constantBuffer,
+        const void *const data,
+        const std::size_t byteCount,
+        const char *const errorMessage
+    )
+    {
+        D3D11_MAPPED_SUBRESOURCE mapped{};
+        D3d11Helpers::ThrowIfFailed(
+            context->Map(constantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped),
+            errorMessage
+        );
+        std::memcpy(mapped.pData, data, byteCount);
+        context->Unmap(constantBuffer, 0);
+    }
 }
 
 PrimitiveRenderer3D::~PrimitiveRenderer3D() = default;
@@ -138,6 +156,26 @@ void PrimitiveRenderer3D::DrawBox(
         throw std::logic_error("PrimitiveRenderer3D::DrawBox called before Initialize.");
     }
 
+    if (m_shadowBindingHost != nullptr
+        && m_shadowBindingHost->GetActiveRenderPassKind() == RenderPassKind::DeferredGeometry)
+    {
+        RenderMaterialParameters material{};
+        material.BaseColor = color;
+        material.ReceiveLighting = false;
+        material.AmbientFactor = 1.0f;
+        DrawDeferredGeometryMesh(
+            m_litBoxVertexBuffer.Get(),
+            m_litBoxIndexBuffer.Get(),
+            m_litBoxIndexCount,
+            world,
+            view,
+            projection,
+            CameraWorldPositionFromViewMatrix(view),
+            material
+        );
+        return;
+    }
+
     BindTargets();
     m_box->Draw(world, view, projection, color);
 }
@@ -152,6 +190,26 @@ void PrimitiveRenderer3D::DrawSphere(
     if (m_graphics == nullptr || m_sphere == nullptr)
     {
         throw std::logic_error("PrimitiveRenderer3D::DrawSphere called before Initialize.");
+    }
+
+    if (m_shadowBindingHost != nullptr
+        && m_shadowBindingHost->GetActiveRenderPassKind() == RenderPassKind::DeferredGeometry)
+    {
+        RenderMaterialParameters material{};
+        material.BaseColor = color;
+        material.ReceiveLighting = false;
+        material.AmbientFactor = 1.0f;
+        DrawDeferredGeometryMesh(
+            m_litSphereVertexBuffer.Get(),
+            m_litSphereIndexBuffer.Get(),
+            m_litSphereIndexCount,
+            world,
+            view,
+            projection,
+            CameraWorldPositionFromViewMatrix(view),
+            material
+        );
+        return;
     }
 
     BindTargets();
@@ -203,6 +261,33 @@ void PrimitiveRenderer3D::DrawSphereLit(
         m_litSphereVertexBuffer.Get(),
         m_litSphereIndexBuffer.Get(),
         m_litSphereIndexCount,
+        world,
+        view,
+        projection,
+        cameraWorldPosition,
+        lighting,
+        material
+    );
+}
+
+void PrimitiveRenderer3D::DrawTriangularPrismLit(
+    const Matrix &world,
+    const Matrix &view,
+    const Matrix &projection,
+    const Vector3 &cameraWorldPosition,
+    const SceneLightingDescriptor3D &lighting,
+    const RenderMaterialParameters &material
+) const
+{
+    if (m_litTriangularPrismVertexBuffer == nullptr || m_litTriangularPrismIndexBuffer == nullptr)
+    {
+        throw std::logic_error("PrimitiveRenderer3D::DrawTriangularPrismLit called before Initialize.");
+    }
+
+    DrawLitMesh(
+        m_litTriangularPrismVertexBuffer.Get(),
+        m_litTriangularPrismIndexBuffer.Get(),
+        m_litTriangularPrismIndexCount,
         world,
         view,
         projection,
@@ -502,6 +587,16 @@ void PrimitiveRenderer3D::CreateLitResources()
 
     const auto litVertexShaderBlob = ShaderCompiler::CompileFromFile("Core/Shaders/ForwardPhong3D.hlsl", "VSMain", "vs_5_0");
     const auto litPixelShaderBlob = ShaderCompiler::CompileFromFile("Core/Shaders/ForwardPhong3D.hlsl", "PSMain", "ps_5_0");
+    const auto deferredVertexShaderBlob = ShaderCompiler::CompileFromFile(
+        "Core/Shaders/DeferredGeometry3D.hlsl",
+        "VSMainVertexColor",
+        "vs_5_0"
+    );
+    const auto deferredPixelShaderBlob = ShaderCompiler::CompileFromFile(
+        "Core/Shaders/DeferredGeometry3D.hlsl",
+        "PSMainVertexColor",
+        "ps_5_0"
+    );
 
     D3d11Helpers::ThrowIfFailed(
         device->CreateVertexShader(
@@ -521,6 +616,26 @@ void PrimitiveRenderer3D::CreateLitResources()
             m_litPixelShader.GetAddressOf()
         ),
         "PrimitiveRenderer3D failed to create lit pixel shader."
+    );
+
+    D3d11Helpers::ThrowIfFailed(
+        device->CreateVertexShader(
+            deferredVertexShaderBlob->GetBufferPointer(),
+            deferredVertexShaderBlob->GetBufferSize(),
+            nullptr,
+            m_deferredGeometryVertexShader.GetAddressOf()
+        ),
+        "PrimitiveRenderer3D failed to create deferred geometry vertex shader."
+    );
+
+    D3d11Helpers::ThrowIfFailed(
+        device->CreatePixelShader(
+            deferredPixelShaderBlob->GetBufferPointer(),
+            deferredPixelShaderBlob->GetBufferSize(),
+            nullptr,
+            m_deferredGeometryPixelShader.GetAddressOf()
+        ),
+        "PrimitiveRenderer3D failed to create deferred geometry pixel shader."
     );
 
     constexpr UINT kLitVertexStride = sizeof(MeshVertexLit3D);
@@ -552,7 +667,19 @@ void PrimitiveRenderer3D::CreateLitResources()
         "PrimitiveRenderer3D failed to create lit input layout."
     );
 
+    D3d11Helpers::ThrowIfFailed(
+        device->CreateInputLayout(
+            litInputElements,
+            static_cast<UINT>(std::size(litInputElements)),
+            deferredVertexShaderBlob->GetBufferPointer(),
+            deferredVertexShaderBlob->GetBufferSize(),
+            m_deferredGeometryInputLayout.GetAddressOf()
+        ),
+        "PrimitiveRenderer3D failed to create deferred geometry input layout."
+    );
+
     const MeshLitData boxMesh = MeshGenerator::CreateBoxMeshLit(1.0f, 1.0f, 1.0f);
+    const MeshLitData triangularPrismMesh = MeshGenerator::CreateTriangularPrismMeshLit(1.0f, 1.0f, 1.0f);
     const MeshLitData sphereMesh = MeshGenerator::CreateSphereMeshLit(1.0f, 32, 16);
 
     CreateImmutableBuffer(
@@ -572,6 +699,24 @@ void PrimitiveRenderer3D::CreateLitResources()
     );
 
     m_litBoxIndexCount = static_cast<UINT>(boxMesh.Indices.size());
+
+    CreateImmutableBuffer(
+        device,
+        triangularPrismMesh.Vertices.data(),
+        static_cast<UINT>(sizeof(MeshVertexLit3D) * triangularPrismMesh.Vertices.size()),
+        D3D11_BIND_VERTEX_BUFFER,
+        m_litTriangularPrismVertexBuffer
+    );
+
+    CreateImmutableBuffer(
+        device,
+        triangularPrismMesh.Indices.data(),
+        static_cast<UINT>(sizeof(std::uint32_t) * triangularPrismMesh.Indices.size()),
+        D3D11_BIND_INDEX_BUFFER,
+        m_litTriangularPrismIndexBuffer
+    );
+
+    m_litTriangularPrismIndexCount = static_cast<UINT>(triangularPrismMesh.Indices.size());
 
     CreateImmutableBuffer(
         device,
@@ -633,6 +778,21 @@ void PrimitiveRenderer3D::DrawLitMesh(
     if (m_shadowBindingHost == nullptr)
     {
         throw std::logic_error("PrimitiveRenderer3D::DrawLitMesh requires a shadow binding host from RenderContext::Initialize.");
+    }
+
+    if (m_shadowBindingHost->GetActiveRenderPassKind() == RenderPassKind::DeferredGeometry)
+    {
+        DrawDeferredGeometryMesh(
+            vertexBuffer,
+            indexBuffer,
+            indexCount,
+            world,
+            view,
+            projection,
+            cameraWorldPosition,
+            material
+        );
+        return;
     }
 
     BindTargets();
@@ -714,4 +874,114 @@ void PrimitiveRenderer3D::DrawLitMesh(
     context->DrawIndexed(indexCount, 0, 0);
 
     m_shadowBindingHost->UnbindForwardPhongShadowShaderResource(context);
+}
+
+void PrimitiveRenderer3D::DrawDeferredGeometryMesh(
+    ID3D11Buffer *const vertexBuffer,
+    ID3D11Buffer *const indexBuffer,
+    const UINT indexCount,
+    const Matrix &world,
+    const Matrix &view,
+    const Matrix &projection,
+    const Vector3 &cameraWorldPosition,
+    const RenderMaterialParameters &material
+) const
+{
+    if (m_graphics == nullptr)
+    {
+        throw std::logic_error("PrimitiveRenderer3D::DrawDeferredGeometryMesh requires initialized graphics.");
+    }
+
+    if (m_deferredGeometryVertexShader == nullptr
+        || m_deferredGeometryPixelShader == nullptr
+        || m_deferredGeometryInputLayout == nullptr)
+    {
+        throw std::logic_error("PrimitiveRenderer3D::DrawDeferredGeometryMesh called before deferred resources were created.");
+    }
+
+    BindTargets();
+
+    ID3D11DeviceContext *const context = m_graphics->GetImmediateContext();
+    if (context == nullptr)
+    {
+        throw std::logic_error("PrimitiveRenderer3D::DrawDeferredGeometryMesh failed: null context.");
+    }
+
+    const Matrix viewProjection = view * projection;
+
+    CameraGpuConstants cameraConstants{};
+    cameraConstants.View = view.Transpose();
+    cameraConstants.Projection = projection.Transpose();
+    cameraConstants.ViewProjection = viewProjection.Transpose();
+    cameraConstants.WorldPosition = DirectX::XMFLOAT4(
+        cameraWorldPosition.x,
+        cameraWorldPosition.y,
+        cameraWorldPosition.z,
+        1.0f
+    );
+
+    const Matrix worldInverse = world.Invert();
+    const Matrix worldInverseTranspose = worldInverse.Transpose();
+
+    ObjectGpuConstants objectConstants{};
+    objectConstants.World = world.Transpose();
+    objectConstants.WorldInverseTranspose = worldInverseTranspose.Transpose();
+
+    MaterialGpuConstants materialConstants{};
+    FillMaterialGpuConstantsFromRenderMaterial(material, materialConstants);
+
+    UploadConstantBuffer(
+        context,
+        m_cameraConstantBuffer.Get(),
+        &cameraConstants,
+        sizeof(CameraGpuConstants),
+        "PrimitiveRenderer3D::DrawDeferredGeometryMesh failed to map camera constant buffer."
+    );
+    UploadConstantBuffer(
+        context,
+        m_objectConstantBuffer.Get(),
+        &objectConstants,
+        sizeof(ObjectGpuConstants),
+        "PrimitiveRenderer3D::DrawDeferredGeometryMesh failed to map object constant buffer."
+    );
+    UploadConstantBuffer(
+        context,
+        m_materialConstantBuffer.Get(),
+        &materialConstants,
+        sizeof(MaterialGpuConstants),
+        "PrimitiveRenderer3D::DrawDeferredGeometryMesh failed to map material constant buffer."
+    );
+
+    constexpr UINT kLitVertexStride = sizeof(MeshVertexLit3D);
+    constexpr UINT kVertexOffset = 0;
+    ID3D11Buffer *vertexBuffers[] = {vertexBuffer};
+
+    context->IASetInputLayout(m_deferredGeometryInputLayout.Get());
+    context->IASetVertexBuffers(0, 1, vertexBuffers, &kLitVertexStride, &kVertexOffset);
+    context->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    ID3D11Buffer *const constantBuffers[] =
+    {
+        m_cameraConstantBuffer.Get(),
+        m_objectConstantBuffer.Get(),
+        m_materialConstantBuffer.Get()
+    };
+
+    context->VSSetShader(m_deferredGeometryVertexShader.Get(), nullptr, 0);
+    context->VSSetConstantBuffers(0, 3, constantBuffers);
+
+    context->PSSetShader(m_deferredGeometryPixelShader.Get(), nullptr, 0);
+    context->PSSetConstantBuffers(0, 3, constantBuffers);
+
+    ID3D11RasterizerState *const rasterizerState = material.Wireframe
+        ? m_commonStates->Wireframe()
+        : m_commonStates->CullCounterClockwise();
+    context->RSSetState(rasterizerState);
+    context->OMSetBlendState(m_commonStates->Opaque(), nullptr, 0xFFFFFFFFu);
+    context->OMSetDepthStencilState(m_commonStates->DepthDefault(), 0u);
+
+    context->DrawIndexed(indexCount, 0, 0);
+
+    context->RSSetState(nullptr);
 }

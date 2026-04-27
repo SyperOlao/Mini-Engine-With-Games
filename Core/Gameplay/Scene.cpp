@@ -466,6 +466,76 @@ bool Scene::RemoveModelComponent(const EntityId entityId)
     return true;
 }
 
+MaterialComponent *Scene::TryGetMaterialComponent(const EntityId entityId)
+{
+    const std::optional<std::size_t> slotIndex = TryFindSlotIndex(entityId);
+    if (!slotIndex.has_value())
+    {
+        return nullptr;
+    }
+
+    EntitySlot &slot = m_slots[*slotIndex];
+    if (!slot.Active || !slot.Material.has_value())
+    {
+        return nullptr;
+    }
+
+    return &(*slot.Material);
+}
+
+const MaterialComponent *Scene::TryGetMaterialComponent(const EntityId entityId) const
+{
+    const std::optional<std::size_t> slotIndex = TryFindSlotIndex(entityId);
+    if (!slotIndex.has_value())
+    {
+        return nullptr;
+    }
+
+    const EntitySlot &slot = m_slots[*slotIndex];
+    if (!slot.Active || !slot.Material.has_value())
+    {
+        return nullptr;
+    }
+
+    return &(*slot.Material);
+}
+
+bool Scene::AddMaterialComponent(const EntityId entityId, const MaterialComponent &component)
+{
+    const std::optional<std::size_t> slotIndex = TryFindSlotIndex(entityId);
+    if (!slotIndex.has_value())
+    {
+        return false;
+    }
+
+    EntitySlot &slot = m_slots[*slotIndex];
+    if (!slot.Active)
+    {
+        return false;
+    }
+
+    slot.Material = component;
+    return true;
+}
+
+bool Scene::RemoveMaterialComponent(const EntityId entityId)
+{
+    const std::optional<std::size_t> slotIndex = TryFindSlotIndex(entityId);
+    if (!slotIndex.has_value())
+    {
+        return false;
+    }
+
+    EntitySlot &slot = m_slots[*slotIndex];
+    if (!slot.Active)
+    {
+        return false;
+    }
+
+    slot.Material.reset();
+    return true;
+}
+
 SphereColliderComponent *Scene::TryGetSphereColliderComponent(const EntityId entityId)
 {
     const std::optional<std::size_t> slotIndex = TryFindSlotIndex(entityId);

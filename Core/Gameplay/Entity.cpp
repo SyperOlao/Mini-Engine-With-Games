@@ -126,6 +126,56 @@ bool Entity::RemoveModelComponent()
     return m_ownerScene->RemoveModelComponent(m_entityId);
 }
 
+bool Entity::HasMaterialComponent() const
+{
+    if (m_ownerScene == nullptr)
+    {
+        return false;
+    }
+
+    return m_ownerScene->TryGetMaterialComponent(m_entityId) != nullptr;
+}
+
+MaterialComponent *Entity::TryGetMaterialComponent()
+{
+    if (m_ownerScene == nullptr)
+    {
+        return nullptr;
+    }
+
+    return m_ownerScene->TryGetMaterialComponent(m_entityId);
+}
+
+const MaterialComponent *Entity::TryGetMaterialComponent() const
+{
+    if (m_ownerScene == nullptr)
+    {
+        return nullptr;
+    }
+
+    return m_ownerScene->TryGetMaterialComponent(m_entityId);
+}
+
+bool Entity::AddMaterialComponent(const MaterialComponent &component)
+{
+    if (m_ownerScene == nullptr)
+    {
+        return false;
+    }
+
+    return m_ownerScene->AddMaterialComponent(m_entityId, component);
+}
+
+bool Entity::RemoveMaterialComponent()
+{
+    if (m_ownerScene == nullptr)
+    {
+        return false;
+    }
+
+    return m_ownerScene->RemoveMaterialComponent(m_entityId);
+}
+
 bool Entity::HasSphereColliderComponent() const
 {
     if (m_ownerScene == nullptr)

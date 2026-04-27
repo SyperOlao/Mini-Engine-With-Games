@@ -49,7 +49,18 @@ public:
 private:
     void CreateForwardPhongResources(GraphicsDevice &graphics);
 
+    void CreateDeferredGeometryResources(GraphicsDevice &graphics);
+
     void CreateShadowDepthPassResources(GraphicsDevice &graphics);
+
+    void DrawModelDeferredGeometry(
+        const ModelAsset &model,
+        const DirectX::SimpleMath::Matrix &world,
+        const DirectX::SimpleMath::Matrix &view,
+        const DirectX::SimpleMath::Matrix &projection,
+        const DirectX::SimpleMath::Vector3 &cameraWorldPosition,
+        const RenderMaterialParameters &material
+    ) const;
 
 private:
     GraphicsDevice *m_graphics{nullptr};
@@ -64,6 +75,10 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_forwardPhongMaterialConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_forwardPhongLightsConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_forwardPhongDefaultWhiteDiffuseTexture;
+
+    Microsoft::WRL::ComPtr<ID3D11VertexShader> m_deferredGeometryModelVertexShader;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader> m_deferredGeometryPixelShader;
+    Microsoft::WRL::ComPtr<ID3D11InputLayout> m_deferredGeometryModelInputLayout;
 
     Microsoft::WRL::ComPtr<ID3D11VertexShader> m_shadowDepthVertexShader;
     Microsoft::WRL::ComPtr<ID3D11InputLayout> m_shadowDepthInputLayout;

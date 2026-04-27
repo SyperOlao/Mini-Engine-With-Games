@@ -39,6 +39,16 @@ public:
 
     bool RemoveModelComponent();
 
+    [[nodiscard]] bool HasMaterialComponent() const;
+
+    [[nodiscard]] MaterialComponent *TryGetMaterialComponent();
+
+    [[nodiscard]] const MaterialComponent *TryGetMaterialComponent() const;
+
+    bool AddMaterialComponent(const MaterialComponent &component);
+
+    bool RemoveMaterialComponent();
+
     [[nodiscard]] bool HasSphereColliderComponent() const;
 
     [[nodiscard]] SphereColliderComponent *TryGetSphereColliderComponent();

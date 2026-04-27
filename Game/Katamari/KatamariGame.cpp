@@ -21,6 +21,7 @@
 #include "Game/Katamari/Systems/KatamariBallRollSystem.h"
 #include "Game/Katamari/Systems/KatamariBallVisualRadiusSystem.h"
 #include "Game/Katamari/Systems/KatamariSphereWorldResolveSystem.h"
+#include "Game/Katamari/Systems/KatamariStaticObstacleRenderSystem.h"
 #include "Game/Katamari/UI/KatamariHud.h"
 #include "Core/Platform/Window.h"
 #include "Core/Graphics/Rendering/PrimitiveRenderer3D.h"
@@ -71,10 +72,11 @@ void KatamariGame::Initialize(AppContext &context)
         throw std::runtime_error("KatamariGame::Initialize received invalid AppContext.");
     }
 
-    if (context.Graphics.Render != nullptr && !ForwardRenderPipelineBuilt)
+    if (context.Graphics.Render != nullptr && !RenderPipelineConfigured)
     {
-        context.Graphics.Render->BuildDefaultForwardRenderPipeline();
-        ForwardRenderPipelineBuilt = true;
+        context.Graphics.Render->SetRenderMode(RenderMode::Deferred);
+        context.Graphics.Render->SetGameRenderCallbackForUserInterfacePassEnabled(true);
+        RenderPipelineConfigured = true;
     }
 
     PickupArchetypes = KatamariPickupCatalog::BuildDefaultPickupArchetypes();
@@ -105,26 +107,44 @@ void KatamariGame::Initialize(AppContext &context)
     FillLightSouth.LightColor = DirectX::SimpleMath::Color(0.82f, 0.9f, 1.0f, 1.0f);
     KatamariLighting.PointLights.push_back(FillLightSouth);
 
-    PointLight3D FillLightWest{};
-    FillLightWest.Position = Vector3(-52.0f, 24.0f, 0.0f);
-    FillLightWest.Range = 115.0f;
-    FillLightWest.Intensity = 0.18f;
-    FillLightWest.LightColor = DirectX::SimpleMath::Color(0.95f, 0.88f, 1.0f, 1.0f);
-    KatamariLighting.PointLights.push_back(FillLightWest);
-
-    PointLight3D FillLightEast{};
-    FillLightEast.Position = Vector3(52.0f, 24.0f, 0.0f);
-    FillLightEast.Range = 115.0f;
-    FillLightEast.Intensity = 0.18f;
-    FillLightEast.LightColor = DirectX::SimpleMath::Color(1.0f, 0.92f, 0.88f, 1.0f);
-    KatamariLighting.PointLights.push_back(FillLightEast);
-
     PointLight3D FillLightOverhead{};
     FillLightOverhead.Position = Vector3(0.0f, 48.0f, 0.0f);
     FillLightOverhead.Range = 140.0f;
     FillLightOverhead.Intensity = 0.26f;
     FillLightOverhead.LightColor = DirectX::SimpleMath::Color(0.92f, 0.96f, 1.0f, 1.0f);
     KatamariLighting.PointLights.push_back(FillLightOverhead);
+
+    const float halfExtent = GameConfig.PlayfieldHalfExtent;
+    PointLight3D NeonClusterWest{};
+    NeonClusterWest.Position = Vector3(-halfExtent * 0.55f, 10.0f, -halfExtent * 0.28f);
+    NeonClusterWest.Range = 38.0f;
+    NeonClusterWest.Intensity = 0.85f;
+    NeonClusterWest.LightColor = DirectX::SimpleMath::Color(0.1f, 0.95f, 0.95f, 1.0f);
+    KatamariLighting.PointLights.push_back(NeonClusterWest);
+
+    PointLight3D NeonClusterNorth{};
+    NeonClusterNorth.Position = Vector3(-halfExtent * 0.24f, 12.0f, halfExtent * 0.48f);
+    NeonClusterNorth.Range = 42.0f;
+    NeonClusterNorth.Intensity = 0.75f;
+    NeonClusterNorth.LightColor = DirectX::SimpleMath::Color(1.0f, 0.28f, 0.72f, 1.0f);
+    KatamariLighting.PointLights.push_back(NeonClusterNorth);
+
+    PointLight3D NeonClusterEast{};
+    NeonClusterEast.Position = Vector3(halfExtent * 0.56f, 10.0f, halfExtent * 0.14f);
+    NeonClusterEast.Range = 44.0f;
+    NeonClusterEast.Intensity = 0.7f;
+    NeonClusterEast.LightColor = DirectX::SimpleMath::Color(1.0f, 0.72f, 0.16f, 1.0f);
+    KatamariLighting.PointLights.push_back(NeonClusterEast);
+
+    SpotLight3D StageSpot{};
+    StageSpot.Position = Vector3(0.0f, 58.0f, -42.0f);
+    StageSpot.Direction = Vector3(0.0f, -0.82f, 0.58f);
+    StageSpot.Range = 135.0f;
+    StageSpot.InnerConeAngleRadians = 0.38f;
+    StageSpot.OuterConeAngleRadians = 0.72f;
+    StageSpot.Intensity = 0.42f;
+    StageSpot.LightColor = DirectX::SimpleMath::Color(1.0f, 0.91f, 0.78f, 1.0f);
+    KatamariLighting.SpotLights.push_back(StageSpot);
 
     SceneInstance.GetSceneLightingDescriptor() = KatamariLighting;
 
@@ -155,6 +175,7 @@ void KatamariGame::Initialize(AppContext &context)
     if (!StaticWorldCreated)
     {
         KatamariLevelSetup::CreateStaticWorldCollision(SceneInstance, GameConfig);
+        KatamariLevelSetup::CreateStaticObstacles(SceneInstance, WorldContext, GameConfig);
         StaticWorldCreated = true;
     }
 
@@ -184,6 +205,7 @@ void KatamariGame::RegisterSceneSystems(AppContext &context)
     SceneInstance.AddSystem(std::make_unique<KatamariAbsorptionSystem>(&WorldContext));
     SceneInstance.AddSystem(std::make_unique<KatamariBallRollSystem>(&WorldContext));
     SceneInstance.AddSystem(std::make_unique<RenderSystem>());
+    SceneInstance.AddSystem(std::make_unique<KatamariStaticObstacleRenderSystem>(&WorldContext));
     SceneInstance.InitializeSystems(context);
 }
 
@@ -333,6 +355,27 @@ void KatamariGame::Render(AppContext &context)
         return;
     }
 
+    const RenderPassKind activeRenderPass = context.Graphics.Render != nullptr
+        ? context.Graphics.Render->GetActiveRenderPassKind()
+        : RenderPassKind::None;
+
+    if (activeRenderPass == RenderPassKind::UserInterface)
+    {
+        KatamariHud::Draw(
+            context,
+            WorldContext,
+            DisplayFps,
+            LastDeltaTime
+        );
+        return;
+    }
+
+    if (context.GetRenderMode() == RenderMode::Deferred
+        && activeRenderPass != RenderPassKind::DeferredGeometry)
+    {
+        return;
+    }
+
     const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
     const Matrix viewMatrix = FollowCameraInstance.GetViewMatrix();
     const Matrix projectionMatrix = FollowCameraInstance.GetProjectionMatrix(aspectRatio);
@@ -374,9 +417,12 @@ void KatamariGame::Render(AppContext &context)
             moonMaterial
         );
 
-        const Matrix moonGlowWorld = Matrix::CreateScale(playfieldSpan * 0.66f, playfieldSpan * 0.66f, playfieldSpan * 0.66f) *
-            Matrix::CreateTranslation(moonPosition);
-        primitives.DrawSphere(moonGlowWorld, viewMatrix, projectionMatrix, DirectX::SimpleMath::Color(0.48f, 0.56f, 0.85f, 0.12f));
+        if (context.GetRenderMode() == RenderMode::Forward)
+        {
+            const Matrix moonGlowWorld = Matrix::CreateScale(playfieldSpan * 0.66f, playfieldSpan * 0.66f, playfieldSpan * 0.66f) *
+                Matrix::CreateTranslation(moonPosition);
+            primitives.DrawSphere(moonGlowWorld, viewMatrix, projectionMatrix, DirectX::SimpleMath::Color(0.48f, 0.56f, 0.85f, 0.12f));
+        }
     }
 
     if (GroundModel != nullptr && GroundModel->IsLoaded())
@@ -419,17 +465,6 @@ void KatamariGame::Render(AppContext &context)
         );
     }
 
-    if (WorldContext.DebugDrawCollision)
-    {
-        context.GetDebugDraw().Flush(primitives, viewMatrix, projectionMatrix);
-    }
-
-    KatamariHud::Draw(
-        context,
-        WorldContext,
-        DisplayFps,
-        LastDeltaTime
-    );
 }
 
 void KatamariGame::Shutdown(AppContext &)

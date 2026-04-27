@@ -59,6 +59,17 @@ public:
 
     void UnbindForwardPhongShadowShaderResource(ID3D11DeviceContext *deviceContext) const;
 
+    void BindDirectionalShadowRegisters(
+        ID3D11DeviceContext *deviceContext,
+        UINT shadowMapShaderResourceSlot,
+        UINT comparisonSamplerSlot
+    ) const;
+
+    void UnbindDirectionalShadowShaderResource(
+        ID3D11DeviceContext *deviceContext,
+        UINT shadowMapShaderResourceSlot
+    ) const;
+
     [[nodiscard]] ShapeRenderer2D &GetShapeRenderer2D() noexcept;
 
     [[nodiscard]] const ShapeRenderer2D &GetShapeRenderer2D() const noexcept;
@@ -103,6 +114,8 @@ public:
     [[nodiscard]] bool IsDeferredRenderingEnabled() const noexcept;
     [[nodiscard]] RenderPassKind GetActiveRenderPassKind() const noexcept;
     [[nodiscard]] bool ShouldBindMainRenderTargetsForDraw() const noexcept;
+    void SetGameRenderCallbackForUserInterfacePassEnabled(bool enabled) noexcept;
+    [[nodiscard]] bool ShouldExecuteGameRenderCallbackDuringUserInterfacePass() const noexcept;
 
     void ExecuteFramePipeline(
         Camera *activeCamera,
@@ -126,6 +139,7 @@ private:
     FrameRenderPipeline m_frameRenderPipeline{};
     DirectionalShadowResources m_directionalShadowResources{};
     RenderMode m_renderMode{RenderMode::Forward};
+    bool m_executeGameRenderCallbackDuringUserInterfacePass{false};
     bool m_directionalShadowPassCompletedThisFrame{false};
     Scene *m_frameGameplaySceneForPipeline{nullptr};
     Camera *m_frameActiveCameraForPipeline{nullptr};
