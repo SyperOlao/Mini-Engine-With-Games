@@ -7,6 +7,8 @@
 
 #include <cstdint>
 
+#include "../Graphics/Color.h"
+
 struct AppContext;
 enum class RenderMode : std::uint8_t;
 
@@ -24,6 +26,10 @@ public:
     }
 
     virtual void Shutdown(AppContext &context) {
+    }
+
+    [[nodiscard]] virtual bool TryGetPreferredClearColor(Color &clearColor) const noexcept {
+        return false;
     }
 };
 

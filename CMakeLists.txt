@@ -15,6 +15,7 @@ add_executable(PingPong
         Core/App/Timer.cpp
         Core/App/Timer.h
         Core/App/IGame.h
+        Core/App/IGameHost.h
         Core/App/EngineServices.h
         Core/App/AppContext.h
         Core/App/AppContext.cpp
@@ -218,6 +219,9 @@ add_executable(PingPong
 
         Core/Audio/AudioSystem.cpp
         Core/Audio/AudioSystem.h
+
+        Game/MainMenu/MainMenuGame.cpp
+        Game/MainMenu/MainMenuGame.h
 
         Game/Pong/PongGame.cpp
         Game/Pong/PongGame.h

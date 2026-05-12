@@ -14,6 +14,7 @@ class ModelRenderer;
 class DebugDrawQueue;
 class FrameRenderer;
 class DeferredFrameResources;
+class IGameHost;
 enum class RenderMode : std::uint8_t;
 
 struct AppContext final {
@@ -23,6 +24,7 @@ struct AppContext final {
     UiServices Ui{};
     AudioServices Audio{};
     AssetServices Assets{};
+    IGameHost *GameHost{nullptr};
 
     [[nodiscard]] bool IsValid() const noexcept;
 

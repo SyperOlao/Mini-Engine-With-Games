@@ -66,13 +66,24 @@ void Application::Initialize() {
     m_context.Ui.Font = &m_bitmapFont;
     m_context.Audio.System = &m_audio;
     m_context.Assets.Cache = &m_assetCache;
+    m_context.GameHost = this;
 
     if (!m_context.IsValid()) {
         throw std::runtime_error("Application failed to build a valid AppContext.");
     }
 
     m_game->Initialize(m_context);
+    RefreshClearColorFromActiveGame();
     m_timer.Reset();
+}
+
+void Application::RefreshClearColorFromActiveGame() {
+    Color preferredClear{};
+    if (m_game->TryGetPreferredClearColor(preferredClear)) {
+        m_desc.ClearColor = preferredClear;
+    } else {
+        m_desc.ClearColor = Color(0.05f, 0.05f, 0.08f, 1.0f);
+    }
 }
 
 void Application::ShutdownEngineServices() {
@@ -137,7 +148,29 @@ void Application::Update(const float deltaTime) {
     m_input.Update();
     m_audio.Update();
     m_game->Update(m_context, deltaTime);
+    FlushPendingGameSwitchIfAny();
     UpdateGlobalRenderModeButton();
+}
+
+void Application::RequestSwitchGame(std::unique_ptr<IGame> nextGame) {
+    if (!nextGame) {
+        return;
+    }
+
+    m_pendingGame = std::move(nextGame);
+}
+
+void Application::FlushPendingGameSwitchIfAny() {
+    if (!m_pendingGame) {
+        return;
+    }
+
+    m_game->Shutdown(m_context);
+    m_game = std::move(m_pendingGame);
+
+    m_game->Initialize(m_context);
+    RefreshClearColorFromActiveGame();
+    m_game->OnRenderModeChanged(m_context, m_context.GetRenderMode());
 }
 
 void Application::Render() {

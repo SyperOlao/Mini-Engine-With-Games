@@ -1,20 +1,10 @@
 #include "Core/App/Application.h"
 #include "Core/App/FatalErrorReport.h"
+#include "Game/MainMenu/MainMenuGame.h"
 
 #include <Windows.h>
 #include <exception>
-#include "Game/Katamari/KatamariGame.h"
-#include "Game/LightingTest/LightingTestGame.h"
-#include "Game/Pong/PongGame.h"
-#include "Game/SolarSystem/SolarSystemGame.h"
-
-enum class DemoType
-{
-    Pong,
-    SolarSystem,
-    Katamari,
-    LightingTest
-};
+#include <memory>
 
 int main()
 {
@@ -22,36 +12,10 @@ int main()
     {
         HINSTANCE__ *const hInstance = GetModuleHandleW(nullptr);
 
-        constexpr auto demo = DemoType::Katamari;
-
-        std::unique_ptr<IGame> game;
-
-        switch (demo)
-        {
-            case DemoType::Pong:
-                game = std::make_unique<PongGame>();
-                break;
-
-            case DemoType::SolarSystem:
-                game = std::make_unique<SolarSystemGame>();
-                break;
-
-            case DemoType::Katamari:
-                game = std::make_unique<KatamariGame>();
-                break;
-
-            case DemoType::LightingTest:
-                game = std::make_unique<LightingTestGame>();
-                break;
-        }
-
         ApplicationDesc applicationDescription{};
-        if (demo == DemoType::Katamari)
-        {
-            applicationDescription.ClearColor = Color(0.015f, 0.03f, 0.08f, 1.0f);
-        }
+        applicationDescription.Title = L"Mini Engine";
 
-        Application app(hInstance, std::move(game), applicationDescription);
+        Application app(hInstance, std::make_unique<MainMenuGame>(), applicationDescription);
         return app.Run();
     }
     catch (const std::exception &exception)

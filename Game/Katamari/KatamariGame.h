@@ -32,6 +32,8 @@ public:
 
     void Shutdown(AppContext &context) override;
 
+    [[nodiscard]] bool TryGetPreferredClearColor(Color &clearColor) const noexcept override;
+
 private:
     void RegisterSceneSystems(AppContext &context);
 

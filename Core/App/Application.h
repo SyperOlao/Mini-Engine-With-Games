@@ -18,6 +18,7 @@
 #include "../Assets/AssetCache.h"
 #include "AppContext.h"
 #include "IGame.h"
+#include "IGameHost.h"
 #include "Timer.h"
 #include "Core/UI/BitmapFont.h"
 #include "Core/UI/Button.h"
@@ -33,7 +34,7 @@ struct ApplicationDesc final {
 
 class IGame;
 
-class Application final {
+class Application final : public IGameHost {
 public:
     Application(HINSTANCE hInstance, std::unique_ptr<IGame> game, ApplicationDesc desc = {});
 
@@ -49,10 +50,16 @@ public:
 
     int Run();
 
+    void RequestSwitchGame(std::unique_ptr<IGame> nextGame) override;
+
 private:
     void Initialize();
 
     void ShutdownEngineServices();
+
+    void FlushPendingGameSwitchIfAny();
+
+    void RefreshClearColorFromActiveGame();
 
     void Update(float deltaTime);
 
@@ -62,10 +69,10 @@ private:
 
     void RenderGlobalRenderModeButton() const;
 
-private:
     HINSTANCE m_hInstance{nullptr};
     ApplicationDesc m_desc{};
     std::unique_ptr<IGame> m_game;
+    std::unique_ptr<IGame> m_pendingGame{};
 
     Window m_window{};
     InputSystem m_input{};

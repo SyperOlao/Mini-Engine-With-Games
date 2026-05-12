@@ -1,5 +1,6 @@
 #include "Game/Katamari/KatamariGame.h"
 
+#include "Core/Graphics/Color.h"
 #include "Core/App/AppContext.h"
 #include "Core/Assets/AssetCache.h"
 #include "Core/Gameplay/CollisionDebugDraw.h"
@@ -827,4 +828,10 @@ void KatamariGame::Shutdown(AppContext &context)
     }
 
     Initialized = false;
+}
+
+bool KatamariGame::TryGetPreferredClearColor(Color &clearColor) const noexcept
+{
+    clearColor = Color(0.015f, 0.03f, 0.08f, 1.0f);
+    return true;
 }
