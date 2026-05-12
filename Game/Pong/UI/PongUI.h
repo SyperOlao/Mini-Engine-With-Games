@@ -32,7 +32,7 @@ public:
         None = 0,
         StartVsPlayer,
         StartVsBot,
-        ExitRequested,
+        ReturnToEngineMainMenu,
         DifficultyChanged,
         MatchRuleChanged,
         ResetMatch,
@@ -68,6 +68,7 @@ public:
 
 private:
     [[nodiscard]] Action UpdateMainMenu(AppContext &context);
+    [[nodiscard]] Action ApplyMainMenuSelection(int itemIndex);
     [[nodiscard]] Action UpdateSettingsMenu(AppContext &context);
     [[nodiscard]] Action UpdatePlaying(AppContext &context);
     [[nodiscard]] Action UpdateGameOver(AppContext &context);
@@ -101,10 +102,12 @@ private:
         const AppContext &context,
         const std::array<Button, 4> &buttons,
         int selectedIndex,
-        const char *title
+        const char *title,
+        bool useMouseHighlight,
+        float mouseHighlightX,
+        float mouseHighlightY
     );
 
-private:
     ScreenState m_screenState{ScreenState::MainMenu};
     Difficulty m_difficulty{Difficulty::Medium};
     MatchRule m_matchRule{MatchRule::FirstTo10};
@@ -117,6 +120,8 @@ private:
     int m_selectedMainMenuIndex{0};
     int m_selectedSettingsIndex{0};
     int m_displayFps{0};
+
+    bool m_mainMenuPreviousLeftMouseDown{false};
 
     std::string m_resultText{};
 };

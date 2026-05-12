@@ -25,6 +25,8 @@ public:
 
     void Render(AppContext &context) override;
 
+    void Shutdown(AppContext &context) override;
+
 private:
     void HandleUiAction(AppContext &context, PongUI::Action action);
 

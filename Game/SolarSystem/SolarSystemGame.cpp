@@ -18,6 +18,7 @@
 #include <string>
 
 #include "Core/App/AppContext.h"
+#include "Core/App/IGameHost.h"
 #include "Core/Audio/AudioSystem.h"
 #include "Core/Graphics/Camera.h"
 #include "Core/Graphics/Color.h"
@@ -29,6 +30,9 @@
 #include "Core/Platform/Window.h"
 #include "Core/UI/BitmapFont.h"
 #include "Game/SolarSystem/Entities/OrbitalBody.h"
+#include "Game/MainMenu/MainMenuGame.h"
+
+#include <memory>
 
 using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector3;
@@ -259,7 +263,9 @@ void SolarSystemGame::HandleGlobalInput(const AppContext &context) {
     }
 
     if (keyboard.WasKeyPressed(Key::Escape)) {
-        PostQuitMessage(0);
+        if (context.GameHost != nullptr) {
+            context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
+        }
     }
 
     if (keyboard.WasKeyPressed(Key::Tab)) {

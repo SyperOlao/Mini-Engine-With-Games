@@ -13,6 +13,8 @@
 #include <string_view>
 
 #include "Core/App/AppContext.h"
+#include "Core/App/IGameHost.h"
+#include "Game/MainMenu/MainMenuGame.h"
 #include "Game/Pong/Common/Constants.h"
 #include "Core/Graphics/Color.h"
 #include "Core/Input/InputSystem.h"
@@ -20,6 +22,8 @@
 #include "Game/Pong/Systems/PongCollisionSystem.h"
 #include "Game/Pong/Systems/PongRules.h"
 #include "Core/Audio/AudioSystem.h"
+
+#include <memory>
 
 namespace {
     constexpr ScoreType kWinningScore = 10;
@@ -53,6 +57,10 @@ void PongGame::Initialize(AppContext &context) {
     ResetMatch();
 }
 
+void PongGame::Shutdown(AppContext &context) {
+    context.Audio.System->StopLoop("music_game");
+}
+
 void PongGame::Update(AppContext &context, const float deltaTime) {
     m_fpsAccumulator += deltaTime;
     ++m_fpsFrames;
@@ -75,6 +83,10 @@ void PongGame::Update(AppContext &context, const float deltaTime) {
         case PongUI::ScreenState::Playing: {
             const auto action = m_ui.Update(context);
             HandleUiAction(context, action);
+
+            if (action == PongUI::Action::ReturnToEngineMainMenu) {
+                return;
+            }
 
             if (m_ui.GetScreen() != PongUI::ScreenState::Playing || action == PongUI::Action::ResetMatch) {
                 return;
@@ -112,8 +124,10 @@ void PongGame::HandleUiAction(AppContext &context, const PongUI::Action action) 
             StartGame(GameMode::VersusAI);
             break;
 
-        case PongUI::Action::ExitRequested:
-            PostQuitMessage(0);
+        case PongUI::Action::ReturnToEngineMainMenu:
+            if (context.GameHost != nullptr) {
+                context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
+            }
             break;
 
         case PongUI::Action::DifficultyChanged:

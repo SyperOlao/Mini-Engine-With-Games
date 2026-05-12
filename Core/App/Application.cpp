@@ -149,7 +149,9 @@ void Application::Update(const float deltaTime) {
     m_audio.Update();
     m_game->Update(m_context, deltaTime);
     FlushPendingGameSwitchIfAny();
-    UpdateGlobalRenderModeButton();
+    if (m_game != nullptr && m_game->WantsGlobalRenderModeToggleOverlay()) {
+        UpdateGlobalRenderModeButton();
+    }
 }
 
 void Application::RequestSwitchGame(std::unique_ptr<IGame> nextGame) {
@@ -171,6 +173,7 @@ void Application::FlushPendingGameSwitchIfAny() {
     m_game->Initialize(m_context);
     RefreshClearColorFromActiveGame();
     m_game->OnRenderModeChanged(m_context, m_context.GetRenderMode());
+    m_previousLeftMouseDown = RawInputHandler::Instance().IsLeftMouseDown();
 }
 
 void Application::Render() {
@@ -184,7 +187,9 @@ void Application::Render() {
         },
         m_timer.GetDeltaTime()
     );
-    RenderGlobalRenderModeButton();
+    if (m_game != nullptr && m_game->WantsGlobalRenderModeToggleOverlay()) {
+        RenderGlobalRenderModeButton();
+    }
     m_renderContext.GetFrameRenderer().EndFrame(m_desc.VSync);
 }
 

@@ -34,6 +34,8 @@ public:
 
     [[nodiscard]] bool TryGetPreferredClearColor(Color &clearColor) const noexcept override;
 
+    [[nodiscard]] bool WantsGlobalRenderModeToggleOverlay() const noexcept override;
+
 private:
     void RegisterSceneSystems(AppContext &context);
 

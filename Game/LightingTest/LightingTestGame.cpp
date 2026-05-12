@@ -1,6 +1,7 @@
 #include "Game/LightingTest/LightingTestGame.h"
 
 #include "Core/App/AppContext.h"
+#include "Core/App/IGameHost.h"
 #include "Core/Assets/AssetCache.h"
 #include "Core/Graphics/ModelRenderer.h"
 #include "Core/Graphics/Rendering/Lighting/SceneLighting3D.h"
@@ -10,8 +11,10 @@
 #include "Core/Input/Keyboard.h"
 #include "Core/Input/RawInputHandler.h"
 #include "Core/Platform/Window.h"
+#include "Game/MainMenu/MainMenuGame.h"
 
 #include <cmath>
+#include <memory>
 #include <stdexcept>
 
 using DirectX::SimpleMath::Matrix;
@@ -54,6 +57,14 @@ void LightingTestGame::Update(AppContext &context, const float deltaTime)
 {
     if (!IsInitialized)
     {
+        return;
+    }
+
+    if (context.GameHost != nullptr
+        && context.Input.System != nullptr
+        && context.Input.System->GetKeyboard().WasKeyPressed(Key::Escape))
+    {
+        context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
         return;
     }
 

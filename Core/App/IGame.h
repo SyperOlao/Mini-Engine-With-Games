@@ -31,6 +31,10 @@ public:
     [[nodiscard]] virtual bool TryGetPreferredClearColor(Color &clearColor) const noexcept {
         return false;
     }
+
+    [[nodiscard]] virtual bool WantsGlobalRenderModeToggleOverlay() const noexcept {
+        return false;
+    }
 };
 
 #endif //PINGPONG_IGAME_H

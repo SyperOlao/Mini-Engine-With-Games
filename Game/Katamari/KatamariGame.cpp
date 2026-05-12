@@ -1,5 +1,6 @@
 #include "Game/Katamari/KatamariGame.h"
 
+#include "Core/App/IGameHost.h"
 #include "Core/Graphics/Color.h"
 #include "Core/App/AppContext.h"
 #include "Core/Assets/AssetCache.h"
@@ -26,6 +27,7 @@
 #include "Game/Katamari/Systems/KatamariSphereWorldResolveSystem.h"
 #include "Game/Katamari/Systems/KatamariStaticObstacleRenderSystem.h"
 #include "Game/Katamari/UI/KatamariHud.h"
+#include "Game/MainMenu/MainMenuGame.h"
 #include "imgui.h"
 #include "Core/Graphics/Picking/GBufferPickingService.h"
 #include "Core/Graphics/Rendering/Deferred/GBufferResources.h"
@@ -500,6 +502,14 @@ void KatamariGame::Update(AppContext &context, const float deltaTime)
         return;
     }
 
+    if (context.GameHost != nullptr
+        && context.Input.System != nullptr
+        && context.Input.System->GetKeyboard().WasKeyPressed(Key::Escape))
+    {
+        context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
+        return;
+    }
+
     LastDeltaTime = deltaTime;
     FpsAccumulator += deltaTime;
     ++FpsFrames;
@@ -833,5 +843,10 @@ void KatamariGame::Shutdown(AppContext &context)
 bool KatamariGame::TryGetPreferredClearColor(Color &clearColor) const noexcept
 {
     clearColor = Color(0.015f, 0.03f, 0.08f, 1.0f);
+    return true;
+}
+
+bool KatamariGame::WantsGlobalRenderModeToggleOverlay() const noexcept
+{
     return true;
 }

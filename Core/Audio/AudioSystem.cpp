@@ -86,6 +86,10 @@ void AudioSystem::Load(std::string id, const std::filesystem::path &filePath) {
 
     const std::filesystem::path resolvedPath = ResolveAssetPath(filePath);
 
+    const std::string stableId = id;
+    StopLoop(stableId);
+    m_loopInstances.erase(stableId);
+
     auto effect = std::make_unique<DirectX::SoundEffect>(m_engine.get(), resolvedPath.c_str());
     m_effects[std::move(id)] = std::move(effect);
 }
@@ -126,6 +130,7 @@ void AudioSystem::StopLoop(const std::string_view id) {
     }
 
     it->second->Stop(true);
+    m_loopInstances.erase(it);
 }
 
 void AudioSystem::StopAllLoops() {

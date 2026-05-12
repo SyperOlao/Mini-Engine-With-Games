@@ -19,6 +19,8 @@
 #include "Core/Graphics/Color.h"
 #include "Core/Graphics/Rendering/ShapeRenderer2D.h"
 #include "Core/Input/InputSystem.h"
+#include "Core/Input/RawInputHandler.h"
+#include "Core/Platform/Window.h"
 #include "Core/UI/BitmapFont.h"
 #include "Game/Pong/Entities/Ball.h"
 #include "Game/Pong/Entities/Paddle.h"
@@ -244,6 +246,9 @@ void PongUI::Render(
 }
 
 void PongUI::SetScreen(const ScreenState screen) noexcept {
+    if (screen == ScreenState::MainMenu) {
+        m_mainMenuPreviousLeftMouseDown = RawInputHandler::Instance().IsLeftMouseDown();
+    }
     m_screenState = screen;
 }
 
@@ -279,8 +284,62 @@ void PongUI::SetDisplayedFps(const int fps) noexcept {
     m_displayFps = fps;
 }
 
+PongUI::Action PongUI::ApplyMainMenuSelection(const int itemIndex) {
+    switch (itemIndex) {
+        case 0:
+            m_screenState = ScreenState::Playing;
+            return Action::StartVsPlayer;
+
+        case 1:
+            m_screenState = ScreenState::Playing;
+            return Action::StartVsBot;
+
+        case 2:
+            m_difficultySwitcher.SetSelectedIndex(static_cast<int>(m_difficulty));
+            m_matchRuleSwitcher.SetSelectedIndex(static_cast<int>(m_matchRule));
+            m_selectedSettingsIndex = 0;
+            m_screenState = ScreenState::Settings;
+            return Action::None;
+
+        case 3:
+            return Action::ReturnToEngineMainMenu;
+
+        default:
+            return Action::None;
+    }
+}
+
 PongUI::Action PongUI::UpdateMainMenu(AppContext &context) {
     auto &input = *context.Input.System;
+
+    if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
+        context.Audio.System->PlayOneShot("ui_accept", 0.65f);
+        return Action::ReturnToEngineMainMenu;
+    }
+
+    if (context.Platform.MainWindow != nullptr) {
+        POINT cursorPoint{};
+        GetCursorPos(&cursorPoint);
+        ScreenToClient(context.Platform.MainWindow->GetHandle(), &cursorPoint);
+
+        const float mouseX = static_cast<float>(cursorPoint.x);
+        const float mouseY = static_cast<float>(cursorPoint.y);
+
+        const bool isLeftMouseDown = RawInputHandler::Instance().IsLeftMouseDown();
+        const bool wasLeftPressed = isLeftMouseDown && !m_mainMenuPreviousLeftMouseDown;
+        m_mainMenuPreviousLeftMouseDown = isLeftMouseDown;
+
+        if (wasLeftPressed) {
+            for (int index = 0; index < 4; ++index) {
+                if (m_mainMenuButtons[static_cast<std::size_t>(index)].HandleMouseClick(mouseX, mouseY, true)) {
+                    context.Audio.System->PlayOneShot("ui_accept", 0.65f);
+                    return ApplyMainMenuSelection(index);
+                }
+            }
+        }
+    } else {
+        m_mainMenuPreviousLeftMouseDown = RawInputHandler::Instance().IsLeftMouseDown();
+    }
 
     const int previousIndex = m_selectedMainMenuIndex;
 
@@ -300,28 +359,7 @@ PongUI::Action PongUI::UpdateMainMenu(AppContext &context) {
 
     context.Audio.System->PlayOneShot("ui_accept", 0.65f);
 
-    switch (m_selectedMainMenuIndex) {
-        case 0:
-            m_screenState = ScreenState::Playing;
-            return Action::StartVsPlayer;
-
-        case 1:
-            m_screenState = ScreenState::Playing;
-            return Action::StartVsBot;
-
-        case 2:
-            m_difficultySwitcher.SetSelectedIndex(static_cast<int>(m_difficulty));
-            m_matchRuleSwitcher.SetSelectedIndex(static_cast<int>(m_matchRule));
-            m_selectedSettingsIndex = 0;
-            m_screenState = ScreenState::Settings;
-            return Action::None;
-
-        case 3:
-            return Action::ExitRequested;
-
-        default:
-            return Action::None;
-    }
+    return ApplyMainMenuSelection(m_selectedMainMenuIndex);
 }
 
 PongUI::Action PongUI::UpdateSettingsMenu(AppContext &context) {
@@ -377,8 +415,7 @@ PongUI::Action PongUI::UpdatePlaying(AppContext &context) {
 
     if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
         context.Audio.System->PlayOneShot("ui_accept", 0.65f);
-        m_screenState = ScreenState::MainMenu;
-        return Action::None;
+        return Action::ReturnToEngineMainMenu;
     }
 
     if (input.GetKeyboard().WasKeyPressed(Key::Enter)) {
@@ -394,8 +431,7 @@ PongUI::Action PongUI::UpdateGameOver(AppContext &context) {
 
     if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
         context.Audio.System->PlayOneShot("ui_accept", 0.65f);
-        m_screenState = ScreenState::MainMenu;
-        return Action::None;
+        return Action::ReturnToEngineMainMenu;
     }
 
     if (input.GetKeyboard().WasKeyPressed(Key::Enter)) {
@@ -409,7 +445,28 @@ PongUI::Action PongUI::UpdateGameOver(AppContext &context) {
 void PongUI::RenderMainMenu(const AppContext &context) const {
     auto &renderer = context.GetShapeRenderer2D();
 
-    RenderButtons(context, m_mainMenuButtons, m_selectedMainMenuIndex, "PONG");
+    float mouseHighlightX = 0.0f;
+    float mouseHighlightY = 0.0f;
+    bool useMouseHighlight = false;
+
+    if (context.Platform.MainWindow != nullptr) {
+        POINT cursorPoint{};
+        GetCursorPos(&cursorPoint);
+        ScreenToClient(context.Platform.MainWindow->GetHandle(), &cursorPoint);
+        mouseHighlightX = static_cast<float>(cursorPoint.x);
+        mouseHighlightY = static_cast<float>(cursorPoint.y);
+        useMouseHighlight = true;
+    }
+
+    RenderButtons(
+        context,
+        m_mainMenuButtons,
+        m_selectedMainMenuIndex,
+        "PONG",
+        useMouseHighlight,
+        mouseHighlightX,
+        mouseHighlightY
+    );
 
     DrawCenteredText(
         renderer,
@@ -430,7 +487,7 @@ void PongUI::RenderMainMenu(const AppContext &context) const {
 
     DrawRightAlignedText(
         renderer,
-        "ENTER  SELECT",
+        "ENTER OR CLICK  SELECT",
         static_cast<float>(Constants::WindowWidth) - 26.0f,
         static_cast<float>(Constants::WindowHeight) - 44.0f,
         kMuted,
@@ -560,7 +617,10 @@ void PongUI::RenderButtons(
     const AppContext &context,
     const std::array<Button, 4> &buttons,
     const int selectedIndex,
-    const char *title
+    const char *title,
+    const bool useMouseHighlight,
+    const float mouseHighlightX,
+    const float mouseHighlightY
 ) {
     auto &renderer = context.GetShapeRenderer2D();
 
@@ -570,11 +630,16 @@ void PongUI::RenderButtons(
     style.TextScale = 0.85f;
 
     for (int index = 0; index < static_cast<int>(buttons.size()); ++index) {
+        const bool isHighlighted =
+            index == selectedIndex
+            || (useMouseHighlight
+                && buttons[static_cast<std::size_t>(index)].IsHovered(mouseHighlightX, mouseHighlightY));
+
         buttons[static_cast<std::size_t>(index)].Draw(
             renderer,
             *context.Ui.Font,
             style,
-            index == selectedIndex
+            isHighlighted
         );
     }
 }
