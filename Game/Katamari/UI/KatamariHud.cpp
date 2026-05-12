@@ -78,6 +78,7 @@ void KatamariHud::Draw(
     const bool gBufferDebugVisualizationEnabled,
     const bool shadowCascadeDebugVisualizationEnabled,
     const bool gBufferPickingInspectorEnabled,
+    const bool editorTransformModeEnabled,
     GBufferPickResult const &lastGBufferPickResult
 )
 {
@@ -167,6 +168,16 @@ void KatamariHud::Draw(
             ? "Cascade shadow debug: ON (F4)"
             : "Cascade shadow debug: OFF (F4)",
         shadowCascadeDebugVisualizationEnabled ? Color(0.45f, 1.0f, 0.55f, 1.0f) : mutedColor,
+        helpScale
+    );
+    rowY += 16.0f;
+
+    BitmapFont::DrawString(
+        context.GetShapeRenderer2D(),
+        columnX,
+        rowY,
+        editorTransformModeEnabled ? "Transform gizmo + GBuffer pick: ON (F7)" : "Transform gizmo + GBuffer pick: OFF (F7)",
+        editorTransformModeEnabled ? Color(0.45f, 1.0f, 0.55f, 1.0f) : mutedColor,
         helpScale
     );
     rowY += 16.0f;

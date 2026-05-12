@@ -17,6 +17,7 @@ public:
         bool gBufferDebugVisualizationEnabled,
         bool shadowCascadeDebugVisualizationEnabled,
         bool gBufferPickingInspectorEnabled,
+        bool editorTransformModeEnabled,
         GBufferPickResult const &lastGBufferPickResult
     );
 };

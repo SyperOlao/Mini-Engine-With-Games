@@ -3,8 +3,15 @@
 //
 
 #include "Window.h"
-#include <stdexcept>
 #include "../Input/RawInputHandler.h"
+#include "../UI/ImGui/ImGuiLayer.h"
+
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+
+#include <stdexcept>
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 Window::~Window() {
     if (m_hWnd != nullptr) {
@@ -139,6 +146,14 @@ LRESULT CALLBACK Window::WindowProc(HWND__ *const hWnd, const UINT message, cons
 
 LRESULT Window::HandleMessage(const UINT message, const WPARAM wParam, const LPARAM lParam) const
 {
+    if (ImGuiLayer::IsInitialized() && ImGui::GetCurrentContext() != nullptr)
+    {
+        if (ImGui_ImplWin32_WndProcHandler(m_hWnd, message, wParam, lParam) != 0)
+        {
+            return 1;
+        }
+    }
+
     switch (message)
     {
         case WM_INPUT:

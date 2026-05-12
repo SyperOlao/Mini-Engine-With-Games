@@ -47,13 +47,47 @@ public:
 private:
     void EnsureStagingTextures(ID3D11Device *device);
 
+    void ReleaseGpuResources() noexcept;
+
+    bool TryInitializeGpuResources(ID3D11Device *device);
+
+    [[nodiscard]] GBufferPickResult PickCpu(
+        GraphicsDevice &graphics,
+        const GBufferResources &gBuffer,
+        const Camera &camera,
+        float viewportAspectRatio,
+        int screenX,
+        int screenY
+    );
+
+    [[nodiscard]] GBufferPickResult PickGpu(
+        GraphicsDevice &graphics,
+        const GBufferResources &gBuffer,
+        const Camera &camera,
+        float viewportAspectRatio,
+        int screenX,
+        int screenY
+    );
+
     Microsoft::WRL::ComPtr<ID3D11Texture2D> m_stagingObjectId;
 
     Microsoft::WRL::ComPtr<ID3D11Texture2D> m_stagingNormal;
 
     Microsoft::WRL::ComPtr<ID3D11Texture2D> m_stagingDepth;
 
+    Microsoft::WRL::ComPtr<ID3D11ComputeShader> m_pickComputeShader;
+
+    Microsoft::WRL::ComPtr<ID3D11Buffer> m_pickConstantBuffer;
+
+    Microsoft::WRL::ComPtr<ID3D11Buffer> m_pickResultGpuBuffer;
+
+    Microsoft::WRL::ComPtr<ID3D11Buffer> m_pickResultStagingBuffer;
+
+    Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> m_pickResultUnorderedAccessView;
+
     bool m_initialized{false};
+
+    bool m_gpuPickReady{false};
 };
 
 #endif

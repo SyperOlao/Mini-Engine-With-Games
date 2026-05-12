@@ -25,6 +25,7 @@
 #include "Game/Katamari/Systems/KatamariSphereWorldResolveSystem.h"
 #include "Game/Katamari/Systems/KatamariStaticObstacleRenderSystem.h"
 #include "Game/Katamari/UI/KatamariHud.h"
+#include "imgui.h"
 #include "Core/Graphics/Picking/GBufferPickingService.h"
 #include "Core/Graphics/Rendering/Deferred/GBufferResources.h"
 #include "Core/Platform/Window.h"
@@ -479,6 +480,16 @@ void KatamariGame::UpdateDebugInput(AppContext &context)
             LastGBufferPickResult = {};
         }
     }
+
+    if (keyboard.WasVirtualKeyPressed(VK_F7))
+    {
+        EditorTransformModeEnabled = !EditorTransformModeEnabled;
+        EditorTransformGizmo.SetEnabled(EditorTransformModeEnabled);
+        if (!EditorTransformModeEnabled)
+        {
+            EditorTransformGizmo.ClearSelection();
+        }
+    }
 }
 
 void KatamariGame::Update(AppContext &context, const float deltaTime)
@@ -545,6 +556,47 @@ void KatamariGame::Update(AppContext &context, const float deltaTime)
     if (context.Graphics.Render != nullptr)
     {
         context.Graphics.Render->SetFrameGameplaySceneAndCamera(&SceneInstance, &FollowCameraInstance);
+    }
+
+    if (context.Graphics.Render != nullptr && context.Graphics.Device != nullptr
+        && context.GetRenderMode() == RenderMode::Deferred && EditorTransformModeEnabled)
+    {
+        const Window *const MainWindow = context.Platform.MainWindow;
+        if (MainWindow != nullptr)
+        {
+            const int ClientWidth = MainWindow->GetWidth();
+            const int ClientHeight = MainWindow->GetHeight();
+            if (ClientWidth > 0 && ClientHeight > 0)
+            {
+                const GBufferResources &GBuffer = context.Graphics.Render->GetDeferredFrameResources().GetGBufferResources();
+                if (GBuffer.IsCreated())
+                {
+                    const float ViewportAspectRatio =
+                        static_cast<float>(ClientWidth) / static_cast<float>(ClientHeight);
+                    const POINT MouseClientPoint = GetMouseClientPosition(MainWindow->GetHandle());
+                    const bool IsLeftMouseDown = RawInputHandler::Instance().IsLeftMouseDown();
+                    const bool WasLeftMousePressed = IsLeftMouseDown && !PreviousEditorPickLeftMouseDown;
+                    PreviousEditorPickLeftMouseDown = IsLeftMouseDown;
+
+                    ImGuiIO *const ImGuiIo = ImGui::GetCurrentContext() != nullptr ? &ImGui::GetIO() : nullptr;
+                    const bool BlockPickForUserInterface =
+                        (ImGuiIo != nullptr && ImGuiIo->WantCaptureMouse) || EditorTransformGizmo.WantsInputCapture();
+
+                    if (WasLeftMousePressed && !BlockPickForUserInterface)
+                    {
+                        LastGBufferPickResult = context.Graphics.Render->GetGBufferPickingService().Pick(
+                            *context.Graphics.Device,
+                            GBuffer,
+                            FollowCameraInstance,
+                            ViewportAspectRatio,
+                            MouseClientPoint.x,
+                            MouseClientPoint.y
+                        );
+                        EditorTransformGizmo.TrySelectFromGBufferPick(SceneInstance, LastGBufferPickResult);
+                    }
+                }
+            }
+        }
     }
 
     if (context.Graphics.Render != nullptr && context.Graphics.Device != nullptr
@@ -637,8 +689,20 @@ void KatamariGame::Render(AppContext &context)
             context.Graphics.Render != nullptr && context.Graphics.Render->IsGBufferDebugVisualizationEnabled(),
             SceneInstance.GetShadowCascadeDebugVisualizationEnabled(),
             GBufferPickingInspectorEnabled,
+            EditorTransformModeEnabled,
             LastGBufferPickResult
         );
+        if (EditorTransformModeEnabled)
+        {
+            const float AspectRatio = static_cast<float>(width) / static_cast<float>(height);
+            EditorTransformGizmo.DrawInspectorAndGizmo(
+                SceneInstance,
+                FollowCameraInstance,
+                AspectRatio,
+                width,
+                height
+            );
+        }
         RenderParticleUi(context);
         return;
     }
@@ -752,6 +816,9 @@ void KatamariGame::Render(AppContext &context)
 
 void KatamariGame::Shutdown(AppContext &context)
 {
+    EditorTransformGizmo.SetEnabled(false);
+    EditorTransformGizmo.ClearSelection();
+
     if (context.Graphics.Render != nullptr)
     {
         GpuParticleEmitterDesc particles = context.Graphics.Render->GetGpuParticleSystem().GetEmitterDesc();

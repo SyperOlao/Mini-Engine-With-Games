@@ -5,14 +5,130 @@
 #include "Core/Graphics/GraphicsDevice.h"
 #include "Core/Graphics/Rendering/Deferred/GBufferLayout.h"
 #include "Core/Graphics/Rendering/Deferred/GBufferResources.h"
+#include "Core/Graphics/ShaderCompiler.h"
+
+#include <Windows.h>
 
 #include <cmath>
 #include <cstring>
+#include <filesystem>
 #include <stdexcept>
 
 using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector3;
 using DirectX::SimpleMath::Vector4;
+
+namespace
+{
+constexpr std::uint32_t kPickPackedUintCount = 10u;
+
+struct GBufferPickGpuConstants
+{
+    Matrix InverseProjection{};
+    Matrix InverseView{};
+    std::int32_t PickPixelX{0};
+    std::int32_t PickPixelY{0};
+    std::int32_t GBufferTextureWidth{0};
+    std::int32_t GBufferTextureHeight{0};
+};
+}
+
+void GBufferPickingService::ReleaseGpuResources() noexcept
+{
+    m_pickResultUnorderedAccessView.Reset();
+    m_pickResultStagingBuffer.Reset();
+    m_pickResultGpuBuffer.Reset();
+    m_pickConstantBuffer.Reset();
+    m_pickComputeShader.Reset();
+    m_gpuPickReady = false;
+}
+
+bool GBufferPickingService::TryInitializeGpuResources(ID3D11Device *const device)
+{
+    ReleaseGpuResources();
+    if (device == nullptr)
+    {
+        return false;
+    }
+
+    try
+    {
+        const Microsoft::WRL::ComPtr<ID3DBlob> shaderBlob = ShaderCompiler::CompileFromFile(
+            std::filesystem::path("Core/Shaders/GBufferPickResolve.hlsl"),
+            "PickMain",
+            "cs_5_0"
+        );
+
+        D3d11Helpers::ThrowIfFailed(
+            device->CreateComputeShader(shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), nullptr, m_pickComputeShader.GetAddressOf()),
+            "GBufferPickingService failed to create pick compute shader."
+        );
+
+        D3D11_BUFFER_DESC constantBufferDescription{};
+        constantBufferDescription.ByteWidth = static_cast<UINT>(sizeof(GBufferPickGpuConstants));
+        constantBufferDescription.Usage = D3D11_USAGE_DEFAULT;
+        constantBufferDescription.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        constantBufferDescription.CPUAccessFlags = 0u;
+        constantBufferDescription.MiscFlags = 0u;
+        constantBufferDescription.StructureByteStride = 0u;
+
+        D3d11Helpers::ThrowIfFailed(
+            device->CreateBuffer(&constantBufferDescription, nullptr, m_pickConstantBuffer.GetAddressOf()),
+            "GBufferPickingService failed to create pick constant buffer."
+        );
+
+        constexpr UINT kResultElementCount = 16u;
+        D3D11_BUFFER_DESC resultGpuDescription{};
+        resultGpuDescription.ByteWidth = sizeof(std::uint32_t) * kResultElementCount;
+        resultGpuDescription.Usage = D3D11_USAGE_DEFAULT;
+        resultGpuDescription.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
+        resultGpuDescription.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+        resultGpuDescription.StructureByteStride = sizeof(std::uint32_t);
+
+        D3d11Helpers::ThrowIfFailed(
+            device->CreateBuffer(&resultGpuDescription, nullptr, m_pickResultGpuBuffer.GetAddressOf()),
+            "GBufferPickingService failed to create pick GPU result buffer."
+        );
+
+        D3D11_UNORDERED_ACCESS_VIEW_DESC unorderedAccessViewDescription{};
+        unorderedAccessViewDescription.Format = DXGI_FORMAT_UNKNOWN;
+        unorderedAccessViewDescription.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+        unorderedAccessViewDescription.Buffer.FirstElement = 0u;
+        unorderedAccessViewDescription.Buffer.NumElements = kResultElementCount;
+        unorderedAccessViewDescription.Buffer.Flags = 0u;
+
+        D3d11Helpers::ThrowIfFailed(
+            device->CreateUnorderedAccessView(
+                m_pickResultGpuBuffer.Get(),
+                &unorderedAccessViewDescription,
+                m_pickResultUnorderedAccessView.GetAddressOf()
+            ),
+            "GBufferPickingService failed to create pick result UAV."
+        );
+
+        D3D11_BUFFER_DESC stagingDescription{};
+        stagingDescription.ByteWidth = sizeof(std::uint32_t) * kResultElementCount;
+        stagingDescription.Usage = D3D11_USAGE_STAGING;
+        stagingDescription.BindFlags = 0u;
+        stagingDescription.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+        stagingDescription.MiscFlags = 0u;
+        stagingDescription.StructureByteStride = 0u;
+
+        D3d11Helpers::ThrowIfFailed(
+            device->CreateBuffer(&stagingDescription, nullptr, m_pickResultStagingBuffer.GetAddressOf()),
+            "GBufferPickingService failed to create pick staging buffer."
+        );
+    }
+    catch (const std::exception &exception)
+    {
+        OutputDebugStringA(exception.what());
+        ReleaseGpuResources();
+        return false;
+    }
+
+    m_gpuPickReady = true;
+    return true;
+}
 
 void GBufferPickingService::Initialize(GraphicsDevice &graphics)
 {
@@ -23,11 +139,13 @@ void GBufferPickingService::Initialize(GraphicsDevice &graphics)
     }
 
     EnsureStagingTextures(device);
+    TryInitializeGpuResources(device);
     m_initialized = true;
 }
 
 void GBufferPickingService::Shutdown() noexcept
 {
+    ReleaseGpuResources();
     m_stagingObjectId.Reset();
     m_stagingNormal.Reset();
     m_stagingDepth.Reset();
@@ -78,6 +196,146 @@ void GBufferPickingService::EnsureStagingTextures(ID3D11Device *const device)
 }
 
 GBufferPickResult GBufferPickingService::Pick(
+    GraphicsDevice &graphics,
+    const GBufferResources &gBuffer,
+    const Camera &camera,
+    const float viewportAspectRatio,
+    const int screenX,
+    const int screenY
+)
+{
+    if (m_gpuPickReady)
+    {
+        return PickGpu(graphics, gBuffer, camera, viewportAspectRatio, screenX, screenY);
+    }
+
+    return PickCpu(graphics, gBuffer, camera, viewportAspectRatio, screenX, screenY);
+}
+
+GBufferPickResult GBufferPickingService::PickGpu(
+    GraphicsDevice &graphics,
+    const GBufferResources &gBuffer,
+    const Camera &camera,
+    const float viewportAspectRatio,
+    const int screenX,
+    const int screenY
+)
+{
+    GBufferPickResult result{};
+    result.ScreenX = screenX;
+    result.ScreenY = screenY;
+
+    if (!m_initialized || !gBuffer.IsCreated() || !m_gpuPickReady)
+    {
+        return PickCpu(graphics, gBuffer, camera, viewportAspectRatio, screenX, screenY);
+    }
+
+    ID3D11Device *const device = graphics.GetDevice();
+    ID3D11DeviceContext *const context = graphics.GetImmediateContext();
+    if (device == nullptr || context == nullptr
+        || m_pickComputeShader == nullptr
+        || m_pickConstantBuffer == nullptr
+        || m_pickResultGpuBuffer == nullptr
+        || m_pickResultStagingBuffer == nullptr
+        || m_pickResultUnorderedAccessView == nullptr)
+    {
+        return PickCpu(graphics, gBuffer, camera, viewportAspectRatio, screenX, screenY);
+    }
+
+    const std::uint32_t textureWidth = gBuffer.GetWidth();
+    const std::uint32_t textureHeight = gBuffer.GetHeight();
+    if (textureWidth == 0u || textureHeight == 0u)
+    {
+        return result;
+    }
+
+    if (!(viewportAspectRatio > 0.0f) || std::isnan(viewportAspectRatio) || std::isinf(viewportAspectRatio))
+    {
+        return result;
+    }
+
+    if (screenX < 0 || screenY < 0
+        || screenX >= static_cast<int>(textureWidth)
+        || screenY >= static_cast<int>(textureHeight))
+    {
+        return result;
+    }
+
+    const Matrix viewMatrix = camera.GetViewMatrix();
+    const Matrix projectionMatrix = camera.GetProjectionMatrix(viewportAspectRatio);
+    const Matrix inverseProjection = projectionMatrix.Invert();
+    const Matrix inverseView = viewMatrix.Invert();
+
+    GBufferPickGpuConstants constants{};
+    constants.InverseProjection = inverseProjection;
+    constants.InverseView = inverseView;
+    constants.PickPixelX = static_cast<std::int32_t>(screenX);
+    constants.PickPixelY = static_cast<std::int32_t>(screenY);
+    constants.GBufferTextureWidth = static_cast<std::int32_t>(textureWidth);
+    constants.GBufferTextureHeight = static_cast<std::int32_t>(textureHeight);
+
+    context->UpdateSubresource(m_pickConstantBuffer.Get(), 0u, nullptr, &constants, 0u, 0u);
+
+    ID3D11ShaderResourceView *const shaderResourceViews[3] = {
+        gBuffer.GetNormalTarget().GetShaderResourceView(),
+        gBuffer.GetObjectIdTarget().GetShaderResourceView(),
+        gBuffer.GetSceneDepthTarget().GetShaderResourceView()
+    };
+
+    ID3D11Buffer *const constantBuffers[1] = {m_pickConstantBuffer.Get()};
+    context->CSSetConstantBuffers(0u, 1u, constantBuffers);
+    context->CSSetShaderResources(0u, 3u, shaderResourceViews);
+
+    ID3D11UnorderedAccessView *const unorderedAccessViews[1] = {m_pickResultUnorderedAccessView.Get()};
+    context->CSSetUnorderedAccessViews(0u, 1u, unorderedAccessViews, nullptr);
+
+    context->CSSetShader(m_pickComputeShader.Get(), nullptr, 0u);
+    context->Dispatch(1u, 1u, 1u);
+
+    ID3D11ShaderResourceView *const nullShaderResourceViews[3] = {nullptr, nullptr, nullptr};
+    context->CSSetShaderResources(0u, 3u, nullShaderResourceViews);
+    ID3D11UnorderedAccessView *const nullUnorderedAccessViews[1] = {nullptr};
+    context->CSSetUnorderedAccessViews(0u, 1u, nullUnorderedAccessViews, nullptr);
+    context->CSSetShader(nullptr, nullptr, 0u);
+
+    context->CopyResource(m_pickResultStagingBuffer.Get(), m_pickResultGpuBuffer.Get());
+
+    std::uint32_t packed[kPickPackedUintCount]{};
+    {
+        D3D11_MAPPED_SUBRESOURCE mapped{};
+        const HRESULT mapResult = context->Map(m_pickResultStagingBuffer.Get(), 0u, D3D11_MAP_READ, 0u, &mapped);
+        if (FAILED(mapResult))
+        {
+            return PickCpu(graphics, gBuffer, camera, viewportAspectRatio, screenX, screenY);
+        }
+        std::memcpy(packed, mapped.pData, sizeof(std::uint32_t) * kPickPackedUintCount);
+        context->Unmap(m_pickResultStagingBuffer.Get(), 0u);
+    }
+
+    result.ObjectId = packed[0u];
+    result.Depth = *reinterpret_cast<const float *>(&packed[2u]);
+    const std::uint32_t hitFlag = packed[1u];
+    if (hitFlag == 0u || result.ObjectId == 0u || result.Depth >= 1.0f)
+    {
+        return result;
+    }
+
+    result.WorldNormal = Vector3(
+        *reinterpret_cast<const float *>(&packed[3u]),
+        *reinterpret_cast<const float *>(&packed[4u]),
+        *reinterpret_cast<const float *>(&packed[5u])
+    );
+    result.WorldNormal.Normalize();
+    result.WorldPosition = Vector3(
+        *reinterpret_cast<const float *>(&packed[6u]),
+        *reinterpret_cast<const float *>(&packed[7u]),
+        *reinterpret_cast<const float *>(&packed[8u])
+    );
+    result.Hit = true;
+    return result;
+}
+
+GBufferPickResult GBufferPickingService::PickCpu(
     GraphicsDevice &graphics,
     const GBufferResources &gBuffer,
     const Camera &camera,

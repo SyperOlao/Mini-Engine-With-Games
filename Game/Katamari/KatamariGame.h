@@ -10,6 +10,7 @@
 #include "Core/Graphics/Picking/GBufferPickingService.h"
 #include "Core/Graphics/Rendering/Lighting/SceneLighting3D.h"
 #include "Core/UI/Button.h"
+#include "Core/Editor/TransformGizmoService.h"
 #include "Game/Katamari/Data/KatamariGameConfig.h"
 #include "Game/Katamari/Data/KatamariWorldContext.h"
 #include "Game/Katamari/Data/PickupArchetype.h"
@@ -81,6 +82,9 @@ private:
     SceneLightingDescriptor3D KatamariLighting{};
     bool GBufferPickingInspectorEnabled{false};
     GBufferPickResult LastGBufferPickResult{};
+    TransformGizmoService EditorTransformGizmo{};
+    bool EditorTransformModeEnabled{false};
+    bool PreviousEditorPickLeftMouseDown{false};
 };
 
 #endif

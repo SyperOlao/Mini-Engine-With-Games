@@ -211,6 +211,11 @@ add_executable(PingPong
         Core/UI/Common/RectF.h
         Core/UI/Common/MouseState.h
 
+        Core/UI/ImGui/ImGuiLayer.cpp
+        Core/UI/ImGui/ImGuiLayer.h
+        Core/Editor/TransformGizmoService.cpp
+        Core/Editor/TransformGizmoService.h
+
         Core/Audio/AudioSystem.cpp
         Core/Audio/AudioSystem.h
 
@@ -292,7 +297,23 @@ find_package(directxtk CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
 target_include_directories(PingPong PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui
+        ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/backends
+        ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imguizmo/src
 )
+
+set(
+        IMGUI_ENGINE_SOURCES
+        ThirdParty/imgui/imgui.cpp
+        ThirdParty/imgui/imgui_draw.cpp
+        ThirdParty/imgui/imgui_tables.cpp
+        ThirdParty/imgui/imgui_widgets.cpp
+        ThirdParty/imgui/backends/imgui_impl_dx11.cpp
+        ThirdParty/imgui/backends/imgui_impl_win32.cpp
+        ThirdParty/imguizmo/src/ImGuizmo.cpp
+)
+
+target_sources(PingPong PRIVATE ${IMGUI_ENGINE_SOURCES})
 
 add_library(SolarSystemGame STATIC
         Game/SolarSystem/SolarSystemGame.cpp
@@ -355,6 +376,7 @@ set(CORE_SHADER_SOURCES
         Core/Shaders/DeferredLighting3D.hlsl
         Core/Shaders/DeferredComposite3D.hlsl
         Core/Shaders/GBufferDebugComposite3D.hlsl
+        Core/Shaders/GBufferPickResolve.hlsl
         Core/Shaders/GpuParticlesUpdateCS.hlsl
         Core/Shaders/GpuParticlesBitonicSortCS.hlsl
         Core/Shaders/GpuParticlesDraw3D.hlsl

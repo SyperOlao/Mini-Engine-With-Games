@@ -21,6 +21,7 @@
 #include "Core/Graphics/Rendering/Pipeline/Passes/ShadowDepthRenderPass.h"
 #include "Core/Graphics/Rendering/Pipeline/Passes/UserInterfaceRenderPass.h"
 #include "Core/Graphics/Rendering/Shadows/CascadedShadowMapMath.h"
+#include "Core/UI/ImGui/ImGuiLayer.h"
 
 #include <DirectXMath.h>
 
@@ -32,6 +33,7 @@
 
 RenderContext::~RenderContext()
 {
+    ImGuiLayer::Shutdown();
     m_gBufferPickingService.Shutdown();
     m_gpuParticleSystem.Shutdown();
     m_directionalShadowResources.Shutdown();
@@ -57,6 +59,8 @@ void RenderContext::Initialize(GraphicsDevice &graphics)
     m_sceneRenderer3D.Initialize(m_primitiveRenderer3D, m_modelRenderer);
 
     m_frameRenderPipeline.Initialize(graphics, m_frameRenderResources);
+
+    ImGuiLayer::Initialize(graphics.GetWindowHandle(), graphics.GetDevice(), graphics.GetImmediateContext());
 }
 
 void RenderContext::BeginRenderFrame()
@@ -350,6 +354,7 @@ void RenderContext::ResizeDeferredResources()
     m_directionalShadowResources.Resize(*m_graphics);
     m_frameRenderResources.OnBackbufferResize(m_graphics->GetWidth(), m_graphics->GetHeight());
     m_frameRenderPipeline.Resize(m_graphics->GetWidth(), m_graphics->GetHeight());
+    ImGuiLayer::OnBackbufferResize();
 }
 
 ShapeRenderer2D &RenderContext::GetShapeRenderer2D() noexcept
