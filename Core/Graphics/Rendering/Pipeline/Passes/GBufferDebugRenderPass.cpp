@@ -99,19 +99,23 @@ void GBufferDebugRenderPass::Execute(FramePassRenderContext &framePassRenderCont
         gBuffer.GetNormalTarget().GetShaderResourceView(),
         gBuffer.GetMaterialTarget().GetShaderResourceView(),
         gBuffer.GetEmissiveTarget().GetShaderResourceView(),
-        gBuffer.GetSceneDepthTarget().GetShaderResourceView()
+        gBuffer.GetSceneDepthTarget().GetShaderResourceView(),
+        gBuffer.GetObjectIdTarget().GetShaderResourceView()
     };
 
-    deviceContext->PSSetShaderResources(0, 5, shaderResourceViews);
+    deviceContext->PSSetShaderResources(0, 6, shaderResourceViews);
     ID3D11SamplerState *const samplers[] = {SamplerState.Get()};
     deviceContext->PSSetSamplers(0, 1, samplers);
     deviceContext->IASetInputLayout(nullptr);
     deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     deviceContext->VSSetShader(VertexShader.Get(), nullptr, 0);
     deviceContext->PSSetShader(PixelShader.Get(), nullptr, 0);
+    graphicsDevice.BindRasterizerCullNone();
+    deviceContext->OMSetDepthStencilState(nullptr, 0u);
     deviceContext->Draw(3, 0);
+    graphicsDevice.BindRasterizerDefault();
 
-    ID3D11ShaderResourceView *const nullShaderResourceViews[5] = {};
-    deviceContext->PSSetShaderResources(0, 5, nullShaderResourceViews);
+    ID3D11ShaderResourceView *const nullShaderResourceViews[6] = {};
+    deviceContext->PSSetShaderResources(0, 6, nullShaderResourceViews);
     framePassRenderContext.GetRenderContext().GetFrameRenderer().LeavePass();
 }

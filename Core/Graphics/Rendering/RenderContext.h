@@ -12,6 +12,7 @@
 #include "Core/Graphics/Rendering/Deferred/DeferredFrameResources.h"
 #include "Core/Graphics/Debug/DebugDrawQueue.h"
 #include "Core/Graphics/ModelRenderer.h"
+#include "Core/Graphics/Picking/GBufferPickingService.h"
 #include "Core/Graphics/Rendering/FrameRenderer.h"
 #include "Core/Graphics/Rendering/Pipeline/FrameRenderPipeline.h"
 #include "Core/Graphics/Rendering/Pipeline/FrameRenderResources.h"
@@ -118,6 +119,10 @@ public:
 
     [[nodiscard]] const GpuParticleSystem &GetGpuParticleSystem() const noexcept;
 
+    [[nodiscard]] GBufferPickingService &GetGBufferPickingService() noexcept;
+
+    [[nodiscard]] const GBufferPickingService &GetGBufferPickingService() const noexcept;
+
     void BuildDefaultForwardRenderPipeline();
     void BuildDefaultDeferredRenderPipeline();
 
@@ -153,6 +158,7 @@ private:
     FrameRenderPipeline m_frameRenderPipeline{};
     DirectionalShadowResources m_directionalShadowResources{};
     GpuParticleSystem m_gpuParticleSystem{};
+    GBufferPickingService m_gBufferPickingService{};
     RenderMode m_renderMode{RenderMode::Forward};
     bool m_executeGameRenderCallbackDuringUserInterfacePass{false};
     bool m_gBufferDebugVisualizationEnabled{false};

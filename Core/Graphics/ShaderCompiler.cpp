@@ -4,6 +4,8 @@
 
 #include <d3dcompiler.h>
 
+#include <Windows.h>
+
 #include <stdexcept>
 #include <string>
 
@@ -48,6 +50,13 @@ Microsoft::WRL::ComPtr<ID3DBlob> ShaderCompiler::CompileFromFile(
             message += "\n";
             message.append(errorText, errorText + errorBlob->GetBufferSize());
         }
+
+        message += "\nEntry: ";
+        message += entryPointString;
+        message += "  Profile: ";
+        message += profileString;
+        message += "\n";
+        OutputDebugStringA(message.c_str());
 
         throw std::runtime_error(message);
     }

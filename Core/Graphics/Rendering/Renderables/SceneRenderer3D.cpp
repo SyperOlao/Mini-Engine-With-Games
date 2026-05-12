@@ -6,6 +6,7 @@
 #include "Core/Graphics/Rendering/Renderables/RenderGeometry3D.h"
 #include "Core/Graphics/Rendering/Renderables/Renderable3D.h"
 
+#include <cstdint>
 #include <type_traits>
 
 void SceneRenderer3D::Initialize(
@@ -52,7 +53,8 @@ void SceneRenderer3D::RenderScene(const SceneRenderData3D &sceneRenderData) cons
                             projection,
                             cameraWorldPosition,
                             sceneRenderData.Lighting,
-                            renderable.Material
+                            renderable.Material,
+                            static_cast<std::uint32_t>(renderable.SceneObjectIdValue)
                         );
                     }
                     else if constexpr (std::is_same_v<GeometryType, PrimitiveSphereGeometry3D>)
@@ -63,7 +65,8 @@ void SceneRenderer3D::RenderScene(const SceneRenderData3D &sceneRenderData) cons
                             projection,
                             cameraWorldPosition,
                             sceneRenderData.Lighting,
-                            renderable.Material
+                            renderable.Material,
+                            static_cast<std::uint32_t>(renderable.SceneObjectIdValue)
                         );
                     }
                     else if constexpr (std::is_same_v<GeometryType, PrimitiveOrbitGeometry3D>)
@@ -91,12 +94,20 @@ void SceneRenderer3D::RenderScene(const SceneRenderData3D &sceneRenderData) cons
                                 projection,
                                 cameraWorldPosition,
                                 sceneRenderData.Lighting,
-                                renderable.Material
+                                renderable.Material,
+                                static_cast<std::uint32_t>(renderable.SceneObjectIdValue)
                             );
                         }
                         else
                         {
-                            m_modelRenderer->DrawModel(*geometry.Model, world, view, projection, renderable.Material);
+                            m_modelRenderer->DrawModel(
+                                *geometry.Model,
+                                world,
+                                view,
+                                projection,
+                                renderable.Material,
+                                static_cast<std::uint32_t>(renderable.SceneObjectIdValue)
+                            );
                         }
                     }
                 },
@@ -112,11 +123,11 @@ void SceneRenderer3D::RenderScene(const SceneRenderData3D &sceneRenderData) cons
 
                     if constexpr (std::is_same_v<GeometryType, PrimitiveBoxGeometry3D>)
                     {
-                        m_primitiveRenderer->DrawBox(world, view, projection, renderable.Material.BaseColor);
+                        m_primitiveRenderer->DrawBox(world, view, projection, renderable.Material.BaseColor, static_cast<std::uint32_t>(renderable.SceneObjectIdValue));
                     }
                     else if constexpr (std::is_same_v<GeometryType, PrimitiveSphereGeometry3D>)
                     {
-                        m_primitiveRenderer->DrawSphere(world, view, projection, renderable.Material.BaseColor);
+                        m_primitiveRenderer->DrawSphere(world, view, projection, renderable.Material.BaseColor, static_cast<std::uint32_t>(renderable.SceneObjectIdValue));
                     }
                     else if constexpr (std::is_same_v<GeometryType, PrimitiveOrbitGeometry3D>)
                     {
@@ -134,7 +145,14 @@ void SceneRenderer3D::RenderScene(const SceneRenderData3D &sceneRenderData) cons
                             return;
                         }
 
-                        m_modelRenderer->DrawModel(*geometry.Model, world, view, projection, renderable.Material);
+                        m_modelRenderer->DrawModel(
+                            *geometry.Model,
+                            world,
+                            view,
+                            projection,
+                            renderable.Material,
+                            static_cast<std::uint32_t>(renderable.SceneObjectIdValue)
+                        );
                     }
                 },
                 renderable.Geometry

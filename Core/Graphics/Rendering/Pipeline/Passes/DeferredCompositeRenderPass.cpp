@@ -77,7 +77,10 @@ void DeferredCompositeRenderPass::Execute(FramePassRenderContext &framePassRende
     deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     deviceContext->VSSetShader(VertexShader.Get(), nullptr, 0);
     deviceContext->PSSetShader(PixelShader.Get(), nullptr, 0);
+    graphicsDevice.BindRasterizerCullNone();
+    deviceContext->OMSetDepthStencilState(nullptr, 0u);
     deviceContext->Draw(3, 0);
+    graphicsDevice.BindRasterizerDefault();
 
     ID3D11ShaderResourceView *const nullShaderResourceViews[] = {nullptr};
     deviceContext->PSSetShaderResources(0, 1, nullShaderResourceViews);

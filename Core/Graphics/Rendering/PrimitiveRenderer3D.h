@@ -14,6 +14,8 @@
 #include "Core/Graphics/Rendering/Renderables/RenderMaterialParameters.h"
 #include "Core/Graphics/Vertex3D.h"
 
+#include <cstdint>
+
 class GraphicsDevice;
 class RenderContext;
 
@@ -30,14 +32,16 @@ public:
         const DirectX::SimpleMath::Matrix &world,
         const DirectX::SimpleMath::Matrix &view,
         const DirectX::SimpleMath::Matrix &projection,
-        const DirectX::SimpleMath::Color &color
+        const DirectX::SimpleMath::Color &color,
+        std::uint32_t objectId = 0u
     ) const;
 
     void DrawSphere(
         const DirectX::SimpleMath::Matrix &world,
         const DirectX::SimpleMath::Matrix &view,
         const DirectX::SimpleMath::Matrix &projection,
-        const DirectX::SimpleMath::Color &color
+        const DirectX::SimpleMath::Color &color,
+        std::uint32_t objectId = 0u
     ) const;
 
     void DrawBoxLit(
@@ -46,7 +50,8 @@ public:
         const DirectX::SimpleMath::Matrix &projection,
         const DirectX::SimpleMath::Vector3 &cameraWorldPosition,
         const SceneLightingDescriptor3D &lighting,
-        const RenderMaterialParameters &material
+        const RenderMaterialParameters &material,
+        std::uint32_t objectId = 0u
     ) const;
 
     void DrawSphereLit(
@@ -55,7 +60,8 @@ public:
         const DirectX::SimpleMath::Matrix &projection,
         const DirectX::SimpleMath::Vector3 &cameraWorldPosition,
         const SceneLightingDescriptor3D &lighting,
-        const RenderMaterialParameters &material
+        const RenderMaterialParameters &material,
+        std::uint32_t objectId = 0u
     ) const;
 
     void DrawTriangularPrismLit(
@@ -64,7 +70,8 @@ public:
         const DirectX::SimpleMath::Matrix &projection,
         const DirectX::SimpleMath::Vector3 &cameraWorldPosition,
         const SceneLightingDescriptor3D &lighting,
-        const RenderMaterialParameters &material
+        const RenderMaterialParameters &material,
+        std::uint32_t objectId = 0u
     ) const;
 
     void DrawOrbit(
@@ -98,7 +105,8 @@ private:
         const DirectX::SimpleMath::Matrix &view,
         const DirectX::SimpleMath::Matrix &projection,
         const DirectX::SimpleMath::Vector3 &cameraWorldPosition,
-        const RenderMaterialParameters &material
+        const RenderMaterialParameters &material,
+        std::uint32_t objectId
     ) const;
 
     void DrawLitMesh(
@@ -110,10 +118,10 @@ private:
         const DirectX::SimpleMath::Matrix &projection,
         const DirectX::SimpleMath::Vector3 &cameraWorldPosition,
         const SceneLightingDescriptor3D &lighting,
-        const RenderMaterialParameters &material
+        const RenderMaterialParameters &material,
+        std::uint32_t objectId
     ) const;
 
-private:
     GraphicsDevice *m_graphics{nullptr};
     RenderContext *m_shadowBindingHost{nullptr};
 

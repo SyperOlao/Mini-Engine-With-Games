@@ -13,6 +13,8 @@
 #include "Core/Graphics/Rendering/RenderContext.h"
 #include "Core/Graphics/ShaderCompiler.h"
 
+#include <Windows.h>
+
 #include <cstddef>
 #include <cstring>
 #include <stdexcept>
@@ -127,6 +129,22 @@ void DeferredLightingRenderPass::Execute(FramePassRenderContext &framePassRender
     Scene *const gameplayScene = framePassRenderContext.GetGameplayScene();
     if (activeCamera == nullptr || gameplayScene == nullptr)
     {
+        static bool loggedMissingDeferredLightingContext = false;
+        if (!loggedMissingDeferredLightingContext)
+        {
+            loggedMissingDeferredLightingContext = true;
+            OutputDebugStringA(
+                "DeferredLightingRenderPass: skipped (null camera or scene). "
+                "Use RenderContext::SetFrameGameplaySceneAndCamera or pass pointers into ExecuteFramePipeline.\n"
+            );
+        }
+
+        GraphicsDevice &graphicsDeviceForClear = framePassRenderContext.GetGraphicsDevice();
+        auto &lightAccumulationForClear = deferredFrameResources->GetLightAccumulationTarget();
+        framePassRenderContext.GetRenderContext().GetFrameRenderer().BindDeferredLightingAccumulation(
+            lightAccumulationForClear
+        );
+        lightAccumulationForClear.Clear(graphicsDeviceForClear, Color(0.0f, 0.0f, 0.0f, 1.0f));
         return;
     }
 
@@ -208,7 +226,10 @@ void DeferredLightingRenderPass::Execute(FramePassRenderContext &framePassRender
     deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     deviceContext->VSSetShader(VertexShader.Get(), nullptr, 0);
     deviceContext->PSSetShader(PixelShader.Get(), nullptr, 0);
+    graphicsDevice.BindRasterizerCullNone();
+    deviceContext->OMSetDepthStencilState(nullptr, 0u);
     deviceContext->Draw(3, 0);
+    graphicsDevice.BindRasterizerDefault();
 
     ID3D11ShaderResourceView *const nullShaderResourceViews[6] = {};
     deviceContext->PSSetShaderResources(0, 6, nullShaderResourceViews);

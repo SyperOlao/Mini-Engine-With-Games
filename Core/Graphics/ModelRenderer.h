@@ -10,6 +10,8 @@
 #include "Core/Graphics/Rendering/Lighting/SceneLighting3D.h"
 #include "Core/Graphics/Rendering/Renderables/RenderMaterialParameters.h"
 
+#include <cstdint>
+
 class GraphicsDevice;
 class ModelAsset;
 class RenderContext;
@@ -33,7 +35,8 @@ public:
         const DirectX::SimpleMath::Matrix &world,
         const DirectX::SimpleMath::Matrix &view,
         const DirectX::SimpleMath::Matrix &projection,
-        const RenderMaterialParameters &material
+        const RenderMaterialParameters &material,
+        std::uint32_t objectId = 0u
     ) const;
 
     void DrawModelLit(
@@ -43,7 +46,8 @@ public:
         const DirectX::SimpleMath::Matrix &projection,
         const DirectX::SimpleMath::Vector3 &cameraWorldPosition,
         const SceneLightingDescriptor3D &lighting,
-        const RenderMaterialParameters &material
+        const RenderMaterialParameters &material,
+        std::uint32_t objectId = 0u
     ) const;
 
 private:
@@ -59,7 +63,8 @@ private:
         const DirectX::SimpleMath::Matrix &view,
         const DirectX::SimpleMath::Matrix &projection,
         const DirectX::SimpleMath::Vector3 &cameraWorldPosition,
-        const RenderMaterialParameters &material
+        const RenderMaterialParameters &material,
+        std::uint32_t objectId
     ) const;
 
 private:

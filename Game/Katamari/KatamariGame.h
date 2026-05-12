@@ -7,6 +7,7 @@
 #include "Core/Gameplay/Scene.h"
 #include "Core/Graphics/Particles/GpuParticleTypes.h"
 #include "Core/Graphics/FollowCamera.h"
+#include "Core/Graphics/Picking/GBufferPickingService.h"
 #include "Core/Graphics/Rendering/Lighting/SceneLighting3D.h"
 #include "Core/UI/Button.h"
 #include "Game/Katamari/Data/KatamariGameConfig.h"
@@ -78,6 +79,8 @@ private:
     KatamariParticleSettingsPanel ParticleSettingsPanel{};
     GpuParticleEmitterDesc CurrentParticleEmitterDesc{};
     SceneLightingDescriptor3D KatamariLighting{};
+    bool GBufferPickingInspectorEnabled{false};
+    GBufferPickResult LastGBufferPickResult{};
 };
 
 #endif

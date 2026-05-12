@@ -32,6 +32,7 @@
 
 RenderContext::~RenderContext()
 {
+    m_gBufferPickingService.Shutdown();
     m_gpuParticleSystem.Shutdown();
     m_directionalShadowResources.Shutdown();
 }
@@ -45,6 +46,7 @@ void RenderContext::Initialize(GraphicsDevice &graphics)
 
     m_frameRenderer.Initialize(graphics);
     m_deferredFrameResources.CreateOrResize(graphics);
+    m_gBufferPickingService.Initialize(graphics);
     m_directionalShadowResources.Initialize(graphics);
     m_gpuParticleSystem.Initialize(graphics, 4096u);
     m_shapeRenderer2D.Initialize(graphics);
@@ -448,6 +450,16 @@ GpuParticleSystem &RenderContext::GetGpuParticleSystem() noexcept
 const GpuParticleSystem &RenderContext::GetGpuParticleSystem() const noexcept
 {
     return m_gpuParticleSystem;
+}
+
+GBufferPickingService &RenderContext::GetGBufferPickingService() noexcept
+{
+    return m_gBufferPickingService;
+}
+
+const GBufferPickingService &RenderContext::GetGBufferPickingService() const noexcept
+{
+    return m_gBufferPickingService;
 }
 
 void RenderContext::BuildDefaultForwardRenderPipeline()

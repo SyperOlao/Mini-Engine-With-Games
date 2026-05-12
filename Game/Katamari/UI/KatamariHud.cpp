@@ -2,6 +2,7 @@
 
 #include "Core/App/AppContext.h"
 #include "Core/Graphics/Color.h"
+#include "Core/Graphics/Picking/GBufferPickingService.h"
 #include "Core/Graphics/Rendering/ShapeRenderer2D.h"
 #include "Core/UI/BitmapFont.h"
 #include "Core/Platform/Window.h"
@@ -31,7 +32,7 @@ static void DrawGBufferDebugLabels(AppContext &Context)
         "SPECULAR / POWER",
         "EMISSIVE",
         "SCENE DEPTH",
-        "UNUSED"
+        "OBJECT ID"
     };
 
     constexpr float LabelScale = 0.42f;
@@ -75,7 +76,9 @@ void KatamariHud::Draw(
     int const displayFps,
     float const deltaTimeSeconds,
     const bool gBufferDebugVisualizationEnabled,
-    const bool shadowCascadeDebugVisualizationEnabled
+    const bool shadowCascadeDebugVisualizationEnabled,
+    const bool gBufferPickingInspectorEnabled,
+    GBufferPickResult const &lastGBufferPickResult
 )
 {
     if (context.Ui.Font == nullptr)
@@ -167,6 +170,94 @@ void KatamariHud::Draw(
         helpScale
     );
     rowY += 16.0f;
+
+    BitmapFont::DrawString(
+        context.GetShapeRenderer2D(),
+        columnX,
+        rowY,
+        gBufferPickingInspectorEnabled ? "GBuffer inspector: ON (F6)" : "GBuffer inspector: OFF (F6)",
+        gBufferPickingInspectorEnabled ? Color(0.45f, 1.0f, 0.55f, 1.0f) : mutedColor,
+        helpScale
+    );
+    rowY += 16.0f;
+
+    if (gBufferPickingInspectorEnabled)
+    {
+        if (lastGBufferPickResult.Hit)
+        {
+            BitmapFont::DrawString(
+                context.GetShapeRenderer2D(),
+                columnX,
+                rowY,
+                std::format("ObjectId: {}", lastGBufferPickResult.ObjectId),
+                textColor,
+                helpScale
+            );
+            rowY += 16.0f;
+            BitmapFont::DrawString(
+                context.GetShapeRenderer2D(),
+                columnX,
+                rowY,
+                std::format(
+                    "Pixel: {} {}",
+                    lastGBufferPickResult.ScreenX,
+                    lastGBufferPickResult.ScreenY
+                ),
+                textColor,
+                helpScale
+            );
+            rowY += 16.0f;
+            BitmapFont::DrawString(
+                context.GetShapeRenderer2D(),
+                columnX,
+                rowY,
+                std::format("Depth: {:.4f}", static_cast<double>(lastGBufferPickResult.Depth)),
+                textColor,
+                helpScale
+            );
+            rowY += 16.0f;
+            BitmapFont::DrawString(
+                context.GetShapeRenderer2D(),
+                columnX,
+                rowY,
+                std::format(
+                    "World pos: {:.2f} {:.2f} {:.2f}",
+                    static_cast<double>(lastGBufferPickResult.WorldPosition.x),
+                    static_cast<double>(lastGBufferPickResult.WorldPosition.y),
+                    static_cast<double>(lastGBufferPickResult.WorldPosition.z)
+                ),
+                textColor,
+                helpScale
+            );
+            rowY += 16.0f;
+            BitmapFont::DrawString(
+                context.GetShapeRenderer2D(),
+                columnX,
+                rowY,
+                std::format(
+                    "World nrm: {:.2f} {:.2f} {:.2f}",
+                    static_cast<double>(lastGBufferPickResult.WorldNormal.x),
+                    static_cast<double>(lastGBufferPickResult.WorldNormal.y),
+                    static_cast<double>(lastGBufferPickResult.WorldNormal.z)
+                ),
+                textColor,
+                helpScale
+            );
+            rowY += 16.0f;
+        }
+        else
+        {
+            BitmapFont::DrawString(
+                context.GetShapeRenderer2D(),
+                columnX,
+                rowY,
+                "No object under cursor",
+                mutedColor,
+                helpScale
+            );
+            rowY += 16.0f;
+        }
+    }
 
     BitmapFont::DrawString(
         context.GetShapeRenderer2D(),

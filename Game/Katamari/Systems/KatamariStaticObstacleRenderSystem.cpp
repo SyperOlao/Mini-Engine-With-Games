@@ -9,6 +9,8 @@
 #include "Core/Graphics/Rendering/RenderContext.h"
 #include "Core/Platform/Window.h"
 
+#include <cstdint>
+
 using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector3;
 
@@ -83,7 +85,8 @@ void KatamariStaticObstacleRenderSystem::Render(Scene &scene, AppContext &contex
                 projection,
                 cameraWorldPosition,
                 lighting,
-                obstacle.Material
+                obstacle.Material,
+                static_cast<std::uint32_t>(obstacle.Entity)
             );
             continue;
         }
@@ -94,7 +97,8 @@ void KatamariStaticObstacleRenderSystem::Render(Scene &scene, AppContext &contex
             projection,
             cameraWorldPosition,
             lighting,
-            obstacle.Material
+            obstacle.Material,
+            static_cast<std::uint32_t>(obstacle.Entity)
         );
     }
 }

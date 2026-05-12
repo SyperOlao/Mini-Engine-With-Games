@@ -96,6 +96,10 @@ void GraphicsDevice::BindMainRenderTargets() const
 
     ID3D11RenderTargetView *const renderTargets[] = {m_mainRenderTargetView.Get()};
     m_context->OMSetRenderTargets(1, renderTargets, m_mainDepthStencilView.Get());
+    if (m_mainPassDepthStencilState != nullptr)
+    {
+        m_context->OMSetDepthStencilState(m_mainPassDepthStencilState.Get(), 0u);
+    }
 }
 
 void GraphicsDevice::BindMainRenderTargetsReadOnlyDepth() const
@@ -107,6 +111,10 @@ void GraphicsDevice::BindMainRenderTargetsReadOnlyDepth() const
 
     ID3D11RenderTargetView *const renderTargets[] = {m_mainRenderTargetView.Get()};
     m_context->OMSetRenderTargets(1, renderTargets, m_mainReadOnlyDepthStencilView.Get());
+    if (m_mainPassDepthStencilState != nullptr)
+    {
+        m_context->OMSetDepthStencilState(m_mainPassDepthStencilState.Get(), 0u);
+    }
 }
 
 void GraphicsDevice::BindSingleRenderTarget(ID3D11RenderTargetView *const renderTargetView) const
@@ -473,4 +481,49 @@ void GraphicsDevice::ReleaseDepthStencil() noexcept
     m_mainReadOnlyDepthStencilView.Reset();
     m_mainDepthStencilView.Reset();
     m_mainDepthTexture.Reset();
+}
+
+void GraphicsDevice::BindRasterizerCullNone()
+{
+    if (m_context == nullptr)
+    {
+        return;
+    }
+
+    if (m_rasterizerCullNone == nullptr)
+    {
+        if (m_device == nullptr)
+        {
+            return;
+        }
+
+        D3D11_RASTERIZER_DESC rasterizerDescription{};
+        rasterizerDescription.FillMode = D3D11_FILL_SOLID;
+        rasterizerDescription.CullMode = D3D11_CULL_NONE;
+        rasterizerDescription.FrontCounterClockwise = false;
+        rasterizerDescription.DepthBias = 0;
+        rasterizerDescription.DepthBiasClamp = 0.0f;
+        rasterizerDescription.SlopeScaledDepthBias = 0.0f;
+        rasterizerDescription.DepthClipEnable = true;
+        rasterizerDescription.ScissorEnable = false;
+        rasterizerDescription.MultisampleEnable = false;
+        rasterizerDescription.AntialiasedLineEnable = false;
+
+        D3d11Helpers::ThrowIfFailed(
+            m_device->CreateRasterizerState(&rasterizerDescription, m_rasterizerCullNone.GetAddressOf()),
+            "GraphicsDevice failed to create cull-none rasterizer state."
+        );
+    }
+
+    m_context->RSSetState(m_rasterizerCullNone.Get());
+}
+
+void GraphicsDevice::BindRasterizerDefault()
+{
+    if (m_context == nullptr)
+    {
+        return;
+    }
+
+    m_context->RSSetState(nullptr);
 }

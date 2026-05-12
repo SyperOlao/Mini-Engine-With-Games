@@ -4,6 +4,8 @@
 struct AppContext;
 struct KatamariWorldContext;
 
+struct GBufferPickResult;
+
 class KatamariHud final
 {
 public:
@@ -13,7 +15,9 @@ public:
         int displayFps,
         float deltaTimeSeconds,
         bool gBufferDebugVisualizationEnabled,
-        bool shadowCascadeDebugVisualizationEnabled
+        bool shadowCascadeDebugVisualizationEnabled,
+        bool gBufferPickingInspectorEnabled,
+        GBufferPickResult const &lastGBufferPickResult
     );
 };
 

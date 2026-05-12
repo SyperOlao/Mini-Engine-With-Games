@@ -56,6 +56,10 @@ public:
 
     void ClearDepthStencilView(ID3D11DepthStencilView *depthStencilView, float depthClearValue, uint8_t stencilClear = 0) const;
 
+    void BindRasterizerCullNone();
+
+    void BindRasterizerDefault();
+
     [[nodiscard]] int GetWidth() const noexcept;
 
     [[nodiscard]] int GetHeight() const noexcept;
@@ -117,6 +121,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_mainDepthShaderResourceView;
 
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_mainPassDepthStencilState;
+
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_rasterizerCullNone;
 };
 
 #endif

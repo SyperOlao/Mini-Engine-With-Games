@@ -148,7 +148,8 @@ void PrimitiveRenderer3D::DrawBox(
     const Matrix &world,
     const Matrix &view,
     const Matrix &projection,
-    const DirectX::SimpleMath::Color &color
+    const DirectX::SimpleMath::Color &color,
+    const std::uint32_t objectId
 ) const
 {
     if (m_graphics == nullptr || m_box == nullptr)
@@ -171,7 +172,8 @@ void PrimitiveRenderer3D::DrawBox(
             view,
             projection,
             CameraWorldPositionFromViewMatrix(view),
-            material
+            material,
+            objectId
         );
         return;
     }
@@ -184,7 +186,8 @@ void PrimitiveRenderer3D::DrawSphere(
     const Matrix &world,
     const Matrix &view,
     const Matrix &projection,
-    const DirectX::SimpleMath::Color &color
+    const DirectX::SimpleMath::Color &color,
+    const std::uint32_t objectId
 ) const
 {
     if (m_graphics == nullptr || m_sphere == nullptr)
@@ -207,7 +210,8 @@ void PrimitiveRenderer3D::DrawSphere(
             view,
             projection,
             CameraWorldPositionFromViewMatrix(view),
-            material
+            material,
+            objectId
         );
         return;
     }
@@ -222,7 +226,8 @@ void PrimitiveRenderer3D::DrawBoxLit(
     const Matrix &projection,
     const Vector3 &cameraWorldPosition,
     const SceneLightingDescriptor3D &lighting,
-    const RenderMaterialParameters &material
+    const RenderMaterialParameters &material,
+    const std::uint32_t objectId
 ) const
 {
     if (m_litBoxVertexBuffer == nullptr || m_litBoxIndexBuffer == nullptr)
@@ -239,7 +244,8 @@ void PrimitiveRenderer3D::DrawBoxLit(
         projection,
         cameraWorldPosition,
         lighting,
-        material
+        material,
+        objectId
     );
 }
 
@@ -249,7 +255,8 @@ void PrimitiveRenderer3D::DrawSphereLit(
     const Matrix &projection,
     const Vector3 &cameraWorldPosition,
     const SceneLightingDescriptor3D &lighting,
-    const RenderMaterialParameters &material
+    const RenderMaterialParameters &material,
+    const std::uint32_t objectId
 ) const
 {
     if (m_litSphereVertexBuffer == nullptr || m_litSphereIndexBuffer == nullptr)
@@ -266,7 +273,8 @@ void PrimitiveRenderer3D::DrawSphereLit(
         projection,
         cameraWorldPosition,
         lighting,
-        material
+        material,
+        objectId
     );
 }
 
@@ -276,7 +284,8 @@ void PrimitiveRenderer3D::DrawTriangularPrismLit(
     const Matrix &projection,
     const Vector3 &cameraWorldPosition,
     const SceneLightingDescriptor3D &lighting,
-    const RenderMaterialParameters &material
+    const RenderMaterialParameters &material,
+    const std::uint32_t objectId
 ) const
 {
     if (m_litTriangularPrismVertexBuffer == nullptr || m_litTriangularPrismIndexBuffer == nullptr)
@@ -293,7 +302,8 @@ void PrimitiveRenderer3D::DrawTriangularPrismLit(
         projection,
         cameraWorldPosition,
         lighting,
-        material
+        material,
+        objectId
     );
 }
 
@@ -767,7 +777,8 @@ void PrimitiveRenderer3D::DrawLitMesh(
     const Matrix &projection,
     const Vector3 &cameraWorldPosition,
     const SceneLightingDescriptor3D &lighting,
-    const RenderMaterialParameters &material
+    const RenderMaterialParameters &material,
+    const std::uint32_t objectId
 ) const
 {
     if (m_graphics == nullptr)
@@ -790,7 +801,8 @@ void PrimitiveRenderer3D::DrawLitMesh(
             view,
             projection,
             cameraWorldPosition,
-            material
+            material,
+            objectId
         );
         return;
     }
@@ -884,7 +896,8 @@ void PrimitiveRenderer3D::DrawDeferredGeometryMesh(
     const Matrix &view,
     const Matrix &projection,
     const Vector3 &cameraWorldPosition,
-    const RenderMaterialParameters &material
+    const RenderMaterialParameters &material,
+    const std::uint32_t objectId
 ) const
 {
     if (m_graphics == nullptr)
@@ -926,6 +939,7 @@ void PrimitiveRenderer3D::DrawDeferredGeometryMesh(
     ObjectGpuConstants objectConstants{};
     objectConstants.World = world.Transpose();
     objectConstants.WorldInverseTranspose = worldInverseTranspose.Transpose();
+    objectConstants.ObjectId = objectId;
 
     MaterialGpuConstants materialConstants{};
     FillMaterialGpuConstantsFromRenderMaterial(material, materialConstants);

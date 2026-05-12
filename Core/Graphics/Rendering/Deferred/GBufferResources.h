@@ -4,6 +4,7 @@
 #include "Core/Graphics/Color.h"
 #include "Core/Graphics/Rendering/Deferred/GBufferLayout.h"
 #include "Core/Graphics/Rendering/Deferred/ColorRenderTarget2D.h"
+#include "Core/Graphics/Rendering/Deferred/UIntRenderTarget2D.h"
 #include "Core/Graphics/Rendering/Shadows/DepthRenderTarget2D.h"
 
 #include <cstdint>
@@ -41,6 +42,10 @@ public:
 
     [[nodiscard]] const ColorRenderTarget2D &GetEmissiveTarget() const noexcept;
 
+    [[nodiscard]] UIntRenderTarget2D &GetObjectIdTarget() noexcept;
+
+    [[nodiscard]] const UIntRenderTarget2D &GetObjectIdTarget() const noexcept;
+
     [[nodiscard]] DepthRenderTarget2D &GetSceneDepthTarget() noexcept;
 
     [[nodiscard]] const DepthRenderTarget2D &GetSceneDepthTarget() const noexcept;
@@ -61,6 +66,7 @@ private:
     ColorRenderTarget2D m_normal{};
     ColorRenderTarget2D m_material{};
     ColorRenderTarget2D m_emissive{};
+    UIntRenderTarget2D m_objectId{};
     DepthRenderTarget2D m_sceneDepth{};
 };
 

@@ -515,7 +515,8 @@ void ModelRenderer::DrawModel(
     const Matrix &world,
     const Matrix &view,
     const Matrix &projection,
-    const RenderMaterialParameters &material
+    const RenderMaterialParameters &material,
+    const std::uint32_t objectId
 ) const
 {
     if (m_graphics == nullptr || m_commonStates == nullptr)
@@ -544,7 +545,8 @@ void ModelRenderer::DrawModel(
             view,
             projection,
             CameraWorldPositionFromViewMatrix(view),
-            material
+            material,
+            objectId
         );
         return;
     }
@@ -580,7 +582,8 @@ void ModelRenderer::DrawModelDeferredGeometry(
     const Matrix &view,
     const Matrix &projection,
     const Vector3 &cameraWorldPosition,
-    const RenderMaterialParameters &material
+    const RenderMaterialParameters &material,
+    const std::uint32_t objectId
 ) const
 {
     if (m_graphics == nullptr || m_commonStates == nullptr)
@@ -626,6 +629,7 @@ void ModelRenderer::DrawModelDeferredGeometry(
     ObjectGpuConstants objectConstants{};
     objectConstants.World = world.Transpose();
     objectConstants.WorldInverseTranspose = worldInverseTranspose.Transpose();
+    objectConstants.ObjectId = objectId;
 
     MaterialGpuConstants materialConstants{};
     FillMaterialGpuConstantsFromRenderMaterial(material, materialConstants);
@@ -734,7 +738,8 @@ void ModelRenderer::DrawModelLit(
     const Matrix &projection,
     const Vector3 &cameraWorldPosition,
     const SceneLightingDescriptor3D &lighting,
-    const RenderMaterialParameters &material
+    const RenderMaterialParameters &material,
+    const std::uint32_t objectId
 ) const
 {
     if (m_graphics == nullptr || m_commonStates == nullptr)
@@ -772,7 +777,8 @@ void ModelRenderer::DrawModelLit(
             view,
             projection,
             cameraWorldPosition,
-            material
+            material,
+            objectId
         );
         return;
     }

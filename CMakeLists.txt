@@ -112,6 +112,10 @@ add_executable(PingPong
         Core/Graphics/Rendering/Deferred/DeferredShaderConstants3D.h
         Core/Graphics/Rendering/Deferred/ColorRenderTarget2D.h
         Core/Graphics/Rendering/Deferred/ColorRenderTarget2D.cpp
+        Core/Graphics/Rendering/Deferred/UIntRenderTarget2D.h
+        Core/Graphics/Rendering/Deferred/UIntRenderTarget2D.cpp
+        Core/Graphics/Picking/GBufferPickingService.h
+        Core/Graphics/Picking/GBufferPickingService.cpp
         Core/Graphics/Rendering/Deferred/GBufferResources.h
         Core/Graphics/Rendering/Deferred/GBufferResources.cpp
         Core/Graphics/Rendering/Deferred/DeferredFrameResources.h

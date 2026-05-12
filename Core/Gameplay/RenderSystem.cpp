@@ -10,6 +10,8 @@
 #include "Core/Graphics/Rendering/Renderables/RenderMaterialParameters.h"
 #include "Core/Platform/Window.h"
 
+#include <cstdint>
+
 void RenderSystem::Initialize(Scene &, AppContext &)
 {
 }
@@ -73,7 +75,8 @@ void RenderSystem::Render(Scene &scene, AppContext &context)
                 projectionMatrix,
                 cameraWorldPosition,
                 scene.GetSceneLightingDescriptor(),
-                material
+                material,
+                static_cast<std::uint32_t>(entity.GetId())
             );
         }
         else
@@ -83,7 +86,8 @@ void RenderSystem::Render(Scene &scene, AppContext &context)
                 transform->WorldMatrix,
                 viewMatrix,
                 projectionMatrix,
-                material
+                material,
+                static_cast<std::uint32_t>(entity.GetId())
             );
         }
     });

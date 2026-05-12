@@ -5,7 +5,7 @@
 
 #include <cstdint>
 
-constexpr std::uint32_t kGBufferColorSurfaceCount = 4u;
+constexpr std::uint32_t kGBufferColorSurfaceCount = 5u;
 
 constexpr DXGI_FORMAT kGBufferAlbedoOcclusionFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 
@@ -15,12 +15,15 @@ constexpr DXGI_FORMAT kGBufferMaterialFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 
 constexpr DXGI_FORMAT kGBufferEmissiveFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 
+constexpr DXGI_FORMAT kGBufferObjectIdFormat = DXGI_FORMAT_R32_UINT;
+
 enum class GBufferColorSlot : std::uint32_t
 {
     AlbedoOcclusion = 0u,
     Normal = 1u,
     Material = 2u,
-    Emissive = 3u
+    Emissive = 3u,
+    ObjectId = 4u
 };
 
 #endif

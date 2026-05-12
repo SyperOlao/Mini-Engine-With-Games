@@ -3,6 +3,7 @@ Texture2D NormalReceiveLightingTexture : register(t1);
 Texture2D SpecularPowerTexture : register(t2);
 Texture2D EmissiveTexture : register(t3);
 Texture2D SceneDepthTexture : register(t4);
+Texture2D<uint> ObjectIdTexture : register(t5);
 SamplerState GBufferDebugSampler : register(s0);
 
 struct VSOutput
@@ -77,6 +78,25 @@ float4 PSMain(VSOutput input) : SV_TARGET
         const float sceneDepth = SceneDepthTexture.Sample(GBufferDebugSampler, tileUv).r;
         const float depthPreview = sceneDepth >= 0.999999f ? 0.0f : pow(saturate(1.0f - sceneDepth), 0.18f);
         return float4(depthPreview.xxx, 1.0f);
+    }
+    if (tileIndex == 5u)
+    {
+        uint objectIdTexWidth;
+        uint objectIdTexHeight;
+        ObjectIdTexture.GetDimensions(objectIdTexWidth, objectIdTexHeight);
+        const int2 objectIdPixel = int2(
+            clamp(int(floor(tileUv.x * float(objectIdTexWidth))), 0, int(objectIdTexWidth) - 1),
+            clamp(int(floor(tileUv.y * float(objectIdTexHeight))), 0, int(objectIdTexHeight) - 1));
+        const uint objectIdValue = ObjectIdTexture.Load(int3(objectIdPixel, 0));
+        if (objectIdValue == 0u)
+        {
+            return float4(0.0f, 0.0f, 0.0f, 1.0f);
+        }
+        const float3 pseudoColor = frac(float3(
+            float(objectIdValue) * 0.1031f,
+            float(objectIdValue) * 0.11369f,
+            float(objectIdValue) * 0.13787f));
+        return float4(pseudoColor, 1.0f);
     }
 
     return float4(0.015f, 0.018f, 0.024f, 1.0f);

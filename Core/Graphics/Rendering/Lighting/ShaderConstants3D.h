@@ -38,6 +38,10 @@ struct alignas(16) ObjectGpuConstants final
 {
     DirectX::SimpleMath::Matrix World{};
     DirectX::SimpleMath::Matrix WorldInverseTranspose{};
+    std::uint32_t ObjectId{0u};
+    std::uint32_t PaddingObjectId0{0u};
+    std::uint32_t PaddingObjectId1{0u};
+    std::uint32_t PaddingObjectId2{0u};
 };
 
 struct alignas(16) MaterialGpuConstants final

@@ -10,6 +10,8 @@ cbuffer ObjectConstants : register(b1)
 {
     matrix World;
     matrix WorldInverseTranspose;
+    uint ObjectId;
+    uint3 ObjectPadding;
 };
 
 cbuffer MaterialConstants : register(b2)
@@ -81,6 +83,7 @@ struct GBufferOutput
     float4 NormalReceiveLighting : SV_Target1;
     float4 SpecularPower : SV_Target2;
     float4 Emissive : SV_Target3;
+    uint ObjectIdOut : SV_Target4;
 };
 
 float3 EncodeNormal(float3 worldNormal)
@@ -101,6 +104,7 @@ GBufferOutput PackGBuffer(VSOutput input, float3 textureColor)
     output.NormalReceiveLighting = float4(EncodeNormal(input.WorldNormal), receiveLighting);
     output.SpecularPower = float4(saturate(SpecularColorAndPower.rgb), encodedSpecularPower);
     output.Emissive = float4(saturate(EmissiveAndAmbient.rgb), 1.0f);
+    output.ObjectIdOut = ObjectId;
 
     return output;
 }

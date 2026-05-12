@@ -25,8 +25,11 @@
 #include "Game/Katamari/Systems/KatamariSphereWorldResolveSystem.h"
 #include "Game/Katamari/Systems/KatamariStaticObstacleRenderSystem.h"
 #include "Game/Katamari/UI/KatamariHud.h"
+#include "Core/Graphics/Picking/GBufferPickingService.h"
+#include "Core/Graphics/Rendering/Deferred/GBufferResources.h"
 #include "Core/Platform/Window.h"
 #include "Core/Graphics/Rendering/PrimitiveRenderer3D.h"
+#include "Core/Graphics/Debug/DebugDrawQueue.h"
 
 #include <DirectXCollision.h>
 #include <algorithm>
@@ -467,6 +470,15 @@ void KatamariGame::UpdateDebugInput(AppContext &context)
             );
         }
     }
+
+    if (keyboard.WasVirtualKeyPressed(VK_F6))
+    {
+        GBufferPickingInspectorEnabled = !GBufferPickingInspectorEnabled;
+        if (!GBufferPickingInspectorEnabled)
+        {
+            LastGBufferPickResult = {};
+        }
+    }
 }
 
 void KatamariGame::Update(AppContext &context, const float deltaTime)
@@ -534,6 +546,60 @@ void KatamariGame::Update(AppContext &context, const float deltaTime)
     {
         context.Graphics.Render->SetFrameGameplaySceneAndCamera(&SceneInstance, &FollowCameraInstance);
     }
+
+    if (context.Graphics.Render != nullptr && context.Graphics.Device != nullptr
+        && context.GetRenderMode() == RenderMode::Deferred && GBufferPickingInspectorEnabled)
+    {
+        const Window *const MainWindow = context.Platform.MainWindow;
+        if (MainWindow != nullptr)
+        {
+            const int ClientWidth = MainWindow->GetWidth();
+            const int ClientHeight = MainWindow->GetHeight();
+            if (ClientWidth > 0 && ClientHeight > 0)
+            {
+                const GBufferResources &GBuffer = context.Graphics.Render->GetDeferredFrameResources().GetGBufferResources();
+                if (GBuffer.IsCreated())
+                {
+                    const float ViewportAspectRatio =
+                        static_cast<float>(ClientWidth) / static_cast<float>(ClientHeight);
+                    const POINT MouseClientPoint = GetMouseClientPosition(MainWindow->GetHandle());
+                    LastGBufferPickResult = context.Graphics.Render->GetGBufferPickingService().Pick(
+                        *context.Graphics.Device,
+                        GBuffer,
+                        FollowCameraInstance,
+                        ViewportAspectRatio,
+                        MouseClientPoint.x,
+                        MouseClientPoint.y
+                    );
+                    if (LastGBufferPickResult.Hit)
+                    {
+                        DebugDrawQueue &DebugDraw = context.GetDebugDraw();
+                        const Vector3 HitPosition = LastGBufferPickResult.WorldPosition;
+                        const Vector3 HitNormal = LastGBufferPickResult.WorldNormal;
+                        constexpr float CrossHalfExtent = 0.14f;
+                        const DirectX::SimpleMath::Color CrossColor(0.82f, 0.48f, 0.36f, 1.0f);
+                        const DirectX::SimpleMath::Color NormalColor(0.42f, 0.62f, 0.88f, 1.0f);
+                        DebugDraw.AddLineSegment(
+                            HitPosition - Vector3(CrossHalfExtent, 0.0f, 0.0f),
+                            HitPosition + Vector3(CrossHalfExtent, 0.0f, 0.0f),
+                            CrossColor
+                        );
+                        DebugDraw.AddLineSegment(
+                            HitPosition - Vector3(0.0f, CrossHalfExtent, 0.0f),
+                            HitPosition + Vector3(0.0f, CrossHalfExtent, 0.0f),
+                            CrossColor
+                        );
+                        DebugDraw.AddLineSegment(
+                            HitPosition - Vector3(0.0f, 0.0f, CrossHalfExtent),
+                            HitPosition + Vector3(0.0f, 0.0f, CrossHalfExtent),
+                            CrossColor
+                        );
+                        DebugDraw.AddLineSegment(HitPosition, HitPosition + HitNormal * 1.5f, NormalColor);
+                    }
+                }
+            }
+        }
+    }
 }
 
 void KatamariGame::Render(AppContext &context)
@@ -569,7 +635,9 @@ void KatamariGame::Render(AppContext &context)
             DisplayFps,
             LastDeltaTime,
             context.Graphics.Render != nullptr && context.Graphics.Render->IsGBufferDebugVisualizationEnabled(),
-            SceneInstance.GetShadowCascadeDebugVisualizationEnabled()
+            SceneInstance.GetShadowCascadeDebugVisualizationEnabled(),
+            GBufferPickingInspectorEnabled,
+            LastGBufferPickResult
         );
         RenderParticleUi(context);
         return;
