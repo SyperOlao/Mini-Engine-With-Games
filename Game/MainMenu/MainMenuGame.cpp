@@ -123,7 +123,10 @@ void MainMenuGame::Initialize(AppContext &context) {
     }
 
     m_selectedMenuIndex = 0;
-    m_previousLeftMouseDown = false;
+    // Input that triggered a game switch must not leak into this menu.
+    // Reading the real button state prevents the switching click from
+    // appearing as a fresh press on the very first Update() after a switch.
+    m_previousLeftMouseDown = RawInputHandler::Instance().IsLeftMouseDown();
 
     if (context.Audio.System != nullptr) {
         context.Audio.System->Load("ui_move", "Game/Pong/Assets/UI_MOVE.wav");
@@ -185,7 +188,7 @@ void MainMenuGame::TryActivateSelection(AppContext &context, const int itemIndex
             break;
 
         case 4:
-            PostQuitMessage(0);
+            context.GameHost->RequestQuitApplication();
             break;
 
         default:
@@ -203,7 +206,9 @@ void MainMenuGame::Update(AppContext &context, float) {
     auto &input = *context.Input.System;
 
     if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
-        PostQuitMessage(0);
+        if (context.GameHost != nullptr) {
+            context.GameHost->RequestQuitApplication();
+        }
         return;
     }
 

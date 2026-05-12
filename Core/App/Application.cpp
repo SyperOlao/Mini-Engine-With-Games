@@ -162,6 +162,10 @@ void Application::RequestSwitchGame(std::unique_ptr<IGame> nextGame) {
     m_pendingGame = std::move(nextGame);
 }
 
+void Application::RequestQuitApplication() {
+    PostQuitMessage(0);
+}
+
 void Application::FlushPendingGameSwitchIfAny() {
     if (!m_pendingGame) {
         return;

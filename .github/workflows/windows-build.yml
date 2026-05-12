@@ -12,12 +12,21 @@ jobs:
     runs-on: windows-2022
 
     env:
-      VCPKG_ROOT: C:\vcpkg
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup MSVC developer command prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Force local vcpkg path
+        shell: pwsh
+        run: |
+          echo "VCPKG_ROOT=${{ github.workspace }}\vcpkg" >> $env:GITHUB_ENV
 
       - name: Export GitHub Actions cache env for vcpkg
         uses: actions/github-script@v7
@@ -26,15 +35,14 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '')
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '')
 
-      - name: Setup MSVC developer command prompt
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
-      - name: Clone vcpkg
+      - name: Clone and bootstrap vcpkg
         shell: pwsh
         run: |
-          git clone https://github.com/microsoft/vcpkg.git $env:VCPKG_ROOT
+          if (Test-Path "$env:VCPKG_ROOT") {
+            Remove-Item -Recurse -Force "$env:VCPKG_ROOT"
+          }
+
+          git clone https://github.com/microsoft/vcpkg.git "$env:VCPKG_ROOT"
           & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat"
 
       - name: Configure CMake
@@ -50,3 +58,14 @@ jobs:
         shell: pwsh
         run: |
           cmake --build build --config Release --parallel
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MiniEngineWithGames-Windows-x64
+          path: |
+            build/**/*.exe
+            build/Core/Shaders/**
+            build/Game/Pong/Assets/**
+            build/Game/SolarSystem/Assets/**
+            build/Game/Katamari/Assets/**
