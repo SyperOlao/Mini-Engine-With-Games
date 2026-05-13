@@ -22,6 +22,11 @@ void InputSystem::Clear()
     m_keyboard.Update();
 }
 
+void InputSystem::ConsumePressedStates() noexcept
+{
+    m_keyboard.ConsumePressedStates();
+}
+
 const Keyboard& InputSystem::GetKeyboard() const noexcept
 {
     return m_keyboard;

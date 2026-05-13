@@ -44,6 +44,8 @@ public:
 
     [[nodiscard]] bool WasVirtualKeyReleased(USHORT virtualKey) const noexcept;
 
+    void ConsumePressedStates() noexcept;
+
 private:
     static constexpr std::size_t KeyCount = 256;
 

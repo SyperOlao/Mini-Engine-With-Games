@@ -60,3 +60,8 @@ bool Keyboard::WasVirtualKeyReleased(const USHORT virtualKey) const noexcept
 
     return !m_currentState[virtualKey] && m_previousState[virtualKey];
 }
+
+void Keyboard::ConsumePressedStates() noexcept
+{
+    m_previousState = m_currentState;
+}

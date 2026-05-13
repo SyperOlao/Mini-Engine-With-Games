@@ -13,6 +13,8 @@
 #include <string>
 #include <utility>
 
+#include <Windows.h>
+
 Application::Application(
     HINSTANCE__ *const hInstance,
     std::unique_ptr<IGame> game,
@@ -148,21 +150,30 @@ void Application::Update(const float deltaTime) {
     m_input.Update();
     m_audio.Update();
     m_game->Update(m_context, deltaTime);
+
     FlushPendingGameSwitchIfAny();
     if (m_game != nullptr && m_game->WantsGlobalRenderModeToggleOverlay()) {
         UpdateGlobalRenderModeButton();
     }
 }
 
+// Escape is semantic Back inside mini-games. P is a temporary debug direct-return to engine MainMenuGame.
+// Quit (RequestQuitApplication) is allowed only from the engine MainMenu EXIT item.
 void Application::RequestSwitchGame(std::unique_ptr<IGame> nextGame) {
     if (!nextGame) {
         return;
     }
 
+    OutputDebugStringA("[NAV][SWITCH] RequestSwitchGame called\n");
+
     m_pendingGame = std::move(nextGame);
+    m_input.ConsumePressedStates();
 }
 
 void Application::RequestQuitApplication() {
+    OutputDebugStringA("[NAV][QUIT] RequestQuitApplication called\n");
+
+    // PostQuitMessage ends the message loop; only the engine MainMenu EXIT path should reach here.
     PostQuitMessage(0);
 }
 
@@ -171,12 +182,15 @@ void Application::FlushPendingGameSwitchIfAny() {
         return;
     }
 
+    m_input.ConsumePressedStates();
     m_game->Shutdown(m_context);
     m_game = std::move(m_pendingGame);
 
     m_game->Initialize(m_context);
     RefreshClearColorFromActiveGame();
     m_game->OnRenderModeChanged(m_context, m_context.GetRenderMode());
+
+    m_input.ConsumePressedStates();
     m_previousLeftMouseDown = RawInputHandler::Instance().IsLeftMouseDown();
 }
 

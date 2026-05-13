@@ -38,6 +38,7 @@ public:
     static void Initialize(HWND targetWindow);
     void Update();
     void Clear();
+    void ConsumePressedStates() noexcept;
 
     [[nodiscard]] const Keyboard& GetKeyboard() const noexcept;
     [[nodiscard]] Keyboard& GetKeyboard() noexcept;

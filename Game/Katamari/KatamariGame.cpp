@@ -16,6 +16,7 @@
 #include "Core/Graphics/Rendering/Renderables/RenderMaterialParameters.h"
 #include "Core/Input/InputSystem.h"
 #include "Core/Input/Keyboard.h"
+#include "Core/Input/MiniGameDebugNavigation.h"
 #include "Core/Input/RawInputHandler.h"
 #include "Game/Katamari/Data/KatamariPickupCatalog.h"
 #include "Game/Katamari/KatamariLevelSetup.h"
@@ -158,6 +159,8 @@ void KatamariGame::Initialize(AppContext &context)
     );
     WorldContext.FollowCameraForMovement = &FollowCameraInstance;
     WorldContext.Config = &GameConfig;
+
+    PreviousParticleUiLeftMouseDown = RawInputHandler::Instance().IsLeftMouseDown();
 
     Initialized = true;
 }
@@ -502,12 +505,26 @@ void KatamariGame::Update(AppContext &context, const float deltaTime)
         return;
     }
 
-    if (context.GameHost != nullptr
-        && context.Input.System != nullptr
-        && context.Input.System->GetKeyboard().WasKeyPressed(Key::Escape))
-    {
+    if (context.Input.System != nullptr && context.GameHost != nullptr
+        && WasDebugReturnToMainMenuPressed(*context.Input.System)) {
+        // P is a temporary debug direct-return to engine MainMenuGame (separate from Escape Back handling).
         context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
         return;
+    }
+
+    if (context.Input.System != nullptr
+        && context.Input.System->GetKeyboard().WasKeyPressed(Key::Escape))
+    {
+        // Escape is semantic Back: close particle settings first, then engine MainMenuGame.
+        if (ParticleSettingsPanel.IsOpen())
+        {
+            ParticleSettingsPanel.Toggle();
+        }
+        else if (context.GameHost != nullptr)
+        {
+            context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
+            return;
+        }
     }
 
     LastDeltaTime = deltaTime;

@@ -160,6 +160,7 @@ LRESULT Window::HandleMessage(const UINT message, const WPARAM wParam, const LPA
             return RawInputHandler::Instance().HandleMessage(message, wParam, lParam);
 
         case WM_DESTROY:
+            OutputDebugStringA("[WINDOW] WM_DESTROY -> PostQuitMessage\n");
             PostQuitMessage(0);
             return 0;
 

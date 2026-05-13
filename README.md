@@ -36,20 +36,73 @@ It is built as a student-friendly graphics/game-dev playground: one shared `Core
 
 ## Table of Contents
 
-- [Overview](#overview)
+- [Preview](#preview)
+- [Why this project exists](#why-this-project-exists)
 - [Games and Demos](#games-and-demos)
 - [Current Features](#current-features)
 - [Project Architecture](#project-architecture)
-- [Controls](#controls)
+- [Quick Start](#quick-start)
 - [Build Requirements](#build-requirements)
 - [Build and Run](#build-and-run)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
 - [Project Structure](#project-structure)
+---
+## Why this project exists
+
+This repository is meant for students and beginner/intermediate C++ graphics programmers who want to study how a small game runtime can be structured without jumping directly into Unreal Engine-sized complexity.
+
+It demonstrates:
+
+- how to organize a shared engine-like `Core`;
+- how to run multiple games/demos through one application runtime;
+- how to build a simple ECS-style gameplay layer;
+- how to integrate DirectX 11 rendering, audio, input, assets, and UI;
+- how to experiment with forward/deferred rendering, shadows, particles, and debug views.
+
+The goal is not to compete with real engines. The goal is to keep the codebase small enough to read and modify.
 
 ---
-
 **Preview (static):** large motion captures are kept out of Git to keep the repo small. Use the Katamari screenshots below, or attach a short compressed clip to a **GitHub Release** for this repository.
 
 ![Katamari gameplay still](Images/img7.png)
+## Quick Start
+
+### Option A: Download prebuilt Windows binary
+
+1. Open the [latest release](https://github.com/SyperOlao/Mini-Engine-With-Games/releases/latest).
+2. Download the Windows x64 archive.
+3. Extract it.
+4. Run the executable.
+
+### Option B: Build from source
+
+```powershell
+git clone https://github.com/SyperOlao/Mini-Engine-With-Games.git
+cd Mini-Engine-With-Games
+
+cmake -S . -B build `
+  -G "Visual Studio 17 2022" `
+  -A x64 `
+  -DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake `
+  -DVCPKG_TARGET_TRIPLET=x64-windows
+
+cmake --build build --config Debug
+.\build\Debug\PingPong.exe
+```
+
+## Feature Highlights
+
+| Area | Included |
+|---|---|
+| Runtime | Window, app loop, timing, `IGame` lifecycle |
+| Rendering | DirectX 11, 2D/3D rendering, forward/deferred pipeline |
+| Lighting | Directional/point lights, shadow mapping, cascade debug |
+| Gameplay | Lightweight ECS-style scene, entities, components, systems |
+| Physics | 2D/3D collision helpers, debug draw |
+| Audio | DirectXTK Audio, one-shots, loops, runtime control |
+| UI | Bitmap font, buttons, switchers, sliders, debug overlays |
+| Demos | Pong, SolarSystem, Katamari, LightingTest |
 
 ## Overview
 
@@ -372,6 +425,19 @@ DemoType::LightingTest
 - `Game/Katamari/Assets` (if the folder exists)
 
 If assets/shaders seem outdated, rebuild the target to trigger copy/sync post-build steps.
+
+---
+## Contributing
+
+Small contributions are welcome, especially:
+
+- documentation improvements;
+- build fixes;
+- rendering/debug tools;
+- simple gameplay systems;
+- student-friendly examples.
+
+Good starter tasks are tracked with the `good first issue` label.
 
 ---
 

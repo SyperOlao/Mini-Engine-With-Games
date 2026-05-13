@@ -188,6 +188,8 @@ void MainMenuGame::TryActivateSelection(AppContext &context, const int itemIndex
             break;
 
         case 4:
+            OutputDebugStringA("[MAIN_MENU] EXIT selected -> RequestQuitApplication\n");
+            // Quit is allowed only from the engine MainMenu EXIT item (not Escape, not mini-games).
             context.GameHost->RequestQuitApplication();
             break;
 
@@ -204,6 +206,12 @@ void MainMenuGame::Update(AppContext &context, float) {
     }
 
     auto &input = *context.Input.System;
+
+    // Escape is semantic Back; at the engine MainMenu root there is nowhere to go, so consume only.
+    if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
+        input.ConsumePressedStates();
+        return;
+    }
 
     const int previousIndex = m_selectedMenuIndex;
 
@@ -237,8 +245,10 @@ void MainMenuGame::Update(AppContext &context, float) {
         }
     }
 
-    if (m_menuButtons[static_cast<std::size_t>(m_selectedMenuIndex)].HandleKeyboard(input, true)) {
+    if (!wasLeftPressed
+        && m_menuButtons[static_cast<std::size_t>(m_selectedMenuIndex)].HandleKeyboard(input, true)) {
         TryActivateSelection(context, m_selectedMenuIndex);
+        return;
     }
 }
 

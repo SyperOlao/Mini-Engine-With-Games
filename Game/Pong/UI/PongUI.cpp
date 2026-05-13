@@ -58,6 +58,11 @@ namespace {
                || input.GetKeyboard().WasKeyPressed(Key::Down);
     }
 
+    bool WasUiBackKeyPressed(const InputSystem &input) {
+        // Escape is semantic Back (nested Pong UI first, then engine MainMenuGame from Pong main menu).
+        return input.GetKeyboard().WasKeyPressed(Key::Escape);
+    }
+
     MenuItemLayout BuildCenteredMenuItemLayout(const int index, const int itemCount = 4) {
         const float totalHeight =
             static_cast<float>(itemCount) * kMenuButtonHeight
@@ -312,7 +317,7 @@ PongUI::Action PongUI::ApplyMainMenuSelection(const int itemIndex) {
 PongUI::Action PongUI::UpdateMainMenu(AppContext &context) {
     auto &input = *context.Input.System;
 
-    if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
+    if (WasUiBackKeyPressed(input)) {
         context.Audio.System->PlayOneShot("ui_accept", 0.65f);
         return Action::ReturnToEngineMainMenu;
     }
@@ -364,7 +369,7 @@ PongUI::Action PongUI::UpdateMainMenu(AppContext &context) {
 
 PongUI::Action PongUI::UpdateSettingsMenu(AppContext &context) {
     auto &input = *context.Input.System;
-    if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
+    if (WasUiBackKeyPressed(input)) {
         context.Audio.System->PlayOneShot("ui_accept", 0.65f);
         m_screenState = ScreenState::MainMenu;
         return Action::None;
@@ -413,9 +418,10 @@ PongUI::Action PongUI::UpdateSettingsMenu(AppContext &context) {
 PongUI::Action PongUI::UpdatePlaying(AppContext &context) {
     auto &input = *context.Input.System;
 
-    if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
+    if (WasUiBackKeyPressed(input)) {
         context.Audio.System->PlayOneShot("ui_accept", 0.65f);
-        return Action::ReturnToEngineMainMenu;
+        m_screenState = ScreenState::MainMenu;
+        return Action::None;
     }
 
     if (input.GetKeyboard().WasKeyPressed(Key::Enter)) {
@@ -429,9 +435,10 @@ PongUI::Action PongUI::UpdatePlaying(AppContext &context) {
 PongUI::Action PongUI::UpdateGameOver(AppContext &context) {
     auto &input = *context.Input.System;
 
-    if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
+    if (WasUiBackKeyPressed(input)) {
         context.Audio.System->PlayOneShot("ui_accept", 0.65f);
-        return Action::ReturnToEngineMainMenu;
+        m_screenState = ScreenState::MainMenu;
+        return Action::None;
     }
 
     if (input.GetKeyboard().WasKeyPressed(Key::Enter)) {

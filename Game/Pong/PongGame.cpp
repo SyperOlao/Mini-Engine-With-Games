@@ -18,6 +18,7 @@
 #include "Game/Pong/Common/Constants.h"
 #include "Core/Graphics/Color.h"
 #include "Core/Input/InputSystem.h"
+#include "Core/Input/MiniGameDebugNavigation.h"
 #include "Core/Math/MathHelpers.h"
 #include "Game/Pong/Systems/PongCollisionSystem.h"
 #include "Game/Pong/Systems/PongRules.h"
@@ -62,6 +63,13 @@ void PongGame::Shutdown(AppContext &context) {
 }
 
 void PongGame::Update(AppContext &context, const float deltaTime) {
+    if (context.GameHost != nullptr && context.Input.System != nullptr
+        && WasDebugReturnToMainMenuPressed(*context.Input.System)) {
+        // P is a temporary debug direct-return to engine MainMenuGame (separate from Escape Back handling).
+        context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
+        return;
+    }
+
     m_fpsAccumulator += deltaTime;
     ++m_fpsFrames;
 

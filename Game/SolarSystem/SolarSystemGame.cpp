@@ -26,6 +26,7 @@
 #include "Core/Graphics/Rendering/PrimitiveRenderer3D.h"
 #include "Core/Input/InputSystem.h"
 #include "Core/Input/Keyboard.h"
+#include "Core/Input/MiniGameDebugNavigation.h"
 #include "Core/Input/RawInputHandler.h"
 #include "Core/Platform/Window.h"
 #include "Core/UI/BitmapFont.h"
@@ -87,11 +88,20 @@ void SolarSystemGame::Initialize(AppContext &context) {
     m_fpsFrames = 0;
     m_displayFps = 0;
 
+    m_prevLeftMouseDown = RawInputHandler::Instance().IsLeftMouseDown();
+
     m_initialized = true;
 }
 
 void SolarSystemGame::Update(AppContext &context, const float deltaTime) {
     if (!m_initialized) {
+        return;
+    }
+
+    if (context.GameHost != nullptr && context.Input.System != nullptr
+        && WasDebugReturnToMainMenuPressed(*context.Input.System)) {
+        // P is a temporary debug direct-return to engine MainMenuGame (separate from Escape Back handling).
+        context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
         return;
     }
 
@@ -198,7 +208,7 @@ void SolarSystemGame::Render(AppContext &context) {
             context.GetShapeRenderer2D(),
             x,
             y,
-            "F1 FPS   F2 ORBIT   P PROJECTION   TAB SETTINGS",
+            "F1 FPS   F2 ORBIT   O PROJECTION   TAB SETTINGS",
             Color(0.86f, 0.90f, 1.0f, 1.0f),
             helpScale
         );
@@ -254,7 +264,7 @@ void SolarSystemGame::HandleGlobalInput(const AppContext &context) {
         SetCameraMode(CameraMode::Orbit);
     }
 
-    if (keyboard.WasVirtualKeyPressed('P')) {
+    if (keyboard.WasVirtualKeyPressed('O')) {
         if (Camera &camera = GetActiveCamera(); camera.GetProjectionMode() == ProjectionMode::PerspectiveFov) {
             camera.SetProjectionMode(ProjectionMode::PerspectiveOffCenter);
         } else {
@@ -263,6 +273,12 @@ void SolarSystemGame::HandleGlobalInput(const AppContext &context) {
     }
 
     if (keyboard.WasKeyPressed(Key::Escape)) {
+        // Escape is semantic Back: close settings panel first, then return to engine MainMenuGame.
+        if (m_settingsPanel.IsOpen()) {
+            m_settingsPanel.Toggle();
+            return;
+        }
+
         if (context.GameHost != nullptr) {
             context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
         }
