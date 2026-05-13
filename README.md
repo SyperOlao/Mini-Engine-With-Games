@@ -17,448 +17,384 @@
   </a>
 </p>
 
-A compact educational **C++20 / DirectX 11 mini-engine** with playable demos, ECS-style gameplay systems, forward/deferred rendering, shadows, GPU particles, audio, UI, and debug visualization tools.
+A compact **educational C++20 / DirectX 11 mini-engine**: one shared `Core` runtime, several playable demos, and a small **ECS-style** gameplay layer you can read end-to-end without commercial-engine baggage.
 
-It is built as a student-friendly graphics/game-dev playground: one shared `Core`, multiple independent `Game/*` modules, and a single runtime based on the `IGame` interface.
+This is a **learning and experimentation sandbox**, not a production game engine.
 
-> Not a commercial engine. This is a readable, buildable learning project for C++ game architecture, DirectX 11 rendering, and small gameplay systems.
+**Russian README / русская версия:** [README_RU.md](README_RU.md) (mirror of this document; keep both in sync).
 
-**Russian version:** [README_RU.md](README_RU.md)  
-**Download:** [Latest Windows release](https://github.com/SyperOlao/Mini-Engine-With-Games/releases/latest)  
-**Build from source:** see [Build and Run](#build-and-run)
+**Quick links**
 
----
+- [Download latest Windows release](https://github.com/SyperOlao/Mini-Engine-With-Games/releases/latest)
+- [Quick start (build & run)](#quick-start)
+- [Architecture overview](#architecture-overview)
+- [How to add a new mini-game](#how-to-add-a-new-mini-game)
+- [Controls](#controls)
 
-## Preview
-
-![demo2.gif](Images/demo2.gif)
----
-
-## Table of Contents
+## Table of contents
 
 - [Preview](#preview)
 - [Why this project exists](#why-this-project-exists)
-- [Games and Demos](#games-and-demos)
-- [Current Features](#current-features)
-- [Project Architecture](#project-architecture)
-- [Quick Start](#quick-start)
-- [Build Requirements](#build-requirements)
-- [Build and Run](#build-and-run)
+- [What you can learn from this repo](#what-you-can-learn-from-this-repo)
+- [Quick start](#quick-start)
+- [Games and demos](#games-and-demos)
+- [Architecture overview](#architecture-overview)
+- [Rendering features](#rendering-features)
+- [Controls](#controls)
+- [Build requirements](#build-requirements)
+- [Troubleshooting](#troubleshooting)
+- [How to add a new mini-game](#how-to-add-a-new-mini-game)
+- [Project structure](#project-structure)
+- [Known limitations](#known-limitations)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
-- [Project Structure](#project-structure)
----
+- [Media files and Git](#media-files-and-git)
+
+## Preview
+
+![Overview demo](Images/demo2.gif)
+
 ## Why this project exists
 
-This repository is meant for students and beginner/intermediate C++ graphics programmers who want to study how a small game runtime can be structured without jumping directly into Unreal Engine-sized complexity.
+Students and **beginner / intermediate** graphics and gameplay programmers often need a **small, buildable DirectX 11 codebase** to study:
 
-It demonstrates:
+- how a **window, input, timing, and render loop** fit together in modern C++;
+- how to keep **engine-ish Core** code separate from **Game** modules;
+- how **forward vs deferred** rendering and simple **shadow / GBuffer** tooling look in practice;
+- how a **lightweight ECS-style** scene can drive a mini-game without a full editor stack.
 
-- how to organize a shared engine-like `Core`;
-- how to run multiple games/demos through one application runtime;
-- how to build a simple ECS-style gameplay layer;
-- how to integrate DirectX 11 rendering, audio, input, assets, and UI;
-- how to experiment with forward/deferred rendering, shadows, particles, and debug views.
+This repository stays intentionally smaller than a commercial engine: you can trace a feature from `main.cpp` through `Application`, `IGame`, rendering passes, and a concrete demo.
 
-The goal is not to compete with real engines. The goal is to keep the codebase small enough to read and modify.
+## What you can learn from this repo
 
----
-## Quick Start
+- **C++20** usage in a real (small) executable: language features and the STL where they simplify the code, plus clear ownership at game boundaries.
+- **Game loop and lifecycle**: window messages, `Application` update/render, delta time.
+- **`IGame` module switching**: each demo is a class implementing one interface; the shell can swap games at runtime (`IGameHost`, `RequestSwitchGame`).
+- **Core / Game separation**: shared services in `AppContext` (see `Core/App/AppContext.h`, `Core/App/EngineServices.h`); gameplay and content live under `Game/*`.
+- **DirectX 11 basics**: device/swap chain, shaders compiled at runtime from copied `Core/Shaders`, simple 2D and 3D draw paths.
+- **Forward and deferred** rendering paths orchestrated by `FrameRenderer` and passes under `Core/Graphics/Rendering/Pipeline/Passes`.
+- **GBuffer** layout, deferred lighting/composite passes, and **GBuffer debug visualization** (demo hotkeys).
+- **Cascaded shadow mapping** for directional lights and **cascade debug visualization**.
+- **ECS-style gameplay**: `Scene`, entities, components, systems under `Core/Gameplay` (plus Katamari-specific systems).
+- **Collision helpers** in `Core/Physics` and `Core/Gameplay` (2D and 3D utilities, debug draw hooks).
+- **UI**: bitmap font, buttons, switchers, sliders, simple layout patterns in `Core/UI`.
+- **Audio** via **DirectXTK** (`Core/Audio`).
+- **Debug / tools**: **ImGui** layer, **ImGuizmo**-based transform gizmo, and **GBuffer picking** in Katamari (experimental / learning-oriented, not a full editor).
 
-### Option A: Download prebuilt Windows binary
+## Quick start
+
+### A) Download prebuilt Windows binary
 
 1. Open the [latest release](https://github.com/SyperOlao/Mini-Engine-With-Games/releases/latest).
-2. Download the Windows x64 archive.
-3. Extract it.
-4. Run the executable.
+2. Download the Windows **x64** archive.
+3. Extract and run **`MiniEngineDemo.exe`**.
 
-### Option B: Build from source
+The app starts in the **engine main menu** (`MainMenuGame`). Choose a demo, or **EXIT** to quit.
 
-```powershell
-git clone https://github.com/SyperOlao/Mini-Engine-With-Games.git
-cd Mini-Engine-With-Games
+### B) Build from source (Windows 10/11, Visual Studio 2022, CMake 3.21+, vcpkg, x64-windows)
 
-cmake -S . -B build `
-  -G "Visual Studio 17 2022" `
-  -A x64 `
-  -DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake `
-  -DVCPKG_TARGET_TRIPLET=x64-windows
-
-cmake --build build --config Debug
-.\build\Debug\MiniEngineDemo.exe
-```
-
-## Feature Highlights
-
-| Area | Included |
-|---|---|
-| Runtime | Window, app loop, timing, `IGame` lifecycle |
-| Rendering | DirectX 11, 2D/3D rendering, forward/deferred pipeline |
-| Lighting | Directional/point lights, shadow mapping, cascade debug |
-| Gameplay | Lightweight ECS-style scene, entities, components, systems |
-| Physics | 2D/3D collision helpers, debug draw |
-| Audio | DirectXTK Audio, one-shots, loops, runtime control |
-| UI | Bitmap font, buttons, switchers, sliders, debug overlays |
-| Demos | Pong, SolarSystem, Katamari, LightingTest |
-
-## Overview
-
-The repository started as a simple Pong-style game and evolved into a compact game engine framework:
-
-- `Core` provides platform/window, app loop, input, rendering, audio, assets, UI, math, and gameplay systems.
-- `Game/*` contains independent game modules implementing one interface (`IGame`).
-- `main.cpp` selects which module is launched at runtime.
-
-The main executable is `MiniEngineDemo.exe` and hosts multiple game modes (including Pong as one module).
-
----
-## Games and Demos
-
-### Pong (`Game/Pong`)
-
-Classic 2D Pong mode with menu flow and match logic:
-
-- Why it exists:
-  - Baseline "arcade game" module using shared app/runtime APIs
-  - Fast validation target for input, UI, audio, and 2D rendering changes
-- What it provides:
-  - Player vs Player / Player vs Bot
-  - Difficulty and match-rule flow
-  - Main menu, in-game HUD, and game-over screens
-  - Sound effects + looping music
-#### Game play 
-![pong_game_play.gif](Images/pong_game_play.gif)
-
-### SolarSystem (`Game/SolarSystem`)
-
-Interactive 3D solar system sandbox:
-
-- Why it exists:
-  - 3D simulation-style testbed for cameras, UI controls, and scene updates
-  - Demonstrates non-combat/non-arcade interaction patterns
-- What it provides:
-  - Orbit and FPS camera modes
-  - Orbital body rendering and orbit visualization
-  - Live tuning panel for rotation/orbit parameters
-  - Movement-driven engine audio feedback
-#### Game play
-
-Still frame (avoid ~20MB+ GIFs in the repo; compress locally or host on Releases):
-
-![Solar system still](Images/img5.png)
-
-### Katamari (`Game/Katamari`)
-
-3D rolling-ball mini-game with ECS systems and rendering experiments:
-
-- Why it exists:
-  - Main advanced 3D gameplay sandbox in this repository
-  - Stress-tests ECS flow, collisions, rendering modes, and debug passes
-- What it provides:
-  - Roll, absorb, and grow gameplay loop
-  - Follow camera with smoothing
-  - Deferred rendering workflow integration
-  - Particle spawn/settings UI
-  - Collision debug draw, shadow cascade debug, GBuffer debug
-
-Screenshots:
-
-![Katamari gameplay](Images/img12.png)
-![Katamari particles](Images/img13.png)
-![Katamari shadow cascades debug](Images/img14.png)
-![Katamari GBuffer debug](Images/img9.png)
-
-### LightingTest (`Game/LightingTest`)
-
-Compact technical scene used for model/material/lighting/camera validation.
-
-- Why it exists:
-  - Lightweight visual lab for rendering checks without full gameplay complexity
-- What it provides:
-  - Focused environment for lighting/material/camera sanity checks
-
-Screenshot:
-![img.png](Images/img15.png)
----
-
-## Controls
-
-### Global
-
-- `Esc` - exit application (supported in active game logic)
-
-### Demo Selection
-
-Switch the active game in `main.cpp`:
-
-```cpp
-constexpr auto demo = DemoType::Katamari;
-```
-
-Available options:
-
-```cpp
-DemoType::Pong
-DemoType::SolarSystem
-DemoType::Katamari
-DemoType::LightingTest
-```
-
-### SolarSystem
-
-- `F1` - FPS camera
-- `F2` - Orbit camera
-- `P` - projection mode toggle
-- `Tab` - settings panel
-- `W`, `A`, `S`, `D` - movement / zoom (depending on camera mode)
-- Arrow keys - look/orbit adjustments
-- `RMB` - mouse look/orbit rotation
-
-### Katamari
-
-- `W`, `A`, `S`, `D` - movement
-- `Space` - jump
-- `R` - level reset
-- `F3` - collision debug draw
-- `F4` - shadow cascade debug
-- `F5` - GBuffer debug visualization
-- `RMB` - camera control
-
----
-
-## Current Features
-
-The engine is intentionally compact, but already covers a full playable game loop stack:
-
-- **Application Runtime**
-  - Unified game lifecycle through `IGame` (`Initialize`, `Update`, `Render`, `Shutdown`)
-  - Shared runtime context (`AppContext`) used by all game modules
-  - One executable, multiple game modules selected at compile-time in `main.cpp`
-
-- **Rendering**
-  - 2D + 3D rendering on DirectX 11
-  - Forward and deferred render modes
-  - Multi-pass frame pipeline (`Core/Graphics/Rendering/Pipeline`)
-  - Directional + point light support, shadow mapping, and debug visualizations
-  - GBuffer debug mode and shadow cascade debug mode
-  - GPU particles (integrated into Katamari flow)
-
-- **Gameplay Foundation**
-  - Lightweight ECS-style scene flow (`Scene`, entities, components, systems)
-  - Built-in transform, velocity, collision, and render update systems
-  - 2D and 3D collision helpers
-  - Reusable camera logic (FPS, orbit, follow camera styles)
-
-- **Tooling and Content Runtime**
-  - Asset loading for models and textures (Assimp path)
-  - Runtime shader files copied into build output automatically
-  - Built-in UI widgets and debug overlays
-  - Audio integration via DirectXTK Audio
-
----
-
-## Project Architecture
-
-### `Core/App`
-
-Application bootstrap and frame loop:
-
-- `Application` owns startup/shutdown, timing, update loop, and render loop
-- `IGame` defines the contract every game module must implement
-- `AppContext` exposes platform/window/input/graphics/audio/assets/UI services
-- `ApplicationDefaults.h` keeps default window sizing (`1280x720`)
-
-Responsibility: this layer is the "host shell" that keeps game modules decoupled from low-level initialization.
-
-### `Core/Graphics`
-
-Rendering stack and rendering pipeline:
-
-- `GraphicsDevice` initializes and owns D3D11 resources and frame targets
-- `ShapeRenderer2D` handles 2D primitives and UI rendering helpers
-- `PrimitiveRenderer3D` handles debug/simple 3D primitives
-- `ModelRenderer` renders imported model assets with material/light data
-- `FrameRenderer` orchestrates frame execution and render mode behavior
-- Render passes live in `Core/Graphics/Rendering/Pipeline/Passes`
-  - Deferred path includes geometry, lighting, and composite passes
-  - Additional passes exist for shadows, particles, overlays, and UI
-
-Responsibility: this is the rendering subsystem plus frame orchestration logic.
-
-### `Core/Gameplay`
-
-Gameplay foundation for 3D scenes:
-
-- `Scene` implements entity/component/system orchestration
-- Components include transform/model/material/velocity/collider/tag/attachment data
-- Systems include transform propagation, velocity integration, collision, and rendering
-- Additional game-specific systems can be plugged in per module
-
-Responsibility: reusable gameplay runtime for features that should not be rewritten per game.
-
-### Other Core Modules
-
-- `Core/Input` - keyboard/mouse state and raw input deltas
-- `Core/Audio` - sound loading, one-shots, looped sounds, runtime control
-- `Core/Assets` - path resolving and cached asset loading
-- `Core/UI` - bitmap font drawing and custom UI widgets
-- `Core/Physics` - shared collision/math structures and queries
-- `Core/Math` - transforms and helper math utilities
-
----
-
-## Build Requirements
-
-Current setup is Windows-focused:
-
-- Windows 10/11
-- CMake 3.21+
-- C++20 compiler (Visual Studio/MSVC recommended)
-- [vcpkg](https://github.com/microsoft/vcpkg)
-
-Dependencies (from `CMakeLists.txt`):
-
-- `directxtk`
-- `assimp`
-
-System libraries:
-
-- `d3d11`, `dxgi`, `d3dcompiler`, `dxguid`, `user32`, `gdi32`
-
----
-
-## Build and Run
-
-This project is expected to be built in **Debug** during active development.
-
-### A) vcpkg Setup (first time)
-
-1. Clone and bootstrap `vcpkg`:
+**1. vcpkg (first time)**
 
 ```powershell
 git clone https://github.com/microsoft/vcpkg.git C:\dev\vcpkg
 cd C:\dev\vcpkg
 .\bootstrap-vcpkg.bat
-```
-
-2. Optional but recommended environment variables for the current terminal session:
-
-```powershell
-$env:VCPKG_ROOT="C:\dev\vcpkg"
-$env:Path="$env:VCPKG_ROOT;$env:Path"
-vcpkg version
-```
-
-3. Install required ports:
-
-```powershell
 vcpkg install directxtk:x64-windows assimp:x64-windows
 ```
 
-### B) Configure the project with CMake + vcpkg toolchain
-
-From repository root:
+For the current shell session (example paths):
 
 ```powershell
+$env:VCPKG_ROOT = "C:\dev\vcpkg"
+$env:Path = "$env:VCPKG_ROOT;$env:Path"
+```
+
+**2. Configure and build (Visual Studio generator)**
+
+From the repository root (adjust `C:/dev/vcpkg` if your vcpkg root differs):
+
+```powershell
+git clone https://github.com/SyperOlao/Mini-Engine-With-Games.git
+cd Mini-Engine-With-Games
+
 cmake -S . -B cmake-build-debug `
   -G "Visual Studio 17 2022" `
   -A x64 `
   -DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake `
   -DVCPKG_TARGET_TRIPLET=x64-windows
-```
 
-Notes:
-
-- `-DCMAKE_TOOLCHAIN_FILE=.../vcpkg.cmake` is required for `find_package(directxtk)` and `find_package(assimp)` to resolve correctly.
-- `x64-windows` must match installed triplets.
-
-### C) Build (Debug)
-
-```powershell
 cmake --build cmake-build-debug --config Debug
 ```
 
-Expected binary:
+**3. Run**
 
-- `cmake-build-debug/MiniEngineDemo.exe`
-
-### D) Run
+With the **Visual Studio** multi-config generator, the Debug binary is typically:
 
 ```powershell
-.\cmake-build-debug\MiniEngineDemo.exe
+.\cmake-build-debug\Debug\MiniEngineDemo.exe
 ```
 
-### E) Select which game runs
+If you use a **single-config** generator (for example **Ninja**), the executable is usually next to the build tree root, for example `.\build\MiniEngineDemo.exe`.
 
-`main.cpp` selects the active module:
+### Optional: CMake preset (Ninja)
 
-```cpp
-constexpr auto demo = DemoType::Katamari;
+[`CMakePresets.json`](CMakePresets.json) defines a **Ninja** preset that expects:
+
+- `VCPKG_ROOT` pointing at your vcpkg clone
+- **Ninja** on your `PATH`
+
+Example:
+
+```powershell
+$env:VCPKG_ROOT = "C:\dev\vcpkg"
+cmake --preset default
+cmake --build build
+.\build\MiniEngineDemo.exe
 ```
 
-Available options:
+`CMakePresets.json` uses `VCPKG_TARGET_TRIPLET` **x64-windows** to match the vcpkg install above.
 
-```cpp
-DemoType::Pong
-DemoType::SolarSystem
-DemoType::Katamari
-DemoType::LightingTest
-```
+## Games and demos
 
-### F) What CMake copies for runtime
+Runtime flow: **`MiniEngineDemo.exe`** always boots **`MainMenuGame`** from [`main.cpp`](main.cpp). Pick a demo from the menu. To quit cleanly, use **EXIT** on that menu (see [Controls](#controls) for `Esc` behavior).
 
-`CMakeLists.txt` copies runtime data into the build folder:
+### Main menu (`Game/MainMenu`)
 
-- `Core/Shaders`
-- `Game/Pong/Assets`
-- `Game/SolarSystem/Assets`
-- `Game/Katamari/Assets` (if the folder exists)
+**Demonstrates:** simple UI navigation, audio feedback, switching active `IGame` through `IGameHost::RequestSwitchGame`, and returning later via `Game/Common/MiniGameNavigation`.
 
-If assets/shaders seem outdated, rebuild the target to trigger copy/sync post-build steps.
+**Read first:** [`Game/MainMenu/MainMenuGame.cpp`](Game/MainMenu/MainMenuGame.cpp), [`Game/Common/MiniGameNavigation.cpp`](Game/Common/MiniGameNavigation.cpp), [`Core/App/Application.cpp`](Core/App/Application.cpp) (`RequestSwitchGame`, `RequestQuitApplication`).
 
----
-## Contributing
+### Pong (`Game/Pong`)
 
-Small contributions are welcome, especially:
+**Demonstrates:** 2D gameplay, local UI flow (menus, settings, match), collision, and shared audio/UI patterns.
 
-- documentation improvements;
-- build fixes;
-- rendering/debug tools;
-- simple gameplay systems;
-- student-friendly examples.
+**Read first:** [`Game/Pong/PongGame.cpp`](Game/Pong/PongGame.cpp), [`Game/Pong/UI/PongUI.cpp`](Game/Pong/UI/PongUI.cpp).
 
-Good starter tasks are tracked with the `good first issue` label.
+#### Gameplay
 
----
+![Pong gameplay](Images/pong_game_play.gif)
 
-## Project Structure
+### Solar System (`Game/SolarSystem`)
+
+**Demonstrates:** 3D scene update, FPS vs orbit cameras, tuning UI, and movement-driven audio.
+
+**Read first:** [`Game/SolarSystem/SolarSystemGame.cpp`](Game/SolarSystem/SolarSystemGame.cpp), [`Game/SolarSystem/SolarSystemScene.cpp`](Game/SolarSystem/SolarSystemScene.cpp).
+
+Still frame (large GIFs are intentionally avoided in-repo; compress locally or attach clips to Releases if needed):
+
+![Solar system still](Images/img5.png)
+
+### Katamari (`Game/Katamari`)
+
+**Demonstrates:** rolling-ball gameplay, follow camera, deferred integration, GPU particles, collision debug, shadow cascade debug, GBuffer debug, GBuffer picking, and an **ImGuizmo**-based transform tool (learning-oriented).
+
+**Read first:** [`Game/Katamari/KatamariGame.cpp`](Game/Katamari/KatamariGame.cpp), systems under [`Game/Katamari/Systems`](Game/Katamari/Systems), [`Core/Graphics/Rendering/FrameRenderer.cpp`](Core/Graphics/Rendering/FrameRenderer.cpp).
+
+![Katamari gameplay](Images/img12.png)
+
+![Katamari particles](Images/img13.png)
+
+![Katamari shadow cascades debug](Images/img14.png)
+
+![Katamari GBuffer debug](Images/img9.png)
+
+### Lighting test (`Game/LightingTest`)
+
+**Demonstrates:** forward-lit primitives and imported models in a small scene for lighting and camera sanity checks.
+
+**Read first:** [`Game/LightingTest/LightingTestGame.cpp`](Game/LightingTest/LightingTestGame.cpp).
+
+![Lighting test scene](Images/img15.png)
+
+## Architecture overview
+
+High level: **`Application`** owns the window, DirectX device, input, audio, asset cache, and render context. It holds the active **`IGame`**, calls `Initialize` / `Update` / `Render` / `Shutdown`, and applies pending game switches from **`IGameHost`**.
+
+- **`Core/App`** — `Application`, `IGame`, `IGameHost`, `AppContext`, timing, fatal error reporting, default window size (`ApplicationDefaults.h`).
+- **`Core/Graphics`** — `GraphicsDevice`, 2D/3D render helpers, cameras, model rendering, deferred resources, **`FrameRenderer`** and **`Core/Graphics/Rendering/Pipeline/Passes/*`** (geometry, deferred, shadows, particles, overlays, UI).
+- **`Core/Gameplay`** — `Scene`, entities, components, built-in systems (transform, velocity, collision, render sync).
+- **`Core/Input`** — keyboard state and raw mouse deltas (`RawInputHandler`).
+- **`Core/Audio`** — DirectXTK-based loading, one-shots, loops.
+- **`Core/UI`** — bitmap font and lightweight widgets; ImGui integration under `Core/UI/ImGui`.
+- **`Core/Physics`** — shared collision types, queries, helpers used by gameplay and demos.
+- **`Core/Editor`** — small helpers such as **`TransformGizmoService`** (ImGuizmo), used from Katamari.
+- **`Game/*`** — self-contained demos implementing `IGame`; shared navigation helpers live in **`Game/Common`**.
+
+### Start reading here
+
+1. [`main.cpp`](main.cpp) — entry point; constructs `Application` with `MainMenuGame`.
+2. [`Core/App/Application.cpp`](Core/App/Application.cpp) — frame loop, resize, game switching, quit routing.
+3. [`Core/App/IGame.h`](Core/App/IGame.h) — contract every demo implements.
+4. [`Game/MainMenu/MainMenuGame.cpp`](Game/MainMenu/MainMenuGame.cpp) — runtime demo launcher UI.
+5. [`Game/Pong/PongGame.cpp`](Game/Pong/PongGame.cpp) — smallest full game loop example.
+6. [`Core/Graphics/Rendering/FrameRenderer.cpp`](Core/Graphics/Rendering/FrameRenderer.cpp) — how passes are wired per frame.
+7. [`Core/Graphics/Rendering/Pipeline/Passes`](Core/Graphics/Rendering/Pipeline/Passes) — individual render passes (forward/deferred branches, debug, UI).
+8. [`Game/Katamari`](Game/Katamari) — ECS-style systems plus rendering/debug integration.
+
+### Developer option: skip the main menu
+
+For quick iteration you can still construct another `IGame` directly in [`main.cpp`](main.cpp) (for example `std::make_unique<KatamariGame>()` instead of `MainMenuGame`). The supported student path is the **runtime menu**; editing `main.cpp` is optional.
+
+## Rendering features
+
+Present in code today (read passes under `Core/Graphics/Rendering/Pipeline/Passes` for details):
+
+- **Forward** Phong-style path for simpler scenes.
+- **Deferred** geometry + lighting + composite passes; **GBuffer** targets and layouts under `Core/Graphics/Rendering/Deferred`.
+- **GBuffer debug** visualization (toggle in Katamari; see [Controls](#controls)).
+- **Directional cascaded shadow maps** and **cascade debug** visualization.
+- **GPU particles** (compute/update + draw integration; tuned from Katamari UI).
+- **GBuffer picking** (`Core/Graphics/Picking/GBufferPickingService`) — used for entity hit inspection and gizmo selection in Katamari when the picking inspector is enabled (**deferred** mode).
+- **ImGuizmo** transform manipulation (`Core/Editor/TransformGizmoService`) — experimental learning tool, not a shipped editor.
+
+Some combinations (for example picking + forward mode) are intentionally limited; treat advanced tooling as **experimental** where the HUD or code paths indicate so.
+
+## Controls
+
+### Engine main menu (`MainMenuGame`)
+
+- **W / S** or **Up / Down** — move selection
+- **Enter** or **mouse click** — activate item (**Pong**, **Solar System**, **Katamari**, **Lighting test**, **EXIT**)
+- **`Esc`** — **ignored** on this menu (nowhere to go “back”); use **EXIT** to quit or choose a demo
+- **`P`** — intentionally ignored here so it does not leak when returning from demos that use **`P`** as a debug shortcut
+
+### Global (while a demo is running)
+
+- **`P`** — instant return to the **engine main menu** (debug shortcut shared via [`Game/Common/MiniGameNavigation`](Game/Common/MiniGameNavigation.h); also used during development for fast iteration)
+- **Forward / deferred** — in **Katamari**, a **clickable overlay button** toggles render mode (`Application` global overlay when the active game opts in via `WantsGlobalRenderModeToggleOverlay`)
+
+### `Esc` behavior (current implementation)
+
+- **From demos** — `Esc` acts as **Back**: nested UI (for example Pong’s internal flow, Solar System settings, Katamari particle panel) closes first; otherwise the game requests a switch back to **`MainMenuGame`**.
+- **From the engine main menu** — `Esc` does **not** exit the process; use **EXIT** or close the window.
+- **Quitting the process** — `Application::RequestQuitApplication` is used from the main menu **EXIT** item (see comments in [`Core/App/Application.cpp`](Core/App/Application.cpp)).
+
+### Pong
+
+- **Menus:** **W / S** or arrows, **Enter** / click; **`Esc`** steps back (from Pong’s main menu this returns to the **engine main menu**)
+- **Playing:** **W / S** — left paddle; **Up / Down** — right paddle in **two-player** mode
+- **`P`** — return to engine main menu
+
+### Solar System
+
+- **`F1`** — FPS camera
+- **`F2`** — orbit camera
+- **`O`** — projection mode toggle (standard FOV vs off-center perspective)
+- **`Tab`** — settings panel
+- **`W` `A` `S` `D`** — move (mode-dependent) / orbit zoom where applicable
+- **Arrow keys** — look / orbit adjustments
+- **Right mouse** — mouse look / orbit rotation
+- **`Esc`** — closes the settings panel if open, otherwise returns to the engine main menu
+- **`P`** — return to engine main menu
+
+### Katamari
+
+- **`W` `A` `S` `D`** — move
+- **`Space`** — jump
+- **`R`** — reset level
+- **`Right mouse`** — camera orbit / drag
+- **`Esc`** — closes particle settings if open, otherwise returns to the engine main menu
+- **`P`** — return to engine main menu
+- **`F3`** — collision debug draw
+- **`F4`** — shadow cascade debug
+- **`F5`** — GBuffer debug visualization
+- **`F6`** — GBuffer picking inspector (see code paths; **deferred** mode)
+- **`F7`** — transform gizmo / editor-style manipulator (ImGuizmo)
+
+### Lighting test
+
+- **`W` `A` `S` `D`** — move camera
+- **Arrow keys** — rotate
+- **Right mouse** — mouse look
+- **`Esc`** or **`P`** — return to engine main menu
+
+## Build requirements
+
+- **OS:** Windows 10/11 (**DirectX 11** focused; not a cross-platform project today)
+- **Toolchain:** **Visual Studio 2022** / MSVC recommended
+- **CMake:** **3.21+**
+- **Language:** **C++20**
+- **Package manager:** [vcpkg](https://github.com/microsoft/vcpkg) with triplet **x64-windows**
+- **Ports:** `directxtk`, `assimp` (see root [`CMakeLists.txt`](CMakeLists.txt))
+- **System libs linked:** `d3d11`, `dxgi`, `d3dcompiler`, `dxguid`, `user32`, `gdi32`
+- **Bundled third-party sources:** Dear **ImGui** and **ImGuizmo** under [`ThirdParty`](ThirdParty) (compiled as part of `MiniEngineDemo`)
+
+## Troubleshooting
+
+- **`CMAKE_TOOLCHAIN_FILE` not set / wrong path** — `find_package(directxtk)` / `find_package(assimp)` fails. Point `-DCMAKE_TOOLCHAIN_FILE=.../scripts/buildsystems/vcpkg.cmake` at your vcpkg checkout and keep **`VCPKG_TARGET_TRIPLET=x64-windows`** aligned with installed packages.
+- **Wrong Visual Studio generator string** — use **`"Visual Studio 17 2022"`** for VS 2022. A mismatched year/name breaks configuration.
+- **CMake preset fails** — ensure **`VCPKG_ROOT`** is set, **`Ninja`** is installed and on `PATH`, and vcpkg triplets match.
+- **Shaders or assets missing at runtime** — `CMakeLists.txt` copies `Core/Shaders` and selected `Game/*/Assets` into the build tree; run a fresh build so **POST_BUILD** copy steps run. Run **`MiniEngineDemo.exe`** from a working directory that can see those folders next to the binary (Visual Studio places the exe under `Debug/` or `Release/`).
+- **Black screen** — verify GPU supports D3D11, try **windowed** mode from your environment, and confirm shaders finished copying (reconfigure + rebuild).
+- **Lighting test loads no meshes** — the sample loads models from paths such as `Core/Data/*.fbx` in code; if those files are absent in your tree or archive, the scene can still run with reduced geometry—check logs and asset paths in [`LightingTestGame.cpp`](Game/LightingTest/LightingTestGame.cpp).
+- **Debug vs Release confusion** — multi-config generators require `--config Debug` or `--config Release` and matching output folders.
+
+## How to add a new mini-game
+
+1. Add **`Game/MyDemo/MyDemoGame.h`** and **`.cpp`** implementing **`IGame`** (`Initialize`, `Update`, `Render`, `Shutdown`, and optional overrides such as `OnRenderModeChanged`).
+2. Register all new `.cpp` / `.h` files in the main **`add_executable(MiniEngineDemo ...)`** list in [`CMakeLists.txt`](CMakeLists.txt) (this project currently uses **one consolidated target**).
+3. Wire the demo into the **engine main menu**: extend the button row and switch in [`Game/MainMenu/MainMenuGame.cpp`](Game/MainMenu/MainMenuGame.cpp) (mirror patterns from existing games).
+4. If you need navigation back to the hub, call **`RequestReturnToEngineMainMenu`** from [`Game/Common/MiniGameNavigation`](Game/Common/MiniGameNavigation.h) on **`Esc`** / **`P`** consistent with other demos.
+5. Add assets under **`Game/MyDemo/Assets`** and extend **`CMakeLists.txt`** `file(COPY ...)` / `add_custom_command` rules like existing games.
+6. Document **controls** and learning goals in this README (and keep **`README_RU.md`** aligned or clearly noted).
+
+## Project structure
 
 ```text
 Mini-Engine-With-Games/
-├── Core/                                  # Shared engine runtime
-│   ├── App/                               # App lifecycle, IGame contract, AppContext
-│   ├── Platform/                          # Native window integration
-│   ├── Input/                             # Keyboard/mouse/raw input
-│   ├── Graphics/                          # Device, renderers, cameras, shaders, frame pipeline
-│   │   └── Rendering/Pipeline/Passes/     # Frame pass implementations
-│   ├── Gameplay/                          # Scene ECS-style data + systems
-│   ├── Physics/                           # Collision/math primitives and queries
-│   ├── Math/                              # Transform and shared math helpers
-│   ├── Assets/                            # Asset resolving/loading/cache
-│   ├── Audio/                             # Audio runtime
-│   ├── UI/                                # UI framework and widgets
-│   └── Shaders/                           # Runtime shader source files
-├── Game/                                  # Game-specific modules
-│   ├── Pong/                              # 2D arcade gameplay module
-│   ├── SolarSystem/                       # 3D simulation-style demo module
-│   ├── Katamari/                          # 3D gameplay + debug/render stress module
-│   └── LightingTest/                      # Rendering validation scene
-├── Images/                                # README screenshots
-├── main.cpp                               # Active game selection
-└── CMakeLists.txt                         # Build configuration and runtime copy rules
+├── Core/                              # Shared runtime
+│   ├── App/                           # Application, IGame / IGameHost, AppContext, services headers
+│   ├── Platform/                      # Win32 window
+│   ├── Input/                         # Keyboard + raw mouse
+│   ├── Graphics/                      # D3D11 device, renderers, cameras, shaders, FrameRenderer, passes, picking
+│   ├── Gameplay/                      # ECS-style scene, components, systems
+│   ├── Physics/                       # Collision helpers and queries
+│   ├── Math/                          # Transforms and helpers
+│   ├── Assets/                        # Resolver + cache
+│   ├── Audio/                         # DirectXTK audio wrapper
+│   ├── UI/                            # Bitmap font, widgets, ImGui layer
+│   ├── Editor/                        # Small tools (transform gizmo service)
+│   └── Shaders/                       # HLSL sources copied next to the build
+├── Game/
+│   ├── MainMenu/                      # Runtime demo picker (engine hub)
+│   ├── Common/                        # Shared mini-game helpers (main-menu navigation)
+│   ├── Pong/
+│   ├── SolarSystem/
+│   ├── Katamari/
+│   └── LightingTest/
+├── ThirdParty/                        # imgui, imguizmo (built with the executable)
+├── Images/                            # README media (GIFs / screenshots)
+├── main.cpp                           # Entry: Application + MainMenuGame
+└── CMakeLists.txt                     # Targets, dependencies, runtime copy rules
 ```
 
----
+## Known limitations
+
+- **Windows-only**, **DirectX 11-only** learning stack.
+- **Not** a production engine: no asset pipeline, streaming, networking, or editor productization.
+- **CMake** currently attaches most sources to a **single executable target**—easy to grep, harder to modularize.
+- Several debug / tooling paths are **experimental** and demo-scoped (ImGui, gizmo, picking).
+- **No** full level editor; content is mostly code-driven plus on-disk assets.
+- Large binary GIFs are discouraged in Git; see [Media files and Git](#media-files-and-git).
+
+## Roadmap
+
+- More **student-oriented docs** (render pass walkthroughs, diagrams).
+- **Cleaner CMake** split (core library vs. game modules vs. third-party).
+- **Packaged releases** with known-good assets and a short verification checklist.
+- Extra **debug visualizations** and “good first issue” tasks for newcomers.
+- Optional **video clips** hosted on Releases to complement in-repo stills.
+
+## Contributing
+
+Contributions that keep the project approachable are welcome:
+
+- Documentation and README fixes
+- Build / preset / CI improvements
+- Small, well-scoped **rendering** or **debug-tool** experiments (clearly marked when experimental)
+- **Student-friendly** sample code or exercises
+
+Suggested issue labels: **`good first issue`**, **`documentation`**, **`build`**, **`rendering`**, **`gameplay`**, **`bug`**, **`student-friendly`**.
 
 ## Media files and Git
 
