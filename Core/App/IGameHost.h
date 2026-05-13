@@ -15,7 +15,7 @@ public:
 
     virtual void RequestSwitchGame(std::unique_ptr<IGame> nextGame) = 0;
 
-    virtual void RequestQuitApplication() = 0;
+    virtual void RequestQuitApplication(const char *quitSource = nullptr) = 0;
 };
 
 #endif

@@ -117,6 +117,12 @@ namespace {
         BitmapFont::DrawString(renderer, rightX - width, y, value, color, scale);
     }
 
+    void PlayPongUiSoundIfAvailable(AppContext &context, const std::string_view soundId, const float volume) {
+        if (context.Audio.System != nullptr) {
+            context.Audio.System->PlayOneShot(soundId, volume);
+        }
+    }
+
     void RenderSwitcherRow(
         const ShapeRenderer2D &renderer,
         const Switcher &switcher,
@@ -182,6 +188,10 @@ void PongUI::Initialize() {
 }
 
 PongUI::Action PongUI::Update(AppContext &context) {
+    if (context.Input.System == nullptr) {
+        return Action::None;
+    }
+
     switch (m_screenState) {
         case ScreenState::MainMenu:
             return UpdateMainMenu(context);
@@ -318,7 +328,7 @@ PongUI::Action PongUI::UpdateMainMenu(AppContext &context) {
     auto &input = *context.Input.System;
 
     if (WasUiBackKeyPressed(input)) {
-        context.Audio.System->PlayOneShot("ui_accept", 0.65f);
+        PlayPongUiSoundIfAvailable(context,"ui_accept", 0.65f);
         return Action::ReturnToEngineMainMenu;
     }
 
@@ -337,7 +347,7 @@ PongUI::Action PongUI::UpdateMainMenu(AppContext &context) {
         if (wasLeftPressed) {
             for (int index = 0; index < 4; ++index) {
                 if (m_mainMenuButtons[static_cast<std::size_t>(index)].HandleMouseClick(mouseX, mouseY, true)) {
-                    context.Audio.System->PlayOneShot("ui_accept", 0.65f);
+                    PlayPongUiSoundIfAvailable(context,"ui_accept", 0.65f);
                     return ApplyMainMenuSelection(index);
                 }
             }
@@ -355,14 +365,14 @@ PongUI::Action PongUI::UpdateMainMenu(AppContext &context) {
     }
 
     if (previousIndex != m_selectedMainMenuIndex) {
-        context.Audio.System->PlayOneShot("ui_move", 0.45f);
+        PlayPongUiSoundIfAvailable(context,"ui_move", 0.45f);
     }
 
     if (!m_mainMenuButtons[m_selectedMainMenuIndex].HandleKeyboard(input, true)) {
         return Action::None;
     }
 
-    context.Audio.System->PlayOneShot("ui_accept", 0.65f);
+    PlayPongUiSoundIfAvailable(context,"ui_accept", 0.65f);
 
     return ApplyMainMenuSelection(m_selectedMainMenuIndex);
 }
@@ -370,7 +380,7 @@ PongUI::Action PongUI::UpdateMainMenu(AppContext &context) {
 PongUI::Action PongUI::UpdateSettingsMenu(AppContext &context) {
     auto &input = *context.Input.System;
     if (WasUiBackKeyPressed(input)) {
-        context.Audio.System->PlayOneShot("ui_accept", 0.65f);
+        PlayPongUiSoundIfAvailable(context,"ui_accept", 0.65f);
         m_screenState = ScreenState::MainMenu;
         return Action::None;
     }
@@ -384,12 +394,12 @@ PongUI::Action PongUI::UpdateSettingsMenu(AppContext &context) {
     }
 
     if (previousIndex != m_selectedSettingsIndex) {
-        context.Audio.System->PlayOneShot("ui_move", 0.45f);
+        PlayPongUiSoundIfAvailable(context,"ui_move", 0.45f);
     }
 
     if (m_selectedSettingsIndex == 0) {
         if (m_difficultySwitcher.HandleKeyboard(input)) {
-            context.Audio.System->PlayOneShot("ui_move", 0.5f);
+            PlayPongUiSoundIfAvailable(context,"ui_move", 0.5f);
             m_difficulty = static_cast<Difficulty>(m_difficultySwitcher.SelectedIndex());
             return Action::DifficultyChanged;
         }
@@ -399,7 +409,7 @@ PongUI::Action PongUI::UpdateSettingsMenu(AppContext &context) {
 
     if (m_selectedSettingsIndex == 1) {
         if (m_matchRuleSwitcher.HandleKeyboard(input)) {
-            context.Audio.System->PlayOneShot("ui_move", 0.5f);
+            PlayPongUiSoundIfAvailable(context,"ui_move", 0.5f);
             m_matchRule = static_cast<MatchRule>(m_matchRuleSwitcher.SelectedIndex());
             return Action::MatchRuleChanged;
         }
@@ -408,7 +418,7 @@ PongUI::Action PongUI::UpdateSettingsMenu(AppContext &context) {
     }
 
     if (m_settingsBackButton.HandleKeyboard(input, true)) {
-        context.Audio.System->PlayOneShot("ui_accept", 0.65f);
+        PlayPongUiSoundIfAvailable(context,"ui_accept", 0.65f);
         m_screenState = ScreenState::MainMenu;
     }
 
@@ -419,13 +429,13 @@ PongUI::Action PongUI::UpdatePlaying(AppContext &context) {
     auto &input = *context.Input.System;
 
     if (WasUiBackKeyPressed(input)) {
-        context.Audio.System->PlayOneShot("ui_accept", 0.65f);
+        PlayPongUiSoundIfAvailable(context,"ui_accept", 0.65f);
         m_screenState = ScreenState::MainMenu;
         return Action::None;
     }
 
     if (input.GetKeyboard().WasKeyPressed(Key::Enter)) {
-        context.Audio.System->PlayOneShot("ui_accept", 0.65f);
+        PlayPongUiSoundIfAvailable(context,"ui_accept", 0.65f);
         return Action::ResetMatch;
     }
 
@@ -436,13 +446,13 @@ PongUI::Action PongUI::UpdateGameOver(AppContext &context) {
     auto &input = *context.Input.System;
 
     if (WasUiBackKeyPressed(input)) {
-        context.Audio.System->PlayOneShot("ui_accept", 0.65f);
+        PlayPongUiSoundIfAvailable(context,"ui_accept", 0.65f);
         m_screenState = ScreenState::MainMenu;
         return Action::None;
     }
 
     if (input.GetKeyboard().WasKeyPressed(Key::Enter)) {
-        context.Audio.System->PlayOneShot("ui_accept", 0.65f);
+        PlayPongUiSoundIfAvailable(context,"ui_accept", 0.65f);
         return Action::RestartGame;
     }
 
@@ -523,7 +533,6 @@ void PongUI::RenderSettingsMenu(const AppContext &context) const {
 
     m_settingsBackButton.Draw(
         renderer,
-        *context.Ui.Font,
         style,
         m_selectedSettingsIndex == 2
     );
@@ -644,7 +653,6 @@ void PongUI::RenderButtons(
 
         buttons[static_cast<std::size_t>(index)].Draw(
             renderer,
-            *context.Ui.Font,
             style,
             isHighlighted
         );

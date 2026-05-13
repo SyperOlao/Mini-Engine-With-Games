@@ -52,7 +52,7 @@ public:
 
     void RequestSwitchGame(std::unique_ptr<IGame> nextGame) override;
 
-    void RequestQuitApplication() override;
+    void RequestQuitApplication(const char *quitSource = nullptr) override;
 
 private:
     void Initialize();

@@ -123,6 +123,7 @@ void MainMenuGame::Initialize(AppContext &context) {
     }
 
     m_selectedMenuIndex = 0;
+    m_activationSuppressFrames = 2;
     // Input that triggered a game switch must not leak into this menu.
     // Reading the real button state prevents the switching click from
     // appearing as a fresh press on the very first Update() after a switch.
@@ -189,8 +190,7 @@ void MainMenuGame::TryActivateSelection(AppContext &context, const int itemIndex
 
         case 4:
             OutputDebugStringA("[MAIN_MENU] EXIT selected -> RequestQuitApplication\n");
-            // Quit is allowed only from the engine MainMenu EXIT item (not Escape, not mini-games).
-            context.GameHost->RequestQuitApplication();
+            context.GameHost->RequestQuitApplication("MainMenuGame::EXIT");
             break;
 
         default:
@@ -207,8 +207,20 @@ void MainMenuGame::Update(AppContext &context, float) {
 
     auto &input = *context.Input.System;
 
+    if (m_activationSuppressFrames > 0) {
+        --m_activationSuppressFrames;
+        input.ConsumePressedStates();
+        m_previousLeftMouseDown = RawInputHandler::Instance().IsLeftMouseDown();
+        return;
+    }
+
     // Escape is semantic Back; at the engine MainMenu root there is nowhere to go, so consume only.
     if (input.GetKeyboard().WasKeyPressed(Key::Escape)) {
+        input.ConsumePressedStates();
+        return;
+    }
+
+    if (input.GetKeyboard().WasKeyPressed(Key::P)) {
         input.ConsumePressedStates();
         return;
     }
@@ -281,7 +293,6 @@ void MainMenuGame::Render(AppContext &context) {
 
         m_menuButtons[static_cast<std::size_t>(index)].Draw(
             renderer,
-            *context.Ui.Font,
             style,
             isHighlighted
         );

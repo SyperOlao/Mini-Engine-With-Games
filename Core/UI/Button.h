@@ -9,7 +9,6 @@
 #include "../Graphics/Color.h"
 #include "../Graphics/Rendering/ShapeRenderer2D.h"
 
-class BitmapFont;
 class InputSystem;
 
 struct ButtonStyle final
@@ -34,7 +33,7 @@ public:
     [[nodiscard]] bool HandleKeyboard(const InputSystem& input, bool isSelected) const noexcept;
     [[nodiscard]] bool IsHovered(float mousePositionX, float mousePositionY) const noexcept;
     [[nodiscard]] bool HandleMouseClick(float mousePositionX, float mousePositionY, bool wasLeftPressed) const noexcept;
-    void Draw(const ShapeRenderer2D& renderer, const BitmapFont& font, const ButtonStyle& style, bool isSelected) const;
+    void Draw(const ShapeRenderer2D &renderer, const ButtonStyle &style, bool isSelected) const;
 };
 
 

@@ -9,6 +9,7 @@
 #include "Core/Graphics/GraphicsDevice.h"
 #include "Core/Input/RawInputHandler.h"
 
+#include <cstdio>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -164,16 +165,23 @@ void Application::RequestSwitchGame(std::unique_ptr<IGame> nextGame) {
         return;
     }
 
-    OutputDebugStringA("[NAV][SWITCH] RequestSwitchGame called\n");
+    OutputDebugStringA("[NAV][SWITCH_REQUEST] next=pending_IGame\n");
 
     m_pendingGame = std::move(nextGame);
     m_input.ConsumePressedStates();
 }
 
-void Application::RequestQuitApplication() {
-    OutputDebugStringA("[NAV][QUIT] RequestQuitApplication called\n");
+void Application::RequestQuitApplication(const char *quitSource) {
+    {
+        char buffer[320]{};
+        (void)std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "[NAV][QUIT] RequestQuitApplication called source=%s\n",
+            quitSource != nullptr ? quitSource : "(UNEXPECTED_NULL)");
+        OutputDebugStringA(buffer);
+    }
 
-    // PostQuitMessage ends the message loop; only the engine MainMenu EXIT path should reach here.
     PostQuitMessage(0);
 }
 
@@ -182,14 +190,17 @@ void Application::FlushPendingGameSwitchIfAny() {
         return;
     }
 
+    OutputDebugStringA("[NAV][SWITCH_FLUSH] shutting down current game\n");
     m_input.ConsumePressedStates();
     m_game->Shutdown(m_context);
+    m_renderContext.SetFrameGameplaySceneAndCamera(nullptr, nullptr);
     m_game = std::move(m_pendingGame);
 
     m_game->Initialize(m_context);
     RefreshClearColorFromActiveGame();
     m_game->OnRenderModeChanged(m_context, m_context.GetRenderMode());
 
+    OutputDebugStringA("[NAV][SWITCH_FLUSH] initialized pending game\n");
     m_input.ConsumePressedStates();
     m_previousLeftMouseDown = RawInputHandler::Instance().IsLeftMouseDown();
 }
@@ -259,7 +270,7 @@ void Application::UpdateGlobalRenderModeButton() {
 }
 
 void Application::RenderGlobalRenderModeButton() const {
-    if (m_context.Ui.Font == nullptr || m_context.Platform.MainWindow == nullptr) {
+    if (m_context.Platform.MainWindow == nullptr) {
         return;
     }
 
@@ -275,7 +286,6 @@ void Application::RenderGlobalRenderModeButton() const {
     buttonStyle.TextScale = 0.72f;
     m_globalRenderModeButton.Draw(
         m_context.GetShapeRenderer2D(),
-        *m_context.Ui.Font,
         buttonStyle,
         isHovered
     );

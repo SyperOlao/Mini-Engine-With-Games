@@ -13,12 +13,10 @@
 #include <string_view>
 
 #include "Core/App/AppContext.h"
-#include "Core/App/IGameHost.h"
-#include "Game/MainMenu/MainMenuGame.h"
 #include "Game/Pong/Common/Constants.h"
 #include "Core/Graphics/Color.h"
 #include "Core/Input/InputSystem.h"
-#include "Core/Input/MiniGameDebugNavigation.h"
+#include "Game/Common/MiniGameNavigation.h"
 #include "Core/Math/MathHelpers.h"
 #include "Game/Pong/Systems/PongCollisionSystem.h"
 #include "Game/Pong/Systems/PongRules.h"
@@ -43,15 +41,17 @@ void PongGame::Initialize(AppContext &context) {
     m_ui.SyncSettings(m_difficulty, m_matchRule);
     m_ui.SetScreen(PongUI::ScreenState::MainMenu);
 
-    context.Audio.System->Load("ui_move", "Game/Pong/Assets/UI_MOVE.wav");
-    context.Audio.System->Load("ui_accept", "Game/Pong/Assets/UI_ACCEPT.wav");
-    context.Audio.System->Load("paddle_hit", "Game/Pong/Assets/PING.wav");
-    context.Audio.System->Load("point", "Game/Pong/Assets/POINT.wav");
-    context.Audio.System->Load("wall_hit", "Game/Pong/Assets/BALL_WALL.wav");
-    context.Audio.System->Load("score", "Game/Pong/Assets/POINT.wav");
-    context.Audio.System->Load("music_game", "Game/Pong/Assets/MUSIC.wav");
+    if (context.Audio.System != nullptr) {
+        context.Audio.System->Load("ui_move", "Game/Pong/Assets/UI_MOVE.wav");
+        context.Audio.System->Load("ui_accept", "Game/Pong/Assets/UI_ACCEPT.wav");
+        context.Audio.System->Load("paddle_hit", "Game/Pong/Assets/PING.wav");
+        context.Audio.System->Load("point", "Game/Pong/Assets/POINT.wav");
+        context.Audio.System->Load("wall_hit", "Game/Pong/Assets/BALL_WALL.wav");
+        context.Audio.System->Load("score", "Game/Pong/Assets/POINT.wav");
+        context.Audio.System->Load("music_game", "Game/Pong/Assets/MUSIC.wav");
 
-    context.Audio.System->StartLoop("music_game", 0.35f);
+        context.Audio.System->StartLoop("music_game", 0.35f);
+    }
 
     m_scene.Initialize();
 
@@ -59,14 +59,19 @@ void PongGame::Initialize(AppContext &context) {
 }
 
 void PongGame::Shutdown(AppContext &context) {
-    context.Audio.System->StopLoop("music_game");
+    if (context.Audio.System != nullptr) {
+        context.Audio.System->StopLoop("music_game");
+    }
 }
 
 void PongGame::Update(AppContext &context, const float deltaTime) {
-    if (context.GameHost != nullptr && context.Input.System != nullptr
+    if (context.Input.System != nullptr
         && WasDebugReturnToMainMenuPressed(*context.Input.System)) {
-        // P is a temporary debug direct-return to engine MainMenuGame (separate from Escape Back handling).
-        context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
+        RequestReturnToEngineMainMenu(context, "PongGame::P");
+        return;
+    }
+
+    if (context.Input.System == nullptr) {
         return;
     }
 
@@ -133,9 +138,7 @@ void PongGame::HandleUiAction(AppContext &context, const PongUI::Action action) 
             break;
 
         case PongUI::Action::ReturnToEngineMainMenu:
-            if (context.GameHost != nullptr) {
-                context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
-            }
+            RequestReturnToEngineMainMenu(context, "PongGame::ReturnToEngineMainMenu");
             break;
 
         case PongUI::Action::DifficultyChanged:
@@ -239,12 +242,16 @@ void PongGame::UpdateGameplay(const AppContext &context, const float deltaTime) 
     UpdateBall(deltaTime, context);
 
     if (PongCollisionSystem::HandlePaddleCollision(m_ball, m_leftPaddle, m_rightPaddle)) {
-        context.Audio.System->PlayOneShot("paddle_hit", 0.75f);
+        if (context.Audio.System != nullptr) {
+            context.Audio.System->PlayOneShot("paddle_hit", 0.75f);
+        }
     }
 
     const CourtSide outOfBounds = PongCollisionSystem::CheckScoring(m_ball);
     if (outOfBounds != CourtSide::None) {
-        context.Audio.System->PlayOneShot("point", 0.85f);
+        if (context.Audio.System != nullptr) {
+            context.Audio.System->PlayOneShot("point", 0.85f);
+        }
         ScorePoint(outOfBounds);
     }
 }
@@ -268,7 +275,9 @@ void PongGame::UpdateBall(const float deltaTime, const AppContext &context) {
         PongRules::GetPlayableTop(),
         PongRules::GetPlayableBottom()
     )) {
-        context.Audio.System->PlayOneShot("wall_hit", 0.45f);
+        if (context.Audio.System != nullptr) {
+            context.Audio.System->PlayOneShot("wall_hit", 0.45f);
+        }
     }
 }
 

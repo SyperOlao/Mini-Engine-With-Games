@@ -34,7 +34,7 @@ public:
 private:
     void UpdateFpsCounter(float deltaTime) noexcept;
 
-    void HandleGlobalInput(const AppContext& context);
+    void HandleGlobalInput(AppContext &context);
     void UpdateFpsCamera(const AppContext& context, float deltaTime);
     void UpdateOrbitCamera(const AppContext& context, float deltaTime);
 

@@ -25,6 +25,7 @@ private:
 
     std::array<Button, 5> m_menuButtons{};
     int m_selectedMenuIndex{0};
+    int m_activationSuppressFrames{0};
     bool m_previousLeftMouseDown{false};
 };
 

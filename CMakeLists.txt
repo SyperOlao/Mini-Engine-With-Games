@@ -29,7 +29,6 @@ add_executable(PingPong
         Core/Input/InputSystem.h
         Core/Input/Keyboard.cpp
         Core/Input/Keyboard.h
-        Core/Input/MiniGameDebugNavigation.h
         Core/Input/RawInputHandler.cpp
         Core/Input/RawInputHandler.h
 
@@ -223,6 +222,8 @@ add_executable(PingPong
 
         Game/MainMenu/MainMenuGame.cpp
         Game/MainMenu/MainMenuGame.h
+        Game/Common/MiniGameNavigation.h
+        Game/Common/MiniGameNavigation.cpp
 
         Game/Pong/PongGame.cpp
         Game/Pong/PongGame.h

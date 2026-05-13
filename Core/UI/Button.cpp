@@ -44,7 +44,6 @@ bool Button::HandleMouseClick(
 
 void Button::Draw(
     const ShapeRenderer2D &renderer,
-    const BitmapFont &font,
     const ButtonStyle &style,
     const bool isSelected
 ) const {

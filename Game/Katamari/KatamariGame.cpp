@@ -1,6 +1,5 @@
 #include "Game/Katamari/KatamariGame.h"
 
-#include "Core/App/IGameHost.h"
 #include "Core/Graphics/Color.h"
 #include "Core/App/AppContext.h"
 #include "Core/Assets/AssetCache.h"
@@ -16,7 +15,7 @@
 #include "Core/Graphics/Rendering/Renderables/RenderMaterialParameters.h"
 #include "Core/Input/InputSystem.h"
 #include "Core/Input/Keyboard.h"
-#include "Core/Input/MiniGameDebugNavigation.h"
+#include "Game/Common/MiniGameNavigation.h"
 #include "Core/Input/RawInputHandler.h"
 #include "Game/Katamari/Data/KatamariPickupCatalog.h"
 #include "Game/Katamari/KatamariLevelSetup.h"
@@ -28,7 +27,6 @@
 #include "Game/Katamari/Systems/KatamariSphereWorldResolveSystem.h"
 #include "Game/Katamari/Systems/KatamariStaticObstacleRenderSystem.h"
 #include "Game/Katamari/UI/KatamariHud.h"
-#include "Game/MainMenu/MainMenuGame.h"
 #include "imgui.h"
 #include "Core/Graphics/Picking/GBufferPickingService.h"
 #include "Core/Graphics/Rendering/Deferred/GBufferResources.h"
@@ -389,13 +387,11 @@ void KatamariGame::RenderParticleUi(AppContext &context)
     buttonStyle.TextScale = 0.72f;
     ParticleSpawnButton.Draw(
         context.GetShapeRenderer2D(),
-        *context.Ui.Font,
         buttonStyle,
         isSpawnHovered
     );
     ParticleSettingsButton.Draw(
         context.GetShapeRenderer2D(),
-        *context.Ui.Font,
         buttonStyle,
         isSettingsHovered || ParticleSettingsPanel.IsOpen()
     );
@@ -505,10 +501,9 @@ void KatamariGame::Update(AppContext &context, const float deltaTime)
         return;
     }
 
-    if (context.Input.System != nullptr && context.GameHost != nullptr
+    if (context.Input.System != nullptr
         && WasDebugReturnToMainMenuPressed(*context.Input.System)) {
-        // P is a temporary debug direct-return to engine MainMenuGame (separate from Escape Back handling).
-        context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
+        RequestReturnToEngineMainMenu(context, "KatamariGame::P");
         return;
     }
 
@@ -519,12 +514,12 @@ void KatamariGame::Update(AppContext &context, const float deltaTime)
         if (ParticleSettingsPanel.IsOpen())
         {
             ParticleSettingsPanel.Toggle();
-        }
-        else if (context.GameHost != nullptr)
-        {
-            context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
+            context.Input.System->ConsumePressedStates();
             return;
         }
+
+        RequestReturnToEngineMainMenu(context, "KatamariGame::Escape");
+        return;
     }
 
     LastDeltaTime = deltaTime;
@@ -849,6 +844,7 @@ void KatamariGame::Shutdown(AppContext &context)
 
     if (context.Graphics.Render != nullptr)
     {
+        context.Graphics.Render->SetFrameGameplaySceneAndCamera(nullptr, nullptr);
         GpuParticleEmitterDesc particles = context.Graphics.Render->GetGpuParticleSystem().GetEmitterDesc();
         particles.Enabled = false;
         context.Graphics.Render->GetGpuParticleSystem().SetEmitterDesc(particles);

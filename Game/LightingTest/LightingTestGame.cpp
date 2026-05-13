@@ -1,7 +1,6 @@
 #include "Game/LightingTest/LightingTestGame.h"
 
 #include "Core/App/AppContext.h"
-#include "Core/App/IGameHost.h"
 #include "Core/Assets/AssetCache.h"
 #include "Core/Graphics/ModelRenderer.h"
 #include "Core/Graphics/Rendering/Lighting/SceneLighting3D.h"
@@ -9,10 +8,9 @@
 #include "Core/Graphics/Rendering/PrimitiveRenderer3D.h"
 #include "Core/Input/InputSystem.h"
 #include "Core/Input/Keyboard.h"
-#include "Core/Input/MiniGameDebugNavigation.h"
+#include "Game/Common/MiniGameNavigation.h"
 #include "Core/Input/RawInputHandler.h"
 #include "Core/Platform/Window.h"
-#include "Game/MainMenu/MainMenuGame.h"
 
 #include <cmath>
 #include <memory>
@@ -61,19 +59,17 @@ void LightingTestGame::Update(AppContext &context, const float deltaTime)
         return;
     }
 
-    if (context.GameHost != nullptr && context.Input.System != nullptr
+    if (context.Input.System != nullptr
         && WasDebugReturnToMainMenuPressed(*context.Input.System)) {
-        // P is a temporary debug direct-return to engine MainMenuGame (separate from Escape Back handling).
-        context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
+        RequestReturnToEngineMainMenu(context, "LightingTestGame::P");
         return;
     }
 
     // Escape is semantic Back: return to engine MainMenuGame (no nested panels in this demo).
-    if (context.GameHost != nullptr
-        && context.Input.System != nullptr
+    if (context.Input.System != nullptr
         && context.Input.System->GetKeyboard().WasKeyPressed(Key::Escape))
     {
-        context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
+        RequestReturnToEngineMainMenu(context, "LightingTestGame::Escape");
         return;
     }
 

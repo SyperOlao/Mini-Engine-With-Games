@@ -18,7 +18,6 @@
 #include <string>
 
 #include "Core/App/AppContext.h"
-#include "Core/App/IGameHost.h"
 #include "Core/Audio/AudioSystem.h"
 #include "Core/Graphics/Camera.h"
 #include "Core/Graphics/Color.h"
@@ -26,12 +25,11 @@
 #include "Core/Graphics/Rendering/PrimitiveRenderer3D.h"
 #include "Core/Input/InputSystem.h"
 #include "Core/Input/Keyboard.h"
-#include "Core/Input/MiniGameDebugNavigation.h"
 #include "Core/Input/RawInputHandler.h"
 #include "Core/Platform/Window.h"
 #include "Core/UI/BitmapFont.h"
+#include "Game/Common/MiniGameNavigation.h"
 #include "Game/SolarSystem/Entities/OrbitalBody.h"
-#include "Game/MainMenu/MainMenuGame.h"
 
 #include <memory>
 
@@ -98,10 +96,9 @@ void SolarSystemGame::Update(AppContext &context, const float deltaTime) {
         return;
     }
 
-    if (context.GameHost != nullptr && context.Input.System != nullptr
+    if (context.Input.System != nullptr
         && WasDebugReturnToMainMenuPressed(*context.Input.System)) {
-        // P is a temporary debug direct-return to engine MainMenuGame (separate from Escape Back handling).
-        context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
+        RequestReturnToEngineMainMenu(context, "SolarSystemGame::P");
         return;
     }
 
@@ -253,7 +250,7 @@ void SolarSystemGame::UpdateFpsCounter(const float deltaTime) noexcept {
     }
 }
 
-void SolarSystemGame::HandleGlobalInput(const AppContext &context) {
+void SolarSystemGame::HandleGlobalInput(AppContext &context) {
     const Keyboard &keyboard = context.Input.System->GetKeyboard();
 
     if (keyboard.WasVirtualKeyPressed(VK_F1)) {
@@ -279,9 +276,7 @@ void SolarSystemGame::HandleGlobalInput(const AppContext &context) {
             return;
         }
 
-        if (context.GameHost != nullptr) {
-            context.GameHost->RequestSwitchGame(std::make_unique<MainMenuGame>());
-        }
+        RequestReturnToEngineMainMenu(context, "SolarSystemGame::Escape");
     }
 
     if (keyboard.WasKeyPressed(Key::Tab)) {
